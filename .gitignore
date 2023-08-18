@@ -11,4 +11,7 @@ out/
 docs/
 
 # Dotenv file
-.env
+.env.*
+
+node_modules
+.DS_Store

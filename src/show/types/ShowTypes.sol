@@ -8,9 +8,8 @@ interface ShowTypes {
 
     enum Status {
         Proposed,
-        Accepted,
         SoldOut,
-        Active,
+        Accepted,
         Completed,
         Cancelled,
         Refunded
@@ -18,7 +17,8 @@ interface ShowTypes {
 
     struct Venue {
         string name;
-        string location;
+        string location; // lat long
+        uint256 radius;
         uint256 totalCapacity;
     }
 
