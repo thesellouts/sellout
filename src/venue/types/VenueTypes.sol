@@ -21,4 +21,9 @@ interface VenueTypes {
         bool isPeriodActive;
     }
 
+    struct VotingPeriod {
+        uint256 endTime;
+        bool isPeriodActive;
+    }
+
 }

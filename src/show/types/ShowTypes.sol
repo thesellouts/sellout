@@ -12,7 +12,8 @@ interface ShowTypes {
         Accepted,
         Completed,
         Cancelled,
-        Refunded
+        Refunded,
+        Expired
     }
 
     struct Venue {
@@ -20,6 +21,7 @@ interface ShowTypes {
         string location; // lat long
         uint256 radius;
         uint256 totalCapacity;
+        address wallet;
     }
 
     struct TicketPrice {
@@ -39,5 +41,7 @@ interface ShowTypes {
         uint256 totalCapacity;
         Status status;
         bool isActive;
+        uint256[] split;
+        uint256 expiry; // Expiry timestamp
     }
 }

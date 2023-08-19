@@ -11,19 +11,32 @@ interface IShow is ShowTypes {
     ///                                                          ///
     ///                            EVENTS                        ///
     ///                                                          ///
+
+    event StatusUpdated(bytes32 showId, Status status);
+
+
     event ShowProposed(
-        bytes32 showId,
+        bytes32 indexed showId,
         address indexed organizer,
         string name,
         address[] artists,
         string description,
         TicketPrice ticketPrice,
-        uint256 sellOutThreshold
+        uint256 sellOutThreshold,
+        uint256[] split
     );
 
-    event ShowDeactivated(bytes32 showId, address indexed executor);
+    event ShowDeactivated(
+        bytes32 indexed showId,
+        address indexed sender
+    );
 
-    event StatusUpdated(bytes32 showId, Status status);
+    event ExpiryUpdated(bytes32 indexed showId, uint256 newExpiry);
+    event ShowExpired(bytes32 indexed showId);
+
+
+
+
 
     function isOrganizer(address user, bytes32 showId) external view returns (bool);
     function isArtist(address user, bytes32 showId) external view returns (bool);
@@ -35,7 +48,8 @@ interface IShow is ShowTypes {
         ShowTypes.Venue memory venue,
         uint256 sellOutThreshold,
         uint256 totalCapacity,
-        ShowTypes.TicketPrice memory ticketPrice
+        ShowTypes.TicketPrice memory ticketPrice,
+        uint256[] memory split
     ) external returns (bytes32);
 
 //    function deactivateShow(bytes32 showId) internal;
@@ -61,5 +75,6 @@ interface IShow is ShowTypes {
 
     function getShowStatus(bytes32 showId) external view returns (ShowTypes.Status);
     function updateStatus(bytes32 showId, ShowTypes.Status status) external;
+    function checkAndUpdateExpiry(bytes32 showId) external;
 
 }

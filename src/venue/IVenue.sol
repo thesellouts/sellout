@@ -16,6 +16,8 @@ interface IVenue is VenueTypes {
     event ProposalVoted(bytes32 showId, address voter, uint256 proposalIndex);
     event ProposalAccepted(bytes32 showId, uint256 proposalIndex);
     event ProposalRefunded(bytes32 showId, address proposer, uint256 amount);
+    event VenueVoted(bytes32 indexed showId, address indexed voter, uint256 proposalIndex);
+
 
 
     ///                                                          ///

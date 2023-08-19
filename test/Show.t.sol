@@ -15,6 +15,7 @@ contract ShowTest is Test {
     uint256 constant sellOutThreshold = 50;
     uint256 constant totalCapacity = 1000;
     ShowTypes.TicketPrice ticketPrice;
+    uint256[] split;
 
     function setUp() public {
         // Initialize the Show contract here
@@ -25,14 +26,19 @@ contract ShowTest is Test {
         artists[0] = address(this);
 
         // Set up venue
-        venue = ShowTypes.Venue("Test Venue", "40.730610,-73.935242", 100, totalCapacity);
+        venue = ShowTypes.Venue("Test Venue", "40.730610,-73.935242", 100, totalCapacity, 0x1234567890123456789012345678901234567890);
 
         // Set up ticket price
         ticketPrice = ShowTypes.TicketPrice(1 ether, 2 ether);
+
+        split = new uint256[](3);
+        split[1] = 33;
+        split[2] = 34;
+        split[3] = 33;
     }
 
     function testProposeShow() public {
-        bytes32 proposalId = show.proposeShow(name, description, artists, venue, sellOutThreshold, totalCapacity, ticketPrice);
+        bytes32 proposalId = show.proposeShow(name, description, artists, venue, sellOutThreshold, totalCapacity, ticketPrice, split);
 
         // Create the expected proposal ID by hashing the relevant parameters
         bytes32 expectedProposalId = keccak256(abi.encodePacked(name, description, artists, sellOutThreshold, totalCapacity));

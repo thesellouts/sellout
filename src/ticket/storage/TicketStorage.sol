@@ -15,6 +15,9 @@ contract TicketStorage is TicketTypes {
 
     mapping(uint256 => bytes32) public ticketToShow;
     mapping(bytes32 => uint256) public totalTicketsSold;
+    mapping(uint256 => uint256) public ticketPricePaid; // Mapping to store the ticket price paid for each ticket
+    mapping(address => mapping(bytes32 => bool)) public ticketOwnership;
+
 
     function getNextTokenId() internal returns (uint256) {
         _tokenIdCounter.increment();

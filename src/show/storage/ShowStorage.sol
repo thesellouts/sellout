@@ -13,6 +13,11 @@ contract ShowStorage is ShowTypes {
     mapping(uint256 => uint256) public ticketToShow;
     mapping(uint256 => uint256) public totalTicketsSold;
     mapping(bytes32 => Show) public shows;
+    mapping(bytes32 => mapping(address => bool)) public isArtistMapping;
+    mapping(bytes32 => bool) public existingShows;
+    // Mapping to track the Ether balance for each show
+    mapping(bytes32 => uint256) public showVault;
+
 
     uint256 public showCount;
 

@@ -12,6 +12,10 @@ contract VenueStorage is VenueTypes {
     mapping(bytes32 => ProposalPeriod) public proposalPeriods;
     mapping(bytes32 => Proposal[]) public showProposals;
     mapping(bytes32 => mapping(address => bool)) public hasVoted;
+    mapping(bytes32 => VotingPeriod) public votingPeriods;
+    mapping(bytes32 => mapping(address => bool)) public hasTicketOwnerVoted;
+    mapping(bytes32 => mapping(address => uint256)) public previousVote;
+
 
 }
 
