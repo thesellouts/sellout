@@ -1,6 +1,10 @@
 {
+  "extends": "solhint:recommended",
   "plugins": ["prettier"],
   "rules": {
+    "avoid-throw": false,
+    "avoid-suicide": "error",
+    "avoid-sha3": "warn".
     "prettier/prettier": "error"
   }
 }

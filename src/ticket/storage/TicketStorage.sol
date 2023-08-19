@@ -13,8 +13,8 @@ contract TicketStorage is TicketTypes {
 
     string internal _baseTokenURI;
 
-    mapping(uint256 => uint256) public ticketToShow;
-    mapping(uint256 => uint256) public totalTicketsSold;
+    mapping(uint256 => bytes32) public ticketToShow;
+    mapping(bytes32 => uint256) public totalTicketsSold;
 
     function getNextTokenId() internal returns (uint256) {
         _tokenIdCounter.increment();

@@ -14,17 +14,17 @@ contract Venue is IVenue, VenueStorage {
         showInstance = Show(_showBaseContractAddress);
     }
 
-    modifier onlyAuthorized(uint256 showId) {
+    modifier onlyAuthorized(bytes32 showId) {
         require(showInstance.isOrganizer(msg.sender, showId) || showInstance.isArtist(msg.sender, showId), "Not authorized");
         _;
     }
 
-    function startProposalPeriod(uint256 showId) public {
+    function startProposalPeriod(bytes32 showId) public {
         require(showInstance.getShowStatus(showId) == ShowTypes.Status.SoldOut, "Show must be SoldOut");
         proposalPeriods[showId] = ProposalPeriod(block.timestamp + 7 days, true);
     }
 
-    function submitProposal(uint256 showId, string memory venueName, string memory latlong, uint256[] memory proposedDates) public payable {
+    function submitProposal(bytes32 showId, string memory venueName, string memory latlong, uint256[] memory proposedDates) public payable {
         require(proposalPeriods[showId].isPeriodActive, "Proposal period is not active");
         require(block.timestamp <= proposalPeriods[showId].endTime, "Proposal period has ended");
         if (block.timestamp >= proposalPeriods[showId].endTime - 1 hours) {
@@ -42,7 +42,7 @@ contract Venue is IVenue, VenueStorage {
         emit ProposalSubmitted(showId, msg.sender, venueName);
     }
 
-    function vote(uint256 showId, uint256 proposalIndex) public onlyAuthorized(showId) {
+    function vote(bytes32 showId, uint256 proposalIndex) public onlyAuthorized(showId) {
         require(!hasVoted[showId][msg.sender], "Already voted");
         showProposals[showId][proposalIndex].votes++;
         hasVoted[showId][msg.sender] = true;
@@ -50,7 +50,7 @@ contract Venue is IVenue, VenueStorage {
     }
 
 
-    function refundRejectedProposal(uint256 showId, uint256 proposalIndex) public {
+    function refundRejectedProposal(bytes32 showId, uint256 proposalIndex) public {
         Proposal storage proposal = showProposals[showId][proposalIndex];
         require(!proposal.accepted, "Proposal was accepted");
         require(msg.sender == proposal.proposer, "Only the proposer can request a refund");
@@ -60,11 +60,11 @@ contract Venue is IVenue, VenueStorage {
         emit ProposalRefunded(showId, proposal.proposer, refundAmount);
     }
 
-    function getProposals(uint256 showId) public view returns (Proposal[] memory) {
+    function getProposals(bytes32 showId) public view returns (Proposal[] memory) {
         return showProposals[showId];
     }
 
-    function acceptProposal(uint256 showId, uint256 proposalIndex) public onlyAuthorized(showId) {
+    function acceptProposal(bytes32 showId, uint256 proposalIndex) public onlyAuthorized(showId) {
         Proposal storage proposal = showProposals[showId][proposalIndex];
 //        require(proposal.votes >= showBaseInstance.getNumberOfVoters(showId), "Not enough votes");
         proposal.accepted = true;
@@ -74,7 +74,7 @@ contract Venue is IVenue, VenueStorage {
         payable(address(showInstance)).transfer(proposal.bidAmount);
     }
 
-    function hasUserVoted(uint256 showId, address user) public view returns (bool) {
+    function hasUserVoted(bytes32 showId, address user) public view returns (bool) {
         return hasVoted[showId][user];
     }
 }

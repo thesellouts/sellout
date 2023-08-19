@@ -1,107 +1,72 @@
-//// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.16;
-//
-//import "forge-std/Test.sol";
-//import "../src/oldShow.sol";
-//
-//contract ShowTest is Test {
-//    Show public show;
-//
-//    function setUp() public {
-//        address organizer = address(this); // Using the test contract as the organizer
-//        string memory location = "40.730610,-73.935242"; // Example location
-//        address[] memory artists = new address[](2);
-//        artists[0] = address(0x1234567890123456789012345678901234567890); // Example artist addresses
-//        artists[1] = address(0x0987654321098765432109876543210987654321);
-//        uint256 totalCapacity = 1000;
-//        uint256 minTicketPrice = 1 ether;
-//        uint256 maxTicketPrice = 2 ether;
-//        uint256 sellOutThreshold = 80;
-//
-//        show = new Show(
-//            organizer,
-//            location,
-//            artists,
-//            totalCapacity,
-//            minTicketPrice,
-//            maxTicketPrice,
-//            sellOutThreshold
-//        );
-//    }
-//
-//    function testProposeShow() public {
-//        address[] memory artists = new address[](2);
-//        artists[0] = address(0x1234567890123456789012345678901234567890); // Example artist addresses
-//        artists[1] = address(0x0987654321098765432109876543210987654321);
-//
-//        Show show1 = new Show(
-//            address(this),
-//            "40.730610,-73.935242",
-//            artists,
-//            500,
-//            0.5 ether,
-//            1.5 ether,
-//            70
-//        );
-//
-//        Show show2 = new Show(
-//            address(this),
-//            "40.730610,-73.935242",
-//            artists,
-//            1000,
-//            1 ether,
-//            2 ether,
-//            80
-//        );
-//
-//        assertEq(uint256(show1.status()), uint256(Show.Status.Proposed));
-//        assertEq(show1.totalCapacity(), 500);
-//        assertEq(uint256(show2.status()), uint256(Show.Status.Proposed));
-//        assertEq(show2.totalCapacity(), 1000);
-//    }
-//
-//
-//    function testSetVenue() public {
-//        // Test setting the venue
-//        show.setVenue("Madison Square Garden", "40.750504,-73.993439");
-//        (string memory venueName, ) = show.venue();
-//        assertEq(venueName, "Madison Square Garden");
-//    }
-//
-//    //TODO: fix
-////    function testUpdateStatus() public {
-////        // Test updating the show status
-////        show.updateStatus(Show.Status.SoldOut);
-////        assertEq(uint(show.status()), uint(Show.Status.SoldOut));
-////    }
-//
-//
-//    function testInvalidTicketPriceRange() public {
-//        address[] memory artists = new address[](2);
-//        artists[0] = address(0x1234567890123456789012345678901234567890); // Example artist addresses
-//        artists[1] = address(0x0987654321098765432109876543210987654321);
-//
-//        // Attempt to propose a show with max ticket price less than min ticket price
-//        try show.proposeShow("40.730610,-73.935242", artists, 500, 1.5 ether, 0.5 ether, 70) {
-//            // This line should not be reached, as the function call should revert
-//            fail("Should have reverted due to invalid ticket price range");
-//        } catch Error(string memory reason) {
-//            assertEq(reason, "Max ticket price must be greater or equal to min ticket price");
-//        }
-//    }
-//
-//    function testInvalidSellOutThreshold() public {
-//        address[] memory artists = new address[](2);
-//        artists[0] = address(0x1234567890123456789012345678901234567890); // Example artist addresses
-//        artists[1] = address(0x0987654321098765432109876543210987654321);
-//
-//        // Attempt to propose a show with sell-out threshold greater than 100
-//        try show.proposeShow("40.730610,-73.935242", artists, 500, 0.5 ether, 1.5 ether, 101) {
-//            // This line should not be reached, as the function call should revert
-//            fail("Should have reverted due to invalid sell-out threshold");
-//        } catch Error(string memory reason) {
-//            assertEq(reason, "Sell-out threshold must be between 0 and 100");
-//        }
-//    }
-//
-//}
+
+import "forge-std/Test.sol";
+import "../src/show/Show.sol";
+import "../src/show/types/ShowTypes.sol";
+
+contract ShowTest is Test {
+    Show public show;
+
+    string constant name = "Test Show";
+    string constant description = "A test show description";
+    address[] artists;
+    ShowTypes.Venue venue;
+    uint256 constant sellOutThreshold = 50;
+    uint256 constant totalCapacity = 1000;
+    ShowTypes.TicketPrice ticketPrice;
+
+    function setUp() public {
+        // Initialize the Show contract here
+        show = new Show();
+
+        // Set up artists
+        artists = new address[](1);
+        artists[0] = address(this);
+
+        // Set up venue
+        venue = ShowTypes.Venue("Test Venue", "40.730610,-73.935242", 100, totalCapacity);
+
+        // Set up ticket price
+        ticketPrice = ShowTypes.TicketPrice(1 ether, 2 ether);
+    }
+
+    function testProposeShow() public {
+        bytes32 proposalId = show.proposeShow(name, description, artists, venue, sellOutThreshold, totalCapacity, ticketPrice);
+
+        // Create the expected proposal ID by hashing the relevant parameters
+        bytes32 expectedProposalId = keccak256(abi.encodePacked(name, description, artists, sellOutThreshold, totalCapacity));
+
+        assertEq(proposalId, expectedProposalId, "Proposal ID mismatch");
+
+        // Retrieve show details
+        (
+        string memory retrievedName,
+        string memory retrievedDescription,
+        address retrievedOrganizer,
+        address[] memory retrievedArtists,
+        ShowTypes.Venue memory retrievedVenue,
+        ShowTypes.TicketPrice memory retrievedTicketPrice,
+        uint256 retrievedSellOutThreshold,
+        uint256 retrievedTotalCapacity,
+        ShowTypes.Status retrievedStatus,
+        bool retrievedIsActive
+        ) = show.getShowDetails(proposalId);
+
+        // Assert show details
+        assertEq(retrievedName, name, "Name mismatch");
+        assertEq(retrievedDescription, description, "Description mismatch");
+        assertEq(retrievedOrganizer, address(this), "Organizer mismatch");
+        assertEq(retrievedArtists[0], artists[0], "Artists mismatch");
+        assertEq(retrievedVenue.name, venue.name, "Venue name mismatch");
+        assertEq(retrievedVenue.location, venue.location, "Venue location mismatch");
+        assertEq(retrievedVenue.radius, venue.radius, "Venue radius mismatch");
+        assertEq(retrievedVenue.totalCapacity, venue.totalCapacity, "Venue total capacity mismatch");
+        assertEq(retrievedTicketPrice.minPrice, ticketPrice.minPrice, "Min ticket price mismatch");
+        assertEq(retrievedTicketPrice.maxPrice, ticketPrice.maxPrice, "Max ticket price mismatch");
+        assertEq(retrievedSellOutThreshold, sellOutThreshold, "Sell-out threshold mismatch");
+        assertEq(retrievedTotalCapacity, totalCapacity, "Total capacity mismatch");
+        assertEq(uint(retrievedStatus), uint(ShowTypes.Status.Proposed), "Status mismatch");
+        assertTrue(retrievedIsActive, "Show should be active");
+    }
+}

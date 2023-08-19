@@ -9,9 +9,9 @@ import "../types/VenueTypes.sol";
 /// @author taayyohh
 /// @notice Venue Storage contract
 contract VenueStorage is VenueTypes {
-    mapping(uint256 => ProposalPeriod) public proposalPeriods;
-    mapping(uint256 => Proposal[]) public showProposals;
-    mapping(uint256 => mapping(address => bool)) public hasVoted;
+    mapping(bytes32 => ProposalPeriod) public proposalPeriods;
+    mapping(bytes32 => Proposal[]) public showProposals;
+    mapping(bytes32 => mapping(address => bool)) public hasVoted;
 
 }
 

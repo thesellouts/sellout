@@ -20,8 +20,8 @@ interface ITicket is TicketTypes {
     ///                            EVENTS                        ///
     ///                                                          ///
 
-    event TicketPurchased(address indexed buyer, uint256 showId, uint256 ticketId, uint256 fanStatus);
-    event TicketRefunded(address indexed owner, uint256 showId, uint256 ticketId);
+    event TicketPurchased(address indexed buyer, bytes32 showId, uint256 ticketId, uint256 fanStatus);
+    event TicketRefunded(address indexed owner, bytes32 showId, uint256 ticketId);
 
 
     ///                                                          ///
@@ -32,7 +32,7 @@ interface ITicket is TicketTypes {
     ///                                                          ///
     ///                          FUNCTIONS                       ///
     ///                                                          ///
-    function purchaseTicket(uint256 showId) external payable;
+    function purchaseTicket(bytes32 showId) external payable;
     function refundTicket(uint256 ticketId) external;
-    function totalCapacityOfShow(uint256 showId) external view returns (uint256);
+    function totalCapacityOfShow(bytes32 showId) external view returns (uint256);
 }

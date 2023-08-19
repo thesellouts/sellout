@@ -12,32 +12,21 @@ interface IShow is ShowTypes {
     ///                            EVENTS                        ///
     ///                                                          ///
     event ShowProposed(
-        uint256 indexed showId,
+        bytes32 showId,
         address indexed organizer,
         string name,
         address[] artists,
         string description,
-        Venue venue,
         TicketPrice ticketPrice,
         uint256 sellOutThreshold
     );
 
-    event ShowDeactivated(uint256 indexed showId, address indexed executor);
+    event ShowDeactivated(bytes32 showId, address indexed executor);
 
-    event StatusUpdated(uint256 indexed showId, Status status);
+    event StatusUpdated(bytes32 showId, Status status);
 
-
-    ///                                                          ///
-    ///                            ERRORS                        ///
-    ///                                                          ///
-
-
-    ///                                                          ///
-    ///                          FUNCTIONS                       ///
-    ///                                                          ///
-
-    function isOrganizer(address user, uint256 showId) external view returns (bool);
-    function isArtist(address user, uint256 showId) external view returns (bool);
+    function isOrganizer(address user, bytes32 showId) external view returns (bool);
+    function isArtist(address user, bytes32 showId) external view returns (bool);
 
     function proposeShow(
         string calldata name,
@@ -47,17 +36,17 @@ interface IShow is ShowTypes {
         uint256 sellOutThreshold,
         uint256 totalCapacity,
         ShowTypes.TicketPrice memory ticketPrice
-    ) external returns (uint256);
+    ) external returns (bytes32);
 
-//    function deactivateShow(uint256 showId) internal;
-    function cancelShow(uint256 showId) external;
-    function completeShow(uint256 showId) external;
+//    function deactivateShow(bytes32 showId) internal;
+    function cancelShow(bytes32 showId) external;
+    function completeShow(bytes32 showId) external;
 
-    function getTicketPrice(uint256 showId) external view returns (ShowTypes.TicketPrice memory);
-    function getTotalCapacity(uint256 showId) external view returns (uint256);
-    function getSellOutThreshold(uint256 showId) external view returns (uint256);
+    function getTicketPrice(bytes32 showId) external view returns (ShowTypes.TicketPrice memory);
+    function getTotalCapacity(bytes32 showId) external view returns (uint256);
+    function getSellOutThreshold(bytes32 showId) external view returns (uint256);
 
-    function getShowDetails(uint256 showId) external view returns (
+    function getShowDetails(bytes32 showId) external view returns (
         string memory name,
         string memory description,
         address organizer,
@@ -70,7 +59,7 @@ interface IShow is ShowTypes {
         bool isActive
     );
 
-    function getShowStatus(uint256 showId) external view returns (ShowTypes.Status);
-    function updateStatus(uint256 showId, ShowTypes.Status status) external;
+    function getShowStatus(bytes32 showId) external view returns (ShowTypes.Status);
+    function updateStatus(bytes32 showId, ShowTypes.Status status) external;
 
 }

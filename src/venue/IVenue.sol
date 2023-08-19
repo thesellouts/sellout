@@ -12,10 +12,10 @@ interface IVenue is VenueTypes {
     ///                                                          ///
     ///                            EVENTS                        ///
     ///                                                          ///
-    event ProposalSubmitted(uint256 showId, address proposer, string venueName);
-    event ProposalVoted(uint256 showId, address voter, uint256 proposalIndex);
-    event ProposalAccepted(uint256 showId, uint256 proposalIndex);
-    event ProposalRefunded(uint256 showId, address proposer, uint256 amount);
+    event ProposalSubmitted(bytes32 showId, address proposer, string venueName);
+    event ProposalVoted(bytes32 showId, address voter, uint256 proposalIndex);
+    event ProposalAccepted(bytes32 showId, uint256 proposalIndex);
+    event ProposalRefunded(bytes32 showId, address proposer, uint256 amount);
 
 
     ///                                                          ///

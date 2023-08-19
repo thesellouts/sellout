@@ -23,7 +23,7 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         _baseTokenURI = baseURI;
     }
 
-    function purchaseTicket(uint256 showId) public payable nonReentrant {
+    function purchaseTicket(bytes32 showId) public payable nonReentrant {
         require(totalTicketsSold[showId] < totalCapacityOfShow(showId), "Sold out");
 
         uint256 fanStatus = determineFanStatus(showId);
@@ -49,7 +49,7 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
     function refundTicket(uint256 ticketId) public nonReentrant {
         require(ownerOf(ticketId) == msg.sender, "You don't own this ticket");
 
-        uint256 showId = ticketToShow[ticketId];
+        bytes32 showId = ticketToShow[ticketId];
         uint256 fanStatus = determineFanStatus(showId);
         Show.TicketPrice memory ticketPrice = showInstance.getTicketPrice(showId);
 
@@ -91,7 +91,7 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         }
     }
 
-    function determineFanStatus(uint256 showId) internal view returns (uint256) {
+    function determineFanStatus(bytes32 showId) internal view returns (uint256) {
         uint256 totalCapacity;
         uint256 totalTicketsSoldForShow = totalTicketsSold[showId];
         ShowTypes.Status status;
@@ -125,7 +125,7 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         _setTokenURI(tokenId, generatedTokenURI);
         return tokenId;
     }
-    function totalCapacityOfShow(uint256 showId) public view returns (uint256) {
+    function totalCapacityOfShow(bytes32 showId) public view returns (uint256) {
         return showInstance.getTotalCapacity(showId);
     }
 

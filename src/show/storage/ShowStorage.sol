@@ -12,7 +12,7 @@ contract ShowStorage is ShowTypes {
 
     mapping(uint256 => uint256) public ticketToShow;
     mapping(uint256 => uint256) public totalTicketsSold;
-    mapping(uint256 => Show) public shows;
+    mapping(bytes32 => Show) public shows;
 
     uint256 public showCount;
 

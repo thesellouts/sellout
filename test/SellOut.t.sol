@@ -1,5 +1,5 @@
 //// SPDX-License-Identifier: UNLICENSED
-//pragma solidity ^0.8.13;
+pragma solidity ^0.8.16;
 //
 //import "forge-std/Test.sol";
 //import "../src/Show.sol";
@@ -21,7 +21,7 @@
 //        artists[1] = address(0x0987654321098765432109876543210987654321);
 //
 //        // Create a show using the Show contract
-//        uint256 showId = showContract.proposeShow(
+//        bytes32 showId = showContract.proposeShow(
 //            "40.730610,-73.935242",
 //            artists,
 //            1000,
@@ -35,7 +35,7 @@
 //
 //    function testPurchaseTicket() public {
 //        // Create a show
-//        uint256 showId = createShow();
+//        bytes32 showId = createShow();
 //
 //        // Purchase a ticket using the SellOut contract
 //        sellOutContract.purchaseTicket{value: 0.5 ether}(showId);

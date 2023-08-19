@@ -28,6 +28,7 @@ interface ShowTypes {
     }
 
     struct Show {
+        bytes32 showId;
         string name;
         string description;
         address organizer;

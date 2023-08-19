@@ -20,7 +20,14 @@
   },
   "scripts": {
     "format": "prettier --write \"**/*.sol\"",
+    "prettier:solidity": "./node_modules/.bin/prettier --write contracts/**/*.sol",
+    "solhint": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
     "precommit": "lint-staged",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "husky": {
+    "hooks": {
+      "pre-push": "pnpm run prettier:solidity"
+    }
   }
 }

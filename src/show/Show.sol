@@ -8,29 +8,27 @@ import "./storage/ShowStorage.sol";
 
 contract Show is IShow, ShowStorage {
 
-
     ///                                                          ///
     ///                          MODIFIERS                       ///
     ///                                                          ///
     /// @notice Reverts if caller is not an authorized minter
-    modifier onlyOrganizerOrArtist(uint256 showId) {
+    modifier onlyOrganizerOrArtist(bytes32 showId) {
         require(isOrganizer(msg.sender, showId) || isArtist(msg.sender, showId), "Not authorized");
         _;
     }
 
-    function isOrganizer(address user, uint256 showId) public view returns (bool) {
-        return shows[showId].organizer == user;
+    function isOrganizer(address user, bytes32 showId) public view returns (bool) {
+        return shows[showId].organizer == user; // Updated
     }
 
-    function isArtist(address user, uint256 showId) public view returns (bool) {
-        for (uint i = 0; i < shows[showId].artists.length; i++) {
-            if (shows[showId].artists[i] == user) {
+    function isArtist(address user, bytes32 showId) public view returns (bool) {
+        for (uint i = 0; i < shows[showId].artists.length; i++) { // Updated
+            if (shows[showId].artists[i] == user) { // Updated
                 return true;
             }
         }
         return false;
     }
-
 
 
     ///                                                          ///
@@ -42,16 +40,20 @@ contract Show is IShow, ShowStorage {
         string memory description,
         address[] memory artists,
         Venue memory venue,
-        uint256 sellOutThreshold, // Percentage (0-100)
-        uint256 totalCapacity, // Total capacity of the show
+        uint256 sellOutThreshold,
+        uint256 totalCapacity,
         TicketPrice memory ticketPrice
-    ) public returns (uint256) {
+    ) public returns (bytes32 showId) {
         require(totalCapacity > 0, "Total capacity must be greater than 0");
         require(artists.length > 0, "At least one artist required");
         require(ticketPrice.maxPrice >= ticketPrice.minPrice, "Max ticket price must be greater or equal to min ticket price");
         require(sellOutThreshold >= 0 && sellOutThreshold <= 100, "Sell-out threshold must be between 0 and 100");
 
-        shows[showCount] = Show({
+        // Create a proposal ID by hashing the relevant parameters
+        showId = keccak256(abi.encodePacked(msg.sender, name, description, artists, sellOutThreshold, totalCapacity));
+
+        shows[showId] = Show({
+            showId : showId,
             name: name,
             description: description,
             artists: artists,
@@ -64,25 +66,24 @@ contract Show is IShow, ShowStorage {
             isActive: true
         });
 
+        emit ShowProposed(showId, msg.sender, name, artists, description, ticketPrice, sellOutThreshold);
 
-        emit ShowProposed(showCount, msg.sender, name, artists, description, venue, ticketPrice, sellOutThreshold);
-
-        return showCount++;
+        return showId;
     }
 
-    function deactivateShow(uint256 showId) internal onlyOrganizerOrArtist(showId) {
+    function deactivateShow(bytes32 showId) internal onlyOrganizerOrArtist(showId) {
         shows[showId].isActive = false;
         emit ShowDeactivated(showId, msg.sender);
     }
 
-    function cancelShow(uint256 showId) public onlyOrganizerOrArtist(showId) {
+    function cancelShow(bytes32 showId) public onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
         require(show.status == Status.SoldOut, "Show must be SoldOut");
 
         show.status = Status.Cancelled;
     }
 
-    function completeShow(uint256 showId) public onlyOrganizerOrArtist(showId) {
+    function completeShow(bytes32 showId) public onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
         require(show.status == Status.Accepted, "Show must be Accepted");
 
@@ -103,19 +104,19 @@ contract Show is IShow, ShowStorage {
         show.status = Status.Completed;
     }
 
-    function getTicketPrice(uint256 _showId) public view returns (TicketPrice memory) {
-        return shows[_showId].ticketPrice;
+    function getTicketPrice(bytes32 showId) public view returns (TicketPrice memory) {
+        return shows[showId].ticketPrice;
     }
 
-    function getTotalCapacity(uint256 showId) public view returns (uint256) {
-        return shows[showId].totalCapacity;
+    function getTotalCapacity(bytes32 showId) public view returns (uint256) {
+        return shows[showId].totalCapacity; // Updated
     }
 
-    function getSellOutThreshold(uint256 showId) public view returns (uint256) {
-        return shows[showId].sellOutThreshold;
+    function getSellOutThreshold(bytes32 showId) public view returns (uint256) {
+        return shows[showId].sellOutThreshold; // Updated
     }
 
-    function getShowDetails(uint256 showId) public view returns (
+    function getShowDetails(bytes32 showId) public view returns (
         string memory name,
         string memory description,
         address organizer,
@@ -127,7 +128,7 @@ contract Show is IShow, ShowStorage {
         Status status,
         bool isActive
     ) {
-        Show storage show = shows[showId];
+        Show storage show = shows[showId]; // Updated
         return (
             show.name,
             show.description,
@@ -142,13 +143,13 @@ contract Show is IShow, ShowStorage {
         );
     }
 
-    function getShowStatus(uint256 showId) public view returns (Status) {
-        return shows[showId].status;
+    function getShowStatus(bytes32 showId) public view returns (Status) {
+        return shows[showId].status; // Updated
     }
 
-    function updateStatus(uint256 showId, Status _status) public onlyOrganizerOrArtist(showId) {
-        require(shows[showId].status == Status.Proposed, "Show must be in Proposed status");
-        shows[showId].status = _status;
+    function updateStatus(bytes32 showId, Status _status) public onlyOrganizerOrArtist(showId) {
+        require(shows[showId].status == Status.Proposed, "Show must be in Proposed status"); // Updated
+        shows[showId].status = _status; // Updated
         emit StatusUpdated(showId, _status);
     }
 }
