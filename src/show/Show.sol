@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "./IShow.sol";
 import "./storage/ShowStorage.sol";
 
-/// @author fictionalreality
+/// @author fictreal
 /// @title Show
 /// @notice Manages show proposals, statuses, and fund distribution
 contract Show is IShow, ShowStorage {
@@ -24,7 +24,7 @@ contract Show is IShow, ShowStorage {
 
     /// @notice Deposits Ether into the vault for a specific show
     /// @param showId Unique identifier for the show
-    function depositToVault(bytes32 showId) public payable onlyTicketContract {
+    function depositToVault(bytes32 showId) public payable onlyTicketContract onlyVenueContract {
         showVault[showId] += msg.value;
     }
 
@@ -35,6 +35,10 @@ contract Show is IShow, ShowStorage {
     }
     modifier onlyTicketContract() {
         require(msg.sender == ticketContract, "Only the Ticket contract can call this function");
+        _;
+    }
+    modifier onlyVenueContract() {
+        require(msg.sender == venueContract, "Only the Ticket contract can call this function");
         _;
     }
     modifier isExpired(bytes32 showId) {
@@ -56,7 +60,7 @@ contract Show is IShow, ShowStorage {
         string memory name,
         string memory description,
         address[] memory artists,
-        Venue memory venue,
+        VenueTypes.Venue memory venue,
         uint256 sellOutThreshold,
         uint256 totalCapacity,
         TicketPrice memory ticketPrice,
@@ -64,16 +68,18 @@ contract Show is IShow, ShowStorage {
     ) public returns (bytes32 showId) {
         // Validation checks
         require(bytes(name).length > 0, "Name is required");
-        require(bytes(venue.location).length > 0, "Venue location is required");
         require(venue.radius > 0, "Venue radius must be greater than 0");
         require(totalCapacity > 0, "Total capacity must be greater than 0");
         require(artists.length > 0, "At least one artist required");
         require(ticketPrice.maxPrice >= ticketPrice.minPrice, "Max ticket price must be greater or equal to min ticket price");
         require(sellOutThreshold >= 0 && sellOutThreshold <= 100, "Sell-out threshold must be between 0 and 100");
+        require(venue.coordinates.lat >= -90 * 10**6 && venue.coordinates.lat <= 90 * 10**6, "Invalid latitude");
+        require(venue.coordinates.lon >= -180 * 10**6 && venue.coordinates.lon <= 180 * 10**6, "Invalid longitude");
+
         validateSplit(split, artists.length);
 
         // Create a proposal ID by hashing the relevant parameters
-        showId = keccak256(abi.encodePacked(msg.sender, artists, venue.location, venue.radius, sellOutThreshold, totalCapacity));
+        showId = keccak256(abi.encodePacked(msg.sender, artists, venue.coordinates.lat, venue.coordinates.lon, venue.radius, sellOutThreshold, totalCapacity));
         uint256 expiry = block.timestamp + 30 days;
 
         // Create the show proposal
@@ -106,8 +112,7 @@ contract Show is IShow, ShowStorage {
     /// @notice Updates the status of a show
     /// @param showId Unique identifier for the show
     /// @param _status New status for the show
-    function updateStatus(bytes32 showId, Status _status) external onlyTicketContract {
-        require(shows[showId].status == Status.Proposed, "Show must be in Proposed status");
+    function updateStatus(bytes32 showId, Status _status) external onlyTicketContract onlyVenueContract {
         shows[showId].status = _status;
         emit StatusUpdated(showId, _status);
     }
@@ -139,32 +144,38 @@ contract Show is IShow, ShowStorage {
         require(totalAmount > 0, "No funds to distribute");
 
         uint256[] memory split = show.split;
-        uint256 totalSplit = 0;
 
-        // Transfer to organizer
+        // Calculate organizer's share
         uint256 organizerShare = totalAmount * split[0] / 100;
-        payable(show.organizer).transfer(organizerShare);
-        totalSplit += organizerShare;
+        pendingWithdrawals[showId][show.organizer] = organizerShare;
 
-        // Transfer to artists according to their specific split
+        // Calculate artists' shares
         for (uint i = 0; i < show.artists.length; i++) {
             uint256 artistShare = totalAmount * split[i + 1] / 100;
-            payable(show.artists[i]).transfer(artistShare);
-            totalSplit += artistShare;
+            pendingWithdrawals[showId][show.artists[i]] = artistShare;
         }
 
-        // Transfer to venue
+        // Calculate venue's share
         uint256 venueShare = totalAmount * split[split.length - 1] / 100;
-        payable(show.venue.wallet).transfer(venueShare);
-        totalSplit += venueShare;
-
-        require(totalSplit == totalAmount, "Split does not match total amount");
+        pendingWithdrawals[showId][show.venue.wallet] = venueShare;
 
         showVault[showId] = 0;
 
         // Update the status
         show.status = Status.Completed;
     }
+
+    function withdraw(bytes32 showId) public {
+        uint256 amount = pendingWithdrawals[showId][msg.sender];
+        require(amount > 0, "No funds to withdraw");
+
+        // Ensure the recipient can't re-entrantly call this function
+        pendingWithdrawals[showId][msg.sender] = 0;
+
+        payable(msg.sender).transfer(amount);
+        emit Withdrawal(showId, msg.sender, amount);
+    }
+
 
     /// @notice Retrieves the details of a show
     /// @param showId Unique identifier for the show
@@ -178,12 +189,12 @@ contract Show is IShow, ShowStorage {
     /// @return totalCapacity Total capacity of the show
     /// @return status Status of the show
     /// @return isActive Whether the show is active
-    function getShowDetails(bytes32 showId) public view returns (
+    function getShowById(bytes32 showId) public view returns (
         string memory name,
         string memory description,
         address organizer,
         address[] memory artists,
-        Venue memory venue,
+        VenueTypes.Venue memory venue,
         TicketPrice memory ticketPrice,
         uint256 sellOutThreshold,
         uint256 totalCapacity,
@@ -235,20 +246,43 @@ contract Show is IShow, ShowStorage {
     }
 
 
+    /// @notice Returns the total number of voters for a specific show, including artists and the organizer.
+    /// @param showId Unique identifier for the show.
+    /// @return Total number of voters (artists + organizer).
     function getNumberOfVoters(bytes32 showId) public view returns (uint256) {
-        // Assuming artists are stored in an array or mapping
         uint256 numberOfArtists = shows[showId].artists.length;
 
         // Adding 1 for the organizer
         return numberOfArtists + 1;
     }
 
+    /// @notice Updates the venue information for a specific show.
+    /// @param showId Unique identifier for the show.
+    /// @param newVenue New venue information to be set.
+    function setVenue(bytes32 showId, VenueTypes.Venue memory newVenue) external onlyVenueContract {
+        // Retrieve the show using the showId
+        Show storage show = shows[showId];
 
-    // Utility functions
+        // Update the venue information
+        show.venue = newVenue;
+
+        // Optionally, you could emit an event to log the change
+        emit VenueUpdated(showId, newVenue);
+    }
+
+
+    /// @notice Checks if the given user is an organizer of the specified show.
+    /// @param user Address of the user to check
+    /// @param showId Unique identifier for the show
+    /// @return true if the user is an organizer, false otherwise
     function isOrganizer(address user, bytes32 showId) public view returns (bool) {
         return shows[showId].organizer == user;
     }
 
+    /// @notice Checks if the given user is an artist in the specified show.
+    /// @param user Address of the user to check
+    /// @param showId Unique identifier for the show
+    /// @return true if the user is an artist, false otherwise
     function isArtist(address user, bytes32 showId) public view returns (bool) {
         return isArtistMapping[showId][user];
     }

@@ -52,7 +52,7 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         ticketOwnership[msg.sender][showId] = true;
 
 
-    showInstance.updateExpiry(showId, block.timestamp + 30 days);
+        showInstance.updateExpiry(showId, block.timestamp + 30 days);
         if (totalTicketsSold[showId] == totalCapacityOfShow(showId)) {
             showInstance.updateStatus(showId, ShowTypes.Status.SoldOut);
         }
@@ -117,7 +117,7 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         uint256 totalCapacity;
         uint256 totalTicketsSoldForShow = totalTicketsSold[showId];
         ShowTypes.Status status;
-        (,,,,,,,totalCapacity,status,) = showInstance.getShowDetails(showId);
+        (,,,,,,,totalCapacity,status,) = showInstance.getShowById(showId);
         require(status != ShowTypes.Status.Accepted && status != ShowTypes.Status.Refunded, "Show is not refundable");
         uint256 percentageSold = (totalTicketsSoldForShow * 100) / totalCapacity;
         uint256 fanStatus = ceilDiv(percentageSold, 10);
@@ -159,22 +159,33 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
     }
 
 
-    // Overridden functions from ERC721 and ERC721URIStorage
-
+    /// @notice Overridden function from ERC721 to handle token URI
+    /// @param tokenId The ID of the token
+    /// @return The URI of the token
     function tokenURI(uint256 tokenId) public view virtual override(ERC721, ERC721URIStorage) returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
         string memory baseURI = _baseTokenURI;
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, Strings.toString(tokenId))) : "";
     }
 
+    /// @notice Overridden function from ERC721 to handle token transfer
+    /// @param from The address transferring the token
+    /// @param to The address receiving the token
+    /// @param tokenId The ID of the token
+    /// @param batchSize The batch size for the transfer
     function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize) internal virtual override(ERC721, ERC721Enumerable) {
         super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
 
+    /// @notice Overridden function from ERC721Enumerable and ERC721URIStorage to support specific interfaces
+    /// @param interfaceId The ID of the interface
+    /// @return true if the interface is supported, false otherwise
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Enumerable, ERC721URIStorage) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
+    /// @notice Overridden function from ERC721 and ERC721URIStorage to handle token burning
+    /// @param tokenId The ID of the token to burn
     function _burn(uint256 tokenId) internal virtual override(ERC721, ERC721URIStorage) {
         super._burn(tokenId);
     }

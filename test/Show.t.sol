@@ -11,7 +11,8 @@ contract ShowTest is Test {
     string constant name = "Test Show";
     string constant description = "A test show description";
     address[] artists;
-    ShowTypes.Venue venue;
+    VenueTypes.Venue venue;
+    VenueTypes.Coordinates coordinates;
     uint256 constant sellOutThreshold = 50;
     uint256 constant totalCapacity = 1000;
     ShowTypes.TicketPrice ticketPrice;
@@ -25,8 +26,11 @@ contract ShowTest is Test {
         artists = new address[](1);
         artists[0] = address(this);
 
+        coordinates.lat = 100;
+        coordinates.lon = 80;
+
         // Set up venue
-        venue = ShowTypes.Venue("Test Venue", "40.730610,-73.935242", 100, totalCapacity, 0x1234567890123456789012345678901234567890);
+        venue = VenueTypes.Venue("Test Venue", coordinates, 100, totalCapacity, 0x1234567890123456789012345678901234567890, 0);
 
         // Set up ticket price
         ticketPrice = ShowTypes.TicketPrice(1 ether, 2 ether);
@@ -51,13 +55,13 @@ contract ShowTest is Test {
         string memory retrievedDescription,
         address retrievedOrganizer,
         address[] memory retrievedArtists,
-        ShowTypes.Venue memory retrievedVenue,
+        VenueTypes.Venue memory retrievedVenue,
         ShowTypes.TicketPrice memory retrievedTicketPrice,
         uint256 retrievedSellOutThreshold,
         uint256 retrievedTotalCapacity,
         ShowTypes.Status retrievedStatus,
         bool retrievedIsActive
-        ) = show.getShowDetails(proposalId);
+        ) = show.getShowById(proposalId);
 
         // Assert show details
         assertEq(retrievedName, name, "Name mismatch");
@@ -65,7 +69,6 @@ contract ShowTest is Test {
         assertEq(retrievedOrganizer, address(this), "Organizer mismatch");
         assertEq(retrievedArtists[0], artists[0], "Artists mismatch");
         assertEq(retrievedVenue.name, venue.name, "Venue name mismatch");
-        assertEq(retrievedVenue.location, venue.location, "Venue location mismatch");
         assertEq(retrievedVenue.radius, venue.radius, "Venue radius mismatch");
         assertEq(retrievedVenue.totalCapacity, venue.totalCapacity, "Venue total capacity mismatch");
         assertEq(retrievedTicketPrice.minPrice, ticketPrice.minPrice, "Min ticket price mismatch");
