@@ -9,9 +9,15 @@ contract SellOutFactory {
     Ticket public ticketInstance;
     Venue public venueInstance;
 
-    function deployContracts() public {
-        // Deploy the Show contract
-        showInstance = new Show();
+    // State variable to store the Sellout Protocol Wallet address
+    address public SELLOUT_PROTOCOL_WALLET;
+
+    constructor() {
+        // Set the Sellout Protocol Wallet address to the deployer's address
+        SELLOUT_PROTOCOL_WALLET = msg.sender;
+
+        // Deploy the Show contract, passing the Sellout Protocol Wallet address
+        showInstance = new Show(SELLOUT_PROTOCOL_WALLET);
 
         // Deploy the Ticket contract, passing the Show contract's address
         ticketInstance = new Ticket(address(showInstance));

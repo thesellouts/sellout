@@ -14,17 +14,9 @@ contract TicketStorage is TicketTypes {
 
     string internal _baseTokenURI; // Base URI for tokens
 
-    // Mapping to associate ticket ID with show ID
-    mapping(uint256 => bytes32) public ticketToShow;
+    uint256 public constant MAX_TICKETS_PER_WALLET = 5; // or any number you choose
 
-    // Mapping to track the total number of tickets sold for each show ID
-    mapping(bytes32 => uint256) public totalTicketsSold;
 
-    // Mapping to store the ticket price paid for each ticket ID
-    mapping(uint256 => uint256) public ticketPricePaid;
-
-    // Mapping to track ticket ownership for each address and show ID
-    mapping(address => mapping(bytes32 => bool)) public ticketOwnership;
 
     /// @notice Internal function to get the next token ID by incrementing the counter
     /// @return The next available token ID

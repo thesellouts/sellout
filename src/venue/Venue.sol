@@ -53,8 +53,9 @@ contract Venue is IVenue, VenueStorage {
         require(proposedDates.length > 0, "At least one proposed date required");
         require(proposedDates.length <= 5, "Proposal must have 5 or less dates");
 
+
         for (uint256 i = 0; i < proposedDates.length; i++) {
-            require(proposedDates[i] > proposalPeriod[showId].endTime + 7 days, "Proposed date must be in the future");
+            require(proposedDates[i] > proposalPeriod[showId].endTime + 60 days, "Proposed date must be 2 months in the future");
         }
 
         if (!proposalPeriod[showId].isPeriodActive) {
@@ -88,7 +89,7 @@ contract Venue is IVenue, VenueStorage {
     /// @param proposalIndex Index of the proposal to vote for.
     function ticketHolderVenueVote(bytes32 showId, uint256 proposalIndex) public {
         require(votingPeriods[showId].isPeriodActive, "Voting period is not active");
-        require(ticketInstance.isTicketOwner(msg.sender, showId), "Not a ticket owner");
+        require(showInstance.isTicketOwner(msg.sender, showId), "Not a ticket owner");
         require(!hasTicketOwnerVoted[showId][msg.sender], "Already voted");
         showProposals[showId][proposalIndex].votes++;
         hasTicketOwnerVoted[showId][msg.sender] = true;

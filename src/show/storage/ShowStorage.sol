@@ -8,13 +8,11 @@ import "../types/ShowTypes.sol"; // Importing ShowTypes
 /// @notice This contract provides storage for show-related data, including ticket mapping, total tickets sold, show details, and more.
 
 contract ShowStorage is ShowTypes {
-    string internal _baseTokenURI; // Base URI for tokens
+    // Base URI for tokens
+    string internal _baseTokenURI;
 
-    // Mapping to associate ticket ID with show ID
-    mapping(uint256 => uint256) public ticketToShow;
-
-    // Mapping to track the total number of tickets sold for each show ID
-    mapping(uint256 => uint256) public totalTicketsSold;
+    // Counter for the total number of shows
+    uint256 public showCount;
 
     // Mapping to store show details by show ID
     mapping(bytes32 => Show) public shows;
@@ -31,8 +29,15 @@ contract ShowStorage is ShowTypes {
     // Mapping to track pending withdrawals for each show and address
     mapping(bytes32 => mapping(address => uint256)) public pendingWithdrawals;
 
-    uint256 public showCount; // Counter for the total number of shows
+    // Mapping to track the total number of tickets sold for each show ID
+    mapping(bytes32 => uint256) public totalTicketsSold;
 
-    // Constant address for the Sellout Protocol Wallet
-    address constant SELLOUT_PROTOCOL_WALLET = 0x1234567890123456789012345678901234567890;
+    // Mapping to store the ticket price paid for each ticket ID
+    mapping(bytes32 => mapping(uint256 => uint256)) public ticketPricePaid;
+
+    // Mapping to track ticket ownership for each address and show ID
+    mapping(address => mapping(bytes32 => bool)) public ticketOwnership;
+
+    // Mapping to associate wallet addresses with show IDs and token IDs
+    mapping(bytes32 => mapping(address => uint256[])) public walletToShowToTokenIds;
 }

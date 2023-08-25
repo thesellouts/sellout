@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./ITicket.sol";
 import "./storage/TicketStorage.sol";
 import "../show/Show.sol";
+import "../show/types/ShowTypes.sol";
+
 
 /// @title SellOut
 /// @author taayyohh
@@ -20,23 +22,25 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         showInstance = Show(_showContractAddress);
     }
 
-    /// @notice Set the base URI for the NFT metadata
-    /// @param baseURI The base URI string
-    function setBaseURI(string memory baseURI) external {
-        _baseTokenURI = baseURI;
+    modifier onlyShowContract() {
+        require(msg.sender == address(showInstance), "Only the Show contract can call this function");
+        _;
     }
+
 
     /// @notice Purchase a ticket for a specific show
     /// @param showId The ID of the show
     function purchaseTicket(bytes32 showId) public payable nonReentrant {
         require(showInstance.getShowStatus(showId) == ShowTypes.Status.Proposed, "Show is not available for ticket purchase");
+        require(showInstance.getTotalTicketsSold(showId) < showInstance.getTotalCapacity(showId), "Sold out");
+        require(showInstance.getWalletTokenIds(showId, msg.sender).length < MAX_TICKETS_PER_WALLET, "Max tickets reached");
+
         showInstance.checkAndUpdateExpiry(showId);
 
         require(showInstance.getShowStatus(showId) != ShowTypes.Status.Expired, "Show has expired");
-        require(totalTicketsSold[showId] < totalCapacityOfShow(showId), "Sold out");
 
         uint256 fanStatus = determineFanStatus(showId);
-        Show.TicketPrice memory ticketPrice = showInstance.getTicketPrice(showId);
+        ShowTypes.TicketPrice memory ticketPrice = showInstance.getTicketPrice(showId);
 
         uint256 calculatedTicketPrice = calculateTicketPrice(fanStatus, ticketPrice.minPrice, ticketPrice.maxPrice);
 
@@ -46,41 +50,22 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         string memory generatedTokenURI = generateTokenURI(fanStatus);
         uint256 tokenId = _mintNFT(msg.sender, generatedTokenURI);
 
-        ticketToShow[tokenId] = showId;
-        ticketPricePaid[tokenId] = msg.value;
-        totalTicketsSold[showId]++;
-        ticketOwnership[msg.sender][showId] = true;
-
+        showInstance.addTokenIdToWallet(showId, msg.sender, tokenId);
+        showInstance.setTicketPricePaid(showId, tokenId, msg.value);
+        showInstance.incrementTotalTicketsSold(showId);
+        showInstance.setTicketOwnership(msg.sender, showId, true);
 
         showInstance.updateExpiry(showId, block.timestamp + 30 days);
-        if (totalTicketsSold[showId] == totalCapacityOfShow(showId)) {
+        uint256 proposalThresholdValue = (showInstance.getTotalCapacity(showId) * showInstance.getSellOutThreshold(showId)) / 100;
+
+        // Check if the total tickets sold is greater than or equal to the proposal threshold
+        if (showInstance.getTotalTicketsSold(showId) >= proposalThresholdValue) {
             showInstance.updateStatus(showId, ShowTypes.Status.SoldOut);
         }
+
         emit TicketPurchased(msg.sender, showId, tokenId, fanStatus);
     }
 
-    /// @notice Refund a ticket and get the amount paid back
-    /// @param ticketId The ID of the ticket to refund
-    function refundTicket(uint256 ticketId) public nonReentrant {
-        require(ownerOf(ticketId) == msg.sender, "You don't own this ticket");
-
-        bytes32 showId = ticketToShow[ticketId];
-        uint256 refundAmount = ticketPricePaid[ticketId];
-        require(address(this).balance >= refundAmount, "Insufficient funds for refund");
-
-        payable(msg.sender).transfer(refundAmount);
-        totalTicketsSold[showId]--;
-        if (totalTicketsSold[showId] <= showInstance.getSellOutThreshold(showId)) {
-            showInstance.updateStatus(showId, ShowTypes.Status.Proposed);
-        }
-        ticketOwnership[msg.sender][showId] = false;
-
-
-    delete ticketToShow[ticketId];
-        delete ticketPricePaid[ticketId];
-        _burn(ticketId);
-        emit TicketRefunded(msg.sender, showId, ticketId);
-    }
 
     /// @notice Internal function to mint a new NFT
     /// @param to The address to mint the NFT to
@@ -99,9 +84,10 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
     /// @param maxPrice The maximum price of the ticket
     /// @return The calculated ticket price
     function calculateTicketPrice(uint256 fanStatus, uint256 minPrice, uint256 maxPrice) internal pure returns (uint256) {
-        require(fanStatus >= 0 && fanStatus <= 10, "Invalid fan status");
+        require(fanStatus >= 1 && fanStatus <= 10, "Invalid fan status");
         require(maxPrice >= minPrice, "Max price must be greater or equal to min price");
-        if (fanStatus == 1) {
+
+        if (fanStatus == 1 || maxPrice == minPrice) {
             return minPrice;
         } else {
             uint256 priceRange = maxPrice - minPrice;
@@ -110,22 +96,26 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         }
     }
 
+
     /// @notice Determine the fan status based on the percentage of tickets sold
     /// @param showId The ID of the show
     /// @return The fan status (1-10)
     function determineFanStatus(bytes32 showId) internal view returns (uint256) {
         uint256 totalCapacity;
-        uint256 totalTicketsSoldForShow = totalTicketsSold[showId];
+        uint256 totalTicketsSoldForShow = showInstance.getTotalTicketsSold(showId);
         ShowTypes.Status status;
         (,,,,,,,totalCapacity,status,) = showInstance.getShowById(showId);
         require(status != ShowTypes.Status.Accepted && status != ShowTypes.Status.Refunded, "Show is not refundable");
         uint256 percentageSold = (totalTicketsSoldForShow * 100) / totalCapacity;
         uint256 fanStatus = ceilDiv(percentageSold, 10);
-        if (fanStatus > 10) {
+        if (fanStatus == 0) {
+            fanStatus = 1;
+        } else if (fanStatus > 10) {
             fanStatus = 10;
         }
         return fanStatus;
     }
+
 
     /// @notice Calculate the ceiling division of two numbers
     /// @param a The dividend
@@ -133,6 +123,13 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
     /// @return The result of the division, rounded up
     function ceilDiv(uint256 a, uint256 b) internal pure returns (uint256) {
         return (a + b - 1) / b;
+    }
+
+
+    /// @notice Overridden function from ERC721 set the base URI for the NFT metadata
+    /// @param baseURI The base URI string
+    function setBaseURI(string memory baseURI) external {
+        _baseTokenURI = baseURI;
     }
 
     /// @notice Generate the token URI based on fan status
@@ -143,19 +140,12 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         return string(abi.encodePacked(baseURI, "fanStatus/", Strings.toString(fanStatus)));
     }
 
-    /// @notice Get the total capacity of a show
-    /// @param showId The ID of the show
-    /// @return The total capacity of the show
-    function totalCapacityOfShow(bytes32 showId) public view returns (uint256) {
-        return showInstance.getTotalCapacity(showId);
+    function burnToken(uint256 tokenId) public onlyShowContract {
+        _burn(tokenId);
     }
 
-    /// @notice Check if an address owns a ticket for a specific show
-    /// @param owner The address to check
-    /// @param showId The ID of the show
-    /// @return true if the address owns a ticket for the show, false otherwise
-    function isTicketOwner(address owner, bytes32 showId) public view returns (bool) {
-        return ticketOwnership[owner][showId];
+    function checkAndUpdateExpiry(bytes32 showId) public {
+        showInstance.checkAndUpdateExpiry(showId);
     }
 
 
@@ -184,9 +174,10 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         return super.supportsInterface(interfaceId);
     }
 
+
     /// @notice Overridden function from ERC721 and ERC721URIStorage to handle token burning
     /// @param tokenId The ID of the token to burn
-    function _burn(uint256 tokenId) internal virtual override(ERC721, ERC721URIStorage) {
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) onlyShowContract {
         super._burn(tokenId);
     }
 }

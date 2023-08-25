@@ -3,14 +3,25 @@ pragma solidity 0.8.16;
 
 import "./IShow.sol";
 import "./storage/ShowStorage.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "../ticket/Ticket.sol";
 
-/// @author fictreal
 /// @title Show
+/// @author fiction
 /// @notice Manages show proposals, statuses, and fund distribution
-contract Show is IShow, ShowStorage {
+contract Show is IShow, ShowStorage, ReentrancyGuard {
+    Ticket public ticketInstance;
     address public ticketContract; // Address of the Ticket contract
     address public venueContract; // Address of the Venue contract
     bool private areContractsSet = false; // To ensure the addresses are set only once
+
+    // Add a state variable to store the Sellout Protocol Wallet address
+    address public SELLOUT_PROTOCOL_WALLET;
+
+    constructor(address _selloutProtocolWallet) {
+        // Store the Sellout Protocol Wallet address
+        SELLOUT_PROTOCOL_WALLET = _selloutProtocolWallet;
+    }
 
     /// @notice Sets the Ticket and Venue contract addresses
     /// @param _ticketContract Address of the Ticket contract
@@ -19,12 +30,13 @@ contract Show is IShow, ShowStorage {
         require(!areContractsSet, "Ticket and Venue contract addresses already set");
         ticketContract = _ticketContract;
         venueContract = _venueContract;
+        ticketInstance = Ticket(_ticketContract); // Create an instance of the ticket contract
         areContractsSet = true;
     }
 
     /// @notice Deposits Ether into the vault for a specific show
     /// @param showId Unique identifier for the show
-    function depositToVault(bytes32 showId) public payable onlyTicketContract onlyVenueContract {
+    function depositToVault(bytes32 showId) external payable onlyProtocol {
         showVault[showId] += msg.value;
     }
 
@@ -39,6 +51,15 @@ contract Show is IShow, ShowStorage {
     }
     modifier onlyVenueContract() {
         require(msg.sender == venueContract, "Only the Ticket contract can call this function");
+        _;
+    }
+    modifier onlyProtocol() {
+        require(
+            msg.sender == venueContract ||
+            msg.sender == ticketContract ||
+            msg.sender == address(this),
+            "Only the Venue, Ticket contract, or this contract can call this function"
+        );
         _;
     }
     modifier isExpired(bytes32 showId) {
@@ -61,7 +82,7 @@ contract Show is IShow, ShowStorage {
         string memory description,
         address[] memory artists,
         VenueTypes.Venue memory venue,
-        uint256 sellOutThreshold,
+        uint8 sellOutThreshold,
         uint256 totalCapacity,
         TicketPrice memory ticketPrice,
         uint256[] memory split // organizer, artists[], venue
@@ -109,13 +130,6 @@ contract Show is IShow, ShowStorage {
         return showId;
     }
 
-    /// @notice Updates the status of a show
-    /// @param showId Unique identifier for the show
-    /// @param _status New status for the show
-    function updateStatus(bytes32 showId, Status _status) external onlyTicketContract onlyVenueContract {
-        shows[showId].status = _status;
-        emit StatusUpdated(showId, _status);
-    }
 
     /// @notice Updates the expiry time of a show
     /// @param showId Unique identifier for the show
@@ -128,10 +142,12 @@ contract Show is IShow, ShowStorage {
 
     /// @notice Cancels a sold-out show
     /// @param showId Unique identifier for the show
+    /// TODO:
     function cancelShow(bytes32 showId) public onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
-        require(show.status == Status.SoldOut, "Show must be SoldOut");
+        require(show.status == Status.SoldOut || show.status == Status.Accepted || show.status == Status.Upcoming, "Show must be Pending");
         show.status = Status.Cancelled;
+        //TODO:: maybe consider safegaurds here, x percent need to cancel
     }
 
     /// @notice Completes a show and distributes funds
@@ -144,6 +160,13 @@ contract Show is IShow, ShowStorage {
         require(totalAmount > 0, "No funds to distribute");
 
         uint256[] memory split = show.split;
+
+        // Calculate protocol's share (1%)
+        uint256 protocolShare = totalAmount / 100;
+        pendingWithdrawals[showId][SELLOUT_PROTOCOL_WALLET] = protocolShare;
+
+        // Reduce totalAmount by protocol's share
+        totalAmount -= protocolShare;
 
         // Calculate organizer's share
         uint256 organizerShare = totalAmount * split[0] / 100;
@@ -165,7 +188,12 @@ contract Show is IShow, ShowStorage {
         show.status = Status.Completed;
     }
 
-    function withdraw(bytes32 showId) public {
+
+    function payout(bytes32 showId) public {
+        Show storage show = shows[showId];
+        require(show.status == Status.Completed, "Show must be Completed");
+        require(block.timestamp == show.venue.showDate + 2 days, "Show cool down has not ended");
+
         uint256 amount = pendingWithdrawals[showId][msg.sender];
         require(amount > 0, "No funds to withdraw");
 
@@ -174,6 +202,67 @@ contract Show is IShow, ShowStorage {
 
         payable(msg.sender).transfer(amount);
         emit Withdrawal(showId, msg.sender, amount);
+    }
+
+    /// @notice Updates the status of a show
+    /// @param showId Unique identifier for the show
+    /// @param _status New status for the show
+    function updateStatus(bytes32 showId, Status _status) public onlyProtocol {
+        shows[showId].status = _status;
+        emit StatusUpdated(showId, _status);
+    }
+
+    function refundTicket(bytes32 showId) public {
+        require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Cancelled || shows[showId].status == Status.Expired, "Funds are locked");
+        require(isTicketOwner(msg.sender, showId), "User does not own a ticket for this show");
+
+        uint256[] memory ticketIds = getWalletTokenIds(showId, msg.sender);
+        require(ticketIds.length > 0, "No tickets to refund");
+
+        uint256 refundAmount = 0;
+        for (uint256 i = 0; i < ticketIds.length; i++) {
+            uint256 ticketId = ticketIds[i];
+            refundAmount += getTicketPricePaid(showId, ticketId);
+
+            // Update total tickets sold
+            require(totalTicketsSold[showId] > 0, "No tickets sold for this show");
+            totalTicketsSold[showId]--;
+
+            // Delete ticket information
+            removeTicket(showId, ticketId, msg.sender);
+        }
+
+        uint256 proposalThresholdValue = (getSellOutThreshold(showId) * getTotalCapacity(showId)) / 100;
+        require(showVault[showId] >= refundAmount, "Insufficient funds in show vault");
+
+        if (totalTicketsSold[showId] <= proposalThresholdValue) {
+            shows[showId].status = ShowTypes.Status.Proposed;
+            emit StatusUpdated(showId, ShowTypes.Status.Proposed);
+        }
+
+        // Update the show vault and pending withdrawals
+        showVault[showId] -= refundAmount;
+        pendingWithdrawals[showId][msg.sender] += refundAmount;
+
+        emit TicketRefunded(msg.sender, showId, refundAmount);
+    }
+
+    function removeTicket(bytes32 showId, uint256 ticketId, address ticketOwner) internal {
+        require(isTicketOwner(ticketOwner, showId), "Not the owner of the ticket");
+        delete ticketPricePaid[showId][ticketId];
+        ticketInstance.burnToken(ticketId);
+    }
+
+    function withdrawRefund(bytes32 showId) public nonReentrant {
+        uint256 amount = pendingWithdrawals[showId][msg.sender];
+        require(amount > 0, "No funds to withdraw");
+        require(address(this).balance >= amount, "Insufficient funds in the contract");
+
+        // Ensure the refund amount is set to 0 before transferring
+        pendingWithdrawals[showId][msg.sender] = 0;
+
+        payable(msg.sender).transfer(amount);
+        emit RefundWithdrawn(msg.sender, showId, amount);
     }
 
 
@@ -246,6 +335,25 @@ contract Show is IShow, ShowStorage {
     }
 
 
+    /// @notice Retrieves the status of a show
+    /// @param showId Unique identifier for the show
+    /// @return total tickets sold
+    function getTotalTicketsSold(bytes32 showId) public view returns (uint256) {
+        return totalTicketsSold[showId];
+    }
+
+    function getWalletTokenIds(bytes32 showId, address wallet) public view returns (uint256[] memory) {
+        return walletToShowToTokenIds[showId][wallet];
+    }
+
+    /// @notice Check if an address owns a ticket for a specific show
+    /// @param owner The address to check
+    /// @param showId The ID of the show
+    /// @return true if the address owns a ticket for the show, false otherwise
+    function isTicketOwner(address owner, bytes32 showId) public view returns (bool) {
+        return ticketOwnership[owner][showId];
+    }
+
     /// @notice Returns the total number of voters for a specific show, including artists and the organizer.
     /// @param showId Unique identifier for the show.
     /// @return Total number of voters (artists + organizer).
@@ -255,6 +363,7 @@ contract Show is IShow, ShowStorage {
         // Adding 1 for the organizer
         return numberOfArtists + 1;
     }
+
 
     /// @notice Updates the venue information for a specific show.
     /// @param showId Unique identifier for the show.
@@ -302,11 +411,31 @@ contract Show is IShow, ShowStorage {
 
     /// @notice Checks and updates the expiry status of a show
     /// @param showId Unique identifier for the show
-    function checkAndUpdateExpiry(bytes32 showId) external onlyTicketContract {
+    function checkAndUpdateExpiry(bytes32 showId) public onlyTicketContract {
         Show storage show = shows[showId];
         if (block.timestamp >= show.expiry && show.status != Status.Expired) {
             show.status = Status.Expired;
             emit ShowExpired(showId);
         }
+    }
+
+    function setTicketPricePaid(bytes32 showId, uint256 ticketId, uint256 price) external onlyTicketContract {
+        ticketPricePaid[showId][ticketId] = price;
+    }
+
+    function incrementTotalTicketsSold(bytes32 showId) external onlyTicketContract {
+        totalTicketsSold[showId]++;
+    }
+
+    function setTicketOwnership(address user, bytes32 showId, bool owns) external onlyTicketContract {
+        ticketOwnership[user][showId] = owns;
+    }
+
+    function addTokenIdToWallet(bytes32 showId, address wallet, uint256 tokenId) external onlyTicketContract {
+        walletToShowToTokenIds[showId][wallet].push(tokenId);
+    }
+
+    function getTicketPricePaid(bytes32 showId, uint256 ticketId) public view returns (uint256) {
+        return ticketPricePaid[showId][ticketId];
     }
 }
