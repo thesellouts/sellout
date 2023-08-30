@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./ITicket.sol";
-import "./storage/TicketStorage.sol";
-import "../show/Show.sol";
-import "../show/types/ShowTypes.sol";
-
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { ERC721Enumerable, ERC721 } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import { ERC721URIStorage } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { ITicket } from "./ITicket.sol";
+import { TicketStorage } from "./storage/TicketStorage.sol";
+import { Show } from "../show/Show.sol";
+import { ShowTypes } from "../show/types/ShowTypes.sol";
 
 /// @title SellOut
 /// @author taayyohh
@@ -18,15 +18,21 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
 
     /// @notice Constructor to initialize the contract with the Show contract address
     /// @param _showContractAddress The address of the Show contract
-    constructor(address _showContractAddress) ERC721("SellOuts", "SELLOUT") {
+    constructor(address _showContractAddress) ERC721("The SellOuts", "SELLOUT") {
         showInstance = Show(_showContractAddress);
     }
 
+    /// @notice Modifier to ensure only the Show contract can call certain functions
     modifier onlyShowContract() {
         require(msg.sender == address(showInstance), "Only the Show contract can call this function");
         _;
     }
 
+    // Modifier to restrict access to SELLOUT_PROTOCOL_WALLET only
+//    modifier onlySelloutProtocolWallet() {
+//        require(msg.sender == SELLOUT_PROTOCOL_WALLET, "Not authorized");
+//        _;
+//    }
 
     /// @notice Purchase a ticket for a specific show
     /// @param showId The ID of the show
@@ -52,10 +58,9 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
 
         showInstance.addTokenIdToWallet(showId, msg.sender, tokenId);
         showInstance.setTicketPricePaid(showId, tokenId, msg.value);
-        showInstance.incrementTotalTicketsSold(showId);
         showInstance.setTicketOwnership(msg.sender, showId, true);
-
         showInstance.updateExpiry(showId, block.timestamp + 30 days);
+
         uint256 proposalThresholdValue = (showInstance.getTotalCapacity(showId) * showInstance.getSellOutThreshold(showId)) / 100;
 
         // Check if the total tickets sold is greater than or equal to the proposal threshold
@@ -65,7 +70,6 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
 
         emit TicketPurchased(msg.sender, showId, tokenId, fanStatus);
     }
-
 
     /// @notice Internal function to mint a new NFT
     /// @param to The address to mint the NFT to
@@ -96,35 +100,17 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         }
     }
 
-
     /// @notice Determine the fan status based on the percentage of tickets sold
     /// @param showId The ID of the show
     /// @return The fan status (1-10)
     function determineFanStatus(bytes32 showId) internal view returns (uint256) {
-        uint256 totalCapacity;
+        uint256 totalCapacity = showInstance.getTotalCapacity(showId);
         uint256 totalTicketsSoldForShow = showInstance.getTotalTicketsSold(showId);
-        ShowTypes.Status status;
-        (,,,,,,,totalCapacity,status,) = showInstance.getShowById(showId);
-        require(status != ShowTypes.Status.Accepted && status != ShowTypes.Status.Refunded, "Show is not refundable");
         uint256 percentageSold = (totalTicketsSoldForShow * 100) / totalCapacity;
-        uint256 fanStatus = ceilDiv(percentageSold, 10);
-        if (fanStatus == 0) {
-            fanStatus = 1;
-        } else if (fanStatus > 10) {
-            fanStatus = 10;
-        }
-        return fanStatus;
+
+        // Inline ceilDiv logic
+        return (percentageSold + 10 - 1) / 10;
     }
-
-
-    /// @notice Calculate the ceiling division of two numbers
-    /// @param a The dividend
-    /// @param b The divisor
-    /// @return The result of the division, rounded up
-    function ceilDiv(uint256 a, uint256 b) internal pure returns (uint256) {
-        return (a + b - 1) / b;
-    }
-
 
     /// @notice Overridden function from ERC721 set the base URI for the NFT metadata
     /// @param baseURI The base URI string
@@ -135,24 +121,23 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
     /// @notice Generate the token URI based on fan status
     /// @param fanStatus The fan status (1-10)
     /// @return The generated token URI
+    ///TODO: make this more generative
     function generateTokenURI(uint256 fanStatus) internal pure returns (string memory) {
-        string memory baseURI = "https://your-base-uri.com/";
-        return string(abi.encodePacked(baseURI, "fanStatus/", Strings.toString(fanStatus)));
+        string memory baseURI = "https://sellout.lucid.haus/";
+        return string(abi.encodePacked(baseURI, "pfp/", Strings.toString(fanStatus)));
     }
 
+    /// @notice Burns a specific token, removing it from circulation
+    /// @param tokenId The ID of the token to be burned
     function burnToken(uint256 tokenId) public onlyShowContract {
         _burn(tokenId);
-    }
-
-    function checkAndUpdateExpiry(bytes32 showId) public {
-        showInstance.checkAndUpdateExpiry(showId);
     }
 
 
     /// @notice Overridden function from ERC721 to handle token URI
     /// @param tokenId The ID of the token
     /// @return The URI of the token
-    function tokenURI(uint256 tokenId) public view virtual override(ERC721, ERC721URIStorage) returns (string memory) {
+    function tokenURI(uint256 tokenId) public view virtual override(ERC721, ERC721URIStorage,ITicket) returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
         string memory baseURI = _baseTokenURI;
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, Strings.toString(tokenId))) : "";
@@ -173,7 +158,6 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Enumerable, ERC721URIStorage) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
-
 
     /// @notice Overridden function from ERC721 and ERC721URIStorage to handle token burning
     /// @param tokenId The ID of the token to burn

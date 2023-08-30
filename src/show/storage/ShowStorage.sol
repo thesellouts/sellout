@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "../types/ShowTypes.sol"; // Importing ShowTypes
+import { ShowTypes } from "../types/ShowTypes.sol";
 
 /// @title ShowStorageV1
 /// @author taayyohh

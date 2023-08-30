@@ -89,7 +89,7 @@ contract TestTicket is Test {
         uint256 initialBalance = showInstance.pendingWithdrawals(showId, msg.sender);
 
         // Refund the ticket
-        showInstance.refundTicket(showId);
+        showInstance.refundTickets(showId);
 
         // Validate the refund amount
         uint256 refundAmount = showInstance.getTicketPricePaid(showId, ticketId);

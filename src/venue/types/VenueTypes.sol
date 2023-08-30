@@ -49,5 +49,4 @@ interface VenueTypes {
         uint256 endTime; // End time of the date voting period
         bool isPeriodActive; // Whether the date voting period is active or not
     }
-
 }

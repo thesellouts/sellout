@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "../show/Show.sol";
-import "../show/types/ShowTypes.sol";
-import "./storage/VenueStorage.sol";
-import "./IVenue.sol";
-import "../ticket/Ticket.sol";
+import { Show } from "../show/Show.sol";
+import { ShowTypes } from "../show/storage/ShowStorage.sol";
+import { VenueStorage, VenueTypes } from "./storage/VenueStorage.sol";
+import { IVenue } from "./IVenue.sol";
+import { Ticket } from "../ticket/Ticket.sol";
 
 /// @title Venue Contract
+/// @author taayyohh
 /// @notice This contract manages the venue proposals, voting, and acceptance for shows.
 contract Venue is IVenue, VenueStorage {
     Show public showInstance;
@@ -53,7 +54,6 @@ contract Venue is IVenue, VenueStorage {
         require(proposedDates.length > 0, "At least one proposed date required");
         require(proposedDates.length <= 5, "Proposal must have 5 or less dates");
 
-
         for (uint256 i = 0; i < proposedDates.length; i++) {
             require(proposedDates[i] > proposalPeriod[showId].endTime + 60 days, "Proposed date must be 2 months in the future");
         }
@@ -88,6 +88,11 @@ contract Venue is IVenue, VenueStorage {
     /// @param showId Unique identifier for the show.
     /// @param proposalIndex Index of the proposal to vote for.
     function ticketHolderVenueVote(bytes32 showId, uint256 proposalIndex) public {
+        // If the voting period has never been started (endTime is 0) and is not active, start it
+        if (votingPeriods[showId].endTime == 0 && !votingPeriods[showId].isPeriodActive) {
+            startPublicVotingPeriod(showId);
+        }
+
         require(votingPeriods[showId].isPeriodActive, "Voting period is not active");
         require(showInstance.isTicketOwner(msg.sender, showId), "Not a ticket owner");
         require(!hasTicketOwnerVoted[showId][msg.sender], "Already voted");
@@ -150,117 +155,41 @@ contract Venue is IVenue, VenueStorage {
         }
     }
 
+    /// @notice Starts the proposal period for a show.
+    /// @dev Sets the proposal period as active and sets the end time to 2 weeks from the current timestamp.
+    /// @param showId Unique identifier for the show.
+    function startProposalPeriod(bytes32 showId) internal {
+        proposalPeriod[showId].isPeriodActive = true;
+        proposalPeriod[showId].endTime = block.timestamp + 14 days; // 2 weeks
+        emit ProposalPeriodStarted(showId, proposalPeriod[showId].endTime);
+    }
+
+    /// @notice Starts the public voting period for a show.
+    /// @dev Sets the voting period as active and sets the end time to 1 week from the current timestamp.
+    /// @param showId Unique identifier for the show.
+    function startPublicVotingPeriod(bytes32 showId) internal {
+        votingPeriods[showId].isPeriodActive = true;
+        votingPeriods[showId].endTime = block.timestamp + 7 days; // 1 week
+        emit PublicVotingPeriodStarted(showId, votingPeriods[showId].endTime);
+    }
+
     /// @notice Accepts a proposal after voting has ended.
+    /// @dev Sets the proposal as accepted and updates the selected proposal index.
     /// @param showId Unique identifier for the show.
     /// @param proposalIndex Index of the proposal to accept.
     function acceptProposal(bytes32 showId, uint256 proposalIndex) internal {
-        require(block.timestamp > votingPeriods[showId].endTime, "Voting period has not ended");
-        Proposal storage proposal = showProposals[showId][proposalIndex];
-        proposal.accepted = true;
-        showInstance.updateStatus(showId, ShowTypes.Status.Accepted);
+        showProposals[showId][proposalIndex].accepted = true;
+        selectedProposalIndex[showId] = proposalIndex;
         emit ProposalAccepted(showId, proposalIndex);
     }
 
     /// @notice Accepts a proposed date after date voting has ended.
+    /// @dev Updates the selected date for the show.
     /// @param showId Unique identifier for the show.
-    /// @param dateIndex Index of the date to accept.
-    function acceptDate(bytes32 showId, uint256 dateIndex) internal {
-        require(showInstance.getShowStatus(showId) == ShowTypes.Status.Accepted, "Show must be Accepted");
-        uint256 acceptedDate = showProposals[showId][selectedProposalIndex[showId]].proposedDates[dateIndex];
-        selectedDate[showId] = acceptedDate;
-
-        // Assuming proposalIndex is the index of the accepted proposal
-        uint256 proposalIndex = selectedProposalIndex[showId];
-        Proposal storage proposal = showProposals[showId][proposalIndex];
-
-        // Setting the showDate for the accepted venue
-        proposal.venue.showDate = acceptedDate;
-        showInstance.setVenue(showId, proposal.venue);
-        showInstance.updateStatus(showId, ShowTypes.Status.Upcoming);
-
-        // Transferring funds to the Show contract if bribe exists
-        if (proposal.bribe > 0) {
-            payable(address(showInstance)).transfer(proposal.bribe);
-        }
-        calculateRefunds(showId);
-        emit DateAccepted(showId, acceptedDate);
+    /// @param date The proposed date to accept.
+    function acceptDate(bytes32 showId, uint256 date) internal {
+        selectedDate[showId] = date;
+        emit DateAccepted(showId, date);
     }
 
-    /// @notice Starts the proposal period for a show.
-    /// @param showId Unique identifier for the show.
-    function startProposalPeriod(bytes32 showId) public onlyOrganizer(showId) {
-        require(showInstance.getShowStatus(showId) == ShowTypes.Status.SoldOut, "Show must be SoldOut");
-        proposalPeriod[showId] = ProposalPeriod(block.timestamp + 7 days, true);
-    }
-
-    /// @notice Starts the voting period for a show.
-    /// @param showId Unique identifier for the show.
-    function startVotingPeriod(bytes32 showId) public onlyOrganizer(showId) {
-        require(block.timestamp > proposalPeriod[showId].endTime, "Proposal period has not ended");
-        votingPeriods[showId] = VotingPeriod(block.timestamp + 3 days, true);
-    }
-
-    /// @notice Starts the date voting period for a show.
-    /// @param showId Unique identifier for the show.
-    function startDateVotingPeriod(bytes32 showId) public {
-        require(showProposals[showId][selectedProposalIndex[showId]].accepted, "Venue must be selected");
-        dateVotingPeriods[showId] = DateVotingPeriod(block.timestamp + 3 days, true);
-    }
-
-    /// @notice Calculates refunds for all rejected proposals.
-    /// @param showId Unique identifier for the show.
-    function calculateRefunds(bytes32 showId) internal {
-        Proposal[] storage proposals = showProposals[showId];
-
-        for (uint256 i = 0; i < proposals.length; i++) {
-            Proposal storage proposal = proposals[i];
-
-            if (!proposal.accepted) {
-                // Add the bribe to the refund owed to the proposer
-                refunds[proposal.proposer] += proposal.bribe;
-
-                // Clear the bribe from the proposal
-                proposal.bribe = 0;
-            }
-        }
-    }
-
-    /// @notice Allows proposers to withdraw their refunds.
-    function withdrawRefund() public {
-        uint256 refundAmount = refunds[msg.sender];
-
-        require(refundAmount > 0, "No refund owed");
-
-        // Clear the refund before sending to prevent reentrancy attacks
-        refunds[msg.sender] = 0;
-
-        // Send the refund
-        payable(msg.sender).transfer(refundAmount);
-
-        emit RefundWithdrawn(msg.sender, refundAmount);
-    }
-
-    /// @notice Returns all proposals for a specific show.
-    /// @param showId Unique identifier for the show.
-    /// @return Array of proposals.
-    function getProposals(bytes32 showId) public view returns (Proposal[] memory) {
-        return showProposals[showId];
-    }
-
-    /// @notice Returns a specific proposal by index for a specific show.
-    /// @param showId Unique identifier for the show.
-    /// @param proposalIndex Index of the proposal.
-    /// @return Proposal object.
-    function getProposalById(bytes32 showId, uint256 proposalIndex) public view returns (Proposal memory) {
-        require(proposalIndex < showProposals[showId].length, "Invalid proposal index");
-        return showProposals[showId][proposalIndex];
-    }
-
-    /// @notice Checks if a user has voted for a specific show.
-    /// @param showId Unique identifier for the show.
-    /// @param user Address of the user.
-    /// @return Boolean indicating if the user has voted.
-    function hasUserVoted(bytes32 showId, address user) public view returns (bool) {
-        return hasVoted[showId][user];
-    }
 }

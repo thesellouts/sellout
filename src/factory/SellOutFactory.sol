@@ -1,8 +1,8 @@
 pragma solidity 0.8.16;
 
-import "../show/Show.sol";
-import "../ticket/Ticket.sol";
-import "../venue/Venue.sol";
+import { Show } from "../show/Show.sol";
+import { Ticket } from "../ticket/Ticket.sol";
+import { Venue } from "../venue/Venue.sol";
 
 contract SellOutFactory {
     Show public showInstance;

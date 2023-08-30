@@ -73,7 +73,7 @@ contract TestShow is Test {
         vm.warp(block.timestamp + 31 days);
 
         // Simulate the expiry check
-        ticketInstance.checkAndUpdateExpiry(showId);
+//        ticketInstance.checkAndUpdateExpiry(showId);
 
         // Validate that the show status is "Expired"
         Show.Status status = showInstance.getShowStatus(showId);

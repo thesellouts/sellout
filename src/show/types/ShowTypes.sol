@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
-import "../../venue/types/VenueTypes.sol"; // Importing VenueTypes
+import { VenueTypes } from "../../venue/storage/VenueStorage.sol";
 
 /// @title ShowTypes
 /// @author taayyohh
