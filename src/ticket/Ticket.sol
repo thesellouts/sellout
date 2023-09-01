@@ -108,9 +108,17 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         uint256 totalTicketsSoldForShow = showInstance.getTotalTicketsSold(showId);
         uint256 percentageSold = (totalTicketsSoldForShow * 100) / totalCapacity;
 
-        // Inline ceilDiv logic
-        return (percentageSold + 10 - 1) / 10;
+        // Calculate the fan status, ensuring it's at least 1
+        uint256 fanStatus = (percentageSold + 10 - 1) / 10;
+
+        // Ensure the fan status is at least 1
+        if (fanStatus < 1) {
+            fanStatus = 1;
+        }
+
+        return fanStatus;
     }
+
 
     /// @notice Overridden function from ERC721 set the base URI for the NFT metadata
     /// @param baseURI The base URI string
