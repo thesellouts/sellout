@@ -39,4 +39,5 @@ contract SellOutFactory {
         // Linking contracts together as required
         showInstance.setProtocolAddresses(address(ticketInstance), address(venueInstance), address(referralModuleInstance));
     }
+
 }
