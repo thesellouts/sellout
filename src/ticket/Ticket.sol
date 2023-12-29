@@ -1,25 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-import { ERC721Enumerable, ERC721 } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import { ERC721URIStorage } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import { ITicket } from "./ITicket.sol";
-import { TicketStorage } from "./storage/TicketStorage.sol";
-import { Show } from "../show/Show.sol";
-import { ShowTypes } from "../show/types/ShowTypes.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "./ITicket.sol";
+import "./storage/TicketStorage.sol";
+import "../show/Show.sol";
+import "../show/types/ShowTypes.sol";
 
-/// @title SellOut
+/// @title SellOut Ticket
 /// @author taayyohh
-/// @notice A contract for managing ticket sales for shows
-contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, ReentrancyGuard {
+/// @notice A contract for managing ticket sales for shows using the ERC1155 standard
+contract Ticket is ITicket, TicketStorage, ERC1155, ReentrancyGuard {
     Show public showInstance;
+
+    // Mapping from token ID to its URI
+    mapping(uint256 => string) private tokenURIs;
+
+    // Default URI
+    string private defaultURI;
 
     /// @notice Constructor to initialize the contract with the Show contract address
     /// @param _showContractAddress The address of the Show contract
-    constructor(address _showContractAddress) ERC721("The SellOuts", "SELLOUT") {
+    constructor(address _showContractAddress) ERC1155("https://sellout.onchain.haus/") {
         showInstance = Show(_showContractAddress);
+        defaultURI = "https://sellout.onchain.haus/"; // Set the default URI
     }
 
     /// @notice Modifier to ensure only the Show contract can call certain functions
@@ -28,58 +34,41 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         _;
     }
 
-    // Modifier to restrict access to SELLOUT_PROTOCOL_WALLET only
-//    modifier onlySelloutProtocolWallet() {
-//        require(msg.sender == SELLOUT_PROTOCOL_WALLET, "Not authorized");
-//        _;
-//    }
-
-    /// @notice Purchase a ticket for a specific show
+    /// @notice Purchase multiple tickets for a specific show
     /// @param showId The ID of the show
-    function purchaseTicket(bytes32 showId) public payable nonReentrant {
+    /// @param amount The amount of tickets to purchase
+    function purchaseTickets(bytes32 showId, uint256 amount) public payable nonReentrant {
         require(showInstance.getShowStatus(showId) == ShowTypes.Status.Proposed, "Show is not available for ticket purchase");
-        require(showInstance.getTotalTicketsSold(showId) < showInstance.getTotalCapacity(showId), "Sold out");
-        require(showInstance.getWalletTokenIds(showId, msg.sender).length < MAX_TICKETS_PER_WALLET, "Max tickets reached");
-
-        showInstance.checkAndUpdateExpiry(showId);
-
-        require(showInstance.getShowStatus(showId) != ShowTypes.Status.Expired, "Show has expired");
+        require(showInstance.getTotalTicketsSold(showId) + amount <= showInstance.getTotalCapacity(showId), "Not enough tickets available");
 
         uint256 fanStatus = determineFanStatus(showId);
         ShowTypes.TicketPrice memory ticketPrice = showInstance.getTicketPrice(showId);
 
-        uint256 calculatedTicketPrice = calculateTicketPrice(fanStatus, ticketPrice.minPrice, ticketPrice.maxPrice);
+        uint256 calculatedTicketPrice = calculateTicketPrice(fanStatus, ticketPrice.minPrice, ticketPrice.maxPrice) * amount;
 
         require(msg.value == calculatedTicketPrice, "Incorrect payment amount");
         showInstance.depositToVault{value: msg.value}(showId);
 
-        string memory generatedTokenURI = generateTokenURI(fanStatus);
-        uint256 tokenId = _mintNFT(msg.sender, generatedTokenURI);
+        // Increment the purchase counter for this user for this show
+        ticketsPurchasedCount[showId][msg.sender] += amount;
+
+        // Unique token for each show, fan status, and purchase count
+        uint256 tokenId = uint256(keccak256(abi.encodePacked(showId, fanStatus, ticketsPurchasedCount[showId][msg.sender])));
+        _mint(msg.sender, tokenId, amount, ""); // Minting the specified amount of tickets
 
         showInstance.addTokenIdToWallet(showId, msg.sender, tokenId);
         showInstance.setTicketPricePaid(showId, tokenId, msg.value);
         showInstance.setTicketOwnership(msg.sender, showId, true);
         showInstance.updateExpiry(showId, block.timestamp + 30 days);
 
-        uint256 proposalThresholdValue = (showInstance.getTotalCapacity(showId) * showInstance.getSellOutThreshold(showId)) / 100;
-
-        // Check if the total tickets sold is greater than or equal to the proposal threshold
-        if (showInstance.getTotalTicketsSold(showId) >= proposalThresholdValue) {
-            showInstance.updateStatus(showId, ShowTypes.Status.SoldOut);
-        }
-
-        emit TicketPurchased(msg.sender, showId, tokenId, fanStatus);
+        emit TicketPurchased(msg.sender, showId, tokenId, amount, fanStatus);
     }
 
-    /// @notice Internal function to mint a new NFT
-    /// @param to The address to mint the NFT to
-    /// @param generatedTokenURI The URI of the token
-    /// @return tokenId The ID of the minted token
-    function _mintNFT(address to, string memory generatedTokenURI) internal returns (uint256) {
-        uint256 tokenId = getNextTokenId();
-        _mint(to, tokenId);
-        _setTokenURI(tokenId, generatedTokenURI);
-        return tokenId;
+    /// @notice Burns a specific amount of tokens, removing them from circulation
+    /// @param tokenId The ID of the token type to be burned
+    /// @param amount The amount of tokens to be burned
+    function burnTokens(uint256 tokenId, uint256 amount) public onlyShowContract {
+        _burn(msg.sender, tokenId, amount);
     }
 
     /// @notice Calculate the ticket price based on fan status
@@ -109,67 +98,40 @@ contract Ticket is ITicket, TicketStorage, ERC721Enumerable, ERC721URIStorage, R
         uint256 percentageSold = (totalTicketsSoldForShow * 100) / totalCapacity;
 
         // Calculate the fan status, ensuring it's at least 1
-        uint256 fanStatus = (percentageSold + 10 - 1) / 10;
+        uint256 fanStatus = (percentageSold + 9) / 10;
+        return fanStatus > 0 ? fanStatus : 1; // Ensure the fan status is at least 1
+    }
 
-        // Ensure the fan status is at least 1
-        if (fanStatus < 1) {
-            fanStatus = 1;
+    /// @notice Sets the URI for a given token ID
+    /// @param showId The ID of the show for which to set the URI
+    /// @param tokenId The token ID for which to set the URI
+    /// @param newURI The new URI to set
+    function setTokenURI(bytes32 showId, uint256 tokenId, string memory newURI) public {
+        require(msg.sender == showInstance.getOrganizer(showId), "Caller is not the organizer of this show");
+        tokenURIs[tokenId] = newURI;
+        emit URI(newURI, tokenId);
+    }
+
+    function uri(uint256 tokenId) public view override returns (string memory) {
+        string memory _tokenURI = tokenURIs[tokenId];
+        if (bytes(_tokenURI).length > 0) {
+            return _tokenURI; // Specific URI for this token
+        } else {
+            return string(abi.encodePacked(defaultURI, Strings.toString(tokenId), ".json")); // Default URI
         }
+    }
 
-        return fanStatus;
+    // Function to set the default URI for tickets, restricted to the organizer of a specific show
+    function setDefaultURI(string memory newDefaultURI, bytes32 showId) public {
+        require(showInstance.isOrganizer(msg.sender, showId), "Caller is not the organizer");
+        defaultURI = newDefaultURI;
     }
 
 
-    /// @notice Overridden function from ERC721 set the base URI for the NFT metadata
-    /// @param baseURI The base URI string
-    function setBaseURI(string memory baseURI) external {
-        _baseTokenURI = baseURI;
-    }
-
-    /// @notice Generate the token URI based on fan status
-    /// @param fanStatus The fan status (1-10)
-    /// @return The generated token URI
-    ///TODO: make this more generative
-    function generateTokenURI(uint256 fanStatus) internal pure returns (string memory) {
-        string memory baseURI = "https://sellout.lucid.haus/";
-        return string(abi.encodePacked(baseURI, "pfp/", Strings.toString(fanStatus)));
-    }
-
-    /// @notice Burns a specific token, removing it from circulation
-    /// @param tokenId The ID of the token to be burned
-    function burnToken(uint256 tokenId) public onlyShowContract {
-        _burn(tokenId);
-    }
-
-
-    /// @notice Overridden function from ERC721 to handle token URI
-    /// @param tokenId The ID of the token
-    /// @return The URI of the token
-    function tokenURI(uint256 tokenId) public view virtual override(ERC721, ERC721URIStorage,ITicket) returns (string memory) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
-        string memory baseURI = _baseTokenURI;
-        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, Strings.toString(tokenId))) : "";
-    }
-
-    /// @notice Overridden function from ERC721 to handle token transfer
-    /// @param from The address transferring the token
-    /// @param to The address receiving the token
-    /// @param tokenId The ID of the token
-    /// @param batchSize The batch size for the transfer
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize) internal virtual override(ERC721, ERC721Enumerable) {
-        super._beforeTokenTransfer(from, to, tokenId, batchSize);
-    }
-
-    /// @notice Overridden function from ERC721Enumerable and ERC721URIStorage to support specific interfaces
-    /// @param interfaceId The ID of the interface
-    /// @return true if the interface is supported, false otherwise
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Enumerable, ERC721URIStorage) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
-
-    /// @notice Overridden function from ERC721 and ERC721URIStorage to handle token burning
-    /// @param tokenId The ID of the token to burn
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) onlyShowContract {
-        super._burn(tokenId);
+    /// @notice Retrieves the organizer address for a specific show
+    /// @param showId The unique identifier of the show
+    /// @return The address of the organizer of the show
+    function getOrganizer(bytes32 showId) public view returns (address) {
+        return showInstance.getOrganizer(showId);
     }
 }

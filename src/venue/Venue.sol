@@ -14,6 +14,13 @@ contract Venue is IVenue, VenueStorage {
     Show public showInstance;
     Ticket public ticketInstance;
 
+    // Constants for durations
+    uint256 constant PROPOSAL_PERIOD_DURATION = 7 days;
+    uint256 constant PUBLIC_VOTING_PERIOD_DURATION = 3 days;
+    uint256 constant PROPOSAL_DATE_EXTENSION = 1 days;
+    uint256 constant PROPOSAL_DATE_MINIMUM_FUTURE = 30 days;
+    uint256 constant PROPOSAL_PERIOD_EXTENSION_THRESHOLD = 6 hours;
+
     /// @notice Constructor to initialize the Venue contract with Show and Ticket contract addresses.
     /// @param _showBaseContractAddress Address of the Show contract.
     /// @param _ticketBaseContractAddress Address of the Ticket contract.
@@ -48,22 +55,22 @@ contract Venue is IVenue, VenueStorage {
         uint256[] memory proposedDates
     ) public payable {
         require(showInstance.getShowStatus(showId) == ShowTypes.Status.SoldOut, "Show must be SoldOut");
-        require(block.timestamp <= proposalPeriod[showId].endTime, "Proposal period has ended");
+        require(proposalPeriod[showId].endTime == 0 || block.timestamp <= proposalPeriod[showId].endTime, "Proposal period has ended");
         require(coordinates.lat >= -90 * 10**6 && coordinates.lat <= 90 * 10**6, "Invalid latitude");
         require(coordinates.lon >= -180 * 10**6 && coordinates.lon <= 180 * 10**6, "Invalid longitude");
         require(proposedDates.length > 0, "At least one proposed date required");
         require(proposedDates.length <= 5, "Proposal must have 5 or less dates");
 
         for (uint256 i = 0; i < proposedDates.length; i++) {
-            require(proposedDates[i] > proposalPeriod[showId].endTime + 60 days, "Proposed date must be 2 months in the future");
+            require(proposedDates[i] > proposalPeriod[showId].endTime + PROPOSAL_DATE_MINIMUM_FUTURE, "Proposed date must be 60 days in the future");
         }
 
         if (!proposalPeriod[showId].isPeriodActive) {
             startProposalPeriod(showId);
         }
 
-        if (block.timestamp >= proposalPeriod[showId].endTime - 6 hours) {
-            proposalPeriod[showId].endTime += 1 days; // Extend by 1 day if within the last 6 hours
+        if (block.timestamp >= proposalPeriod[showId].endTime - PROPOSAL_PERIOD_EXTENSION_THRESHOLD) {
+            proposalPeriod[showId].endTime += PROPOSAL_DATE_EXTENSION; // Extend by 1 day if within the last 6 hours
         }
 
         VenueTypes.Venue memory venue;
@@ -108,23 +115,23 @@ contract Venue is IVenue, VenueStorage {
         require(proposalIndex < showProposals[showId].length, "Invalid proposal index");
 
         uint256 previousProposalIndex = previousVote[showId][msg.sender];
-        if (previousProposalIndex != proposalIndex) {
-            // Decrement the vote count for the previously voted proposal (if any)
-            if (hasVoted[showId][msg.sender]) {
-                showProposals[showId][previousProposalIndex].votes--;
-            }
+        require(previousProposalIndex != proposalIndex, "Already voted for this venue");
 
-            // Increment the vote count for the newly voted proposal
-            showProposals[showId][proposalIndex].votes++;
-            hasVoted[showId][msg.sender] = true;
-            previousVote[showId][msg.sender] = proposalIndex; // Update the user's previous vote
-            emit ProposalVoted(showId, msg.sender, proposalIndex);
+        // Decrement the vote count for the previously voted proposal (if any)
+        if (hasVoted[showId][msg.sender]) {
+            showProposals[showId][previousProposalIndex].votes--;
+        }
 
-            // Check if all required votes have been received
-            uint256 requiredVotes = showInstance.getNumberOfVoters(showId); // Assuming this returns the count of organizer plus artists
-            if (showProposals[showId][proposalIndex].votes == requiredVotes) {
-                acceptProposal(showId, proposalIndex);
-            }
+        // Increment the vote count for the newly voted proposal
+        showProposals[showId][proposalIndex].votes++;
+        hasVoted[showId][msg.sender] = true;
+        previousVote[showId][msg.sender] = proposalIndex; // Update the user's previous vote
+        emit ProposalVoted(showId, msg.sender, proposalIndex);
+
+        // Check if all required votes have been received
+        uint256 requiredVotes = showInstance.getNumberOfVoters(showId); // Assuming this returns the count of organizer plus artists
+        if (showProposals[showId][proposalIndex].votes == requiredVotes) {
+            acceptProposal(showId, proposalIndex);
         }
     }
 
@@ -135,23 +142,23 @@ contract Venue is IVenue, VenueStorage {
         require(dateIndex < showProposals[showId][selectedProposalIndex[showId]].proposedDates.length, "Invalid date index");
 
         uint256 previousDateIndex = previousDateVote[showId][msg.sender];
-        if (previousDateIndex != dateIndex) {
-            // Decrement the vote count for the previously voted date (if any)
-            if (hasDateVoted[showId][msg.sender]) {
-                dateVotes[showId][previousDateIndex]--;
-            }
+        require(previousDateIndex != dateIndex, "Already voted for this date");
 
-            // Increment the vote count for the newly voted date
-            dateVotes[showId][dateIndex]++;
-            hasDateVoted[showId][msg.sender] = true;
-            previousDateVote[showId][msg.sender] = dateIndex; // Update the user's previous date vote
-            emit DateVoted(showId, msg.sender, dateIndex);
+        // Decrement the vote count for the previously voted date (if any)
+        if (hasDateVoted[showId][msg.sender]) {
+            dateVotes[showId][previousDateIndex]--;
+        }
 
-            // Check if all required votes have been received
-            uint256 requiredVotes = showInstance.getNumberOfVoters(showId); // Assuming this returns the count of organizer plus artists
-            if (dateVotes[showId][dateIndex] == requiredVotes) {
-                acceptDate(showId, dateIndex);
-            }
+        // Increment the vote count for the newly voted date
+        dateVotes[showId][dateIndex]++;
+        hasDateVoted[showId][msg.sender] = true;
+        previousDateVote[showId][msg.sender] = dateIndex; // Update the user's previous date vote
+        emit DateVoted(showId, msg.sender, dateIndex);
+
+        // Check if all required votes have been received
+        uint256 requiredVotes = showInstance.getNumberOfVoters(showId); // Assuming this returns the count of organizer plus artists
+        if (dateVotes[showId][dateIndex] == requiredVotes) {
+            acceptDate(showId, dateIndex);
         }
     }
 
@@ -160,7 +167,7 @@ contract Venue is IVenue, VenueStorage {
     /// @param showId Unique identifier for the show.
     function startProposalPeriod(bytes32 showId) internal {
         proposalPeriod[showId].isPeriodActive = true;
-        proposalPeriod[showId].endTime = block.timestamp + 14 days; // 2 weeks
+        proposalPeriod[showId].endTime = block.timestamp + PROPOSAL_PERIOD_DURATION;
         emit ProposalPeriodStarted(showId, proposalPeriod[showId].endTime);
     }
 
@@ -169,7 +176,7 @@ contract Venue is IVenue, VenueStorage {
     /// @param showId Unique identifier for the show.
     function startPublicVotingPeriod(bytes32 showId) internal {
         votingPeriods[showId].isPeriodActive = true;
-        votingPeriods[showId].endTime = block.timestamp + 7 days; // 1 week
+        votingPeriods[showId].endTime = block.timestamp + PUBLIC_VOTING_PERIOD_DURATION;
         emit PublicVotingPeriodStarted(showId, votingPeriods[showId].endTime);
     }
 
@@ -191,5 +198,4 @@ contract Venue is IVenue, VenueStorage {
         selectedDate[showId] = date;
         emit DateAccepted(showId, date);
     }
-
 }

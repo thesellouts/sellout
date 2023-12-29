@@ -11,17 +11,14 @@ contract ShowStorage is ShowTypes {
     // Base URI for tokens
     string internal _baseTokenURI;
 
-    // Counter for the total number of shows
-    uint256 public showCount;
+    // Counter for the total number of active shows
+    uint256 public activeShowCount;
 
     // Mapping to store show details by show ID
     mapping(bytes32 => Show) public shows;
 
     // Mapping to track whether a given address is an artist for a specific show
     mapping(bytes32 => mapping(address => bool)) public isArtistMapping;
-
-    // Mapping to track existing shows by show ID
-    mapping(bytes32 => bool) public existingShows;
 
     // Mapping to track the Ether balance for each show
     mapping(bytes32 => uint256) public showVault;

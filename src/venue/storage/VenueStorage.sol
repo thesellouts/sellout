@@ -27,9 +27,6 @@ contract VenueStorage is VenueTypes {
     // Mapping to store the previous vote of an address for a venue
     mapping(bytes32 => mapping(address => uint256)) public previousVote;
 
-    // Mapping to store the date voting period for each venue
-    mapping(bytes32 => DateVotingPeriod) public dateVotingPeriods;
-
     // Mapping to store the votes for specific dates for a venue
     mapping(bytes32 => mapping(uint256 => uint256)) public dateVotes;
 

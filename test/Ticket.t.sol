@@ -48,7 +48,7 @@ contract TestTicket is Test {
 
         // Purchase a ticket
         uint256 calculatedTicketPrice = 10; // Assuming fan status 1
-        ticketInstance.purchaseTicket{value: calculatedTicketPrice}(showId);
+        ticketInstance.purchaseTickets{value: calculatedTicketPrice}(showId, 1);
 
         // Validate the result
         uint256 totalTicketsSoldForShow = showInstance.totalTicketsSold(showId);
@@ -80,7 +80,7 @@ contract TestTicket is Test {
 
         bytes32 showId = showInstance.proposeShow(name, description, artists, venue, sellOutThreshold, totalCapacity, ticketPrice, split);
         uint256 calculatedTicketPrice = 10; // Assuming fan status 1
-        ticketInstance.purchaseTicket{value: calculatedTicketPrice}(showId);
+        ticketInstance.purchaseTickets{value: calculatedTicketPrice}(showId, 1);
 
         // Get the ticket ID for the purchased ticket
         uint256 ticketId = 1;
@@ -89,7 +89,7 @@ contract TestTicket is Test {
         uint256 initialBalance = showInstance.pendingWithdrawals(showId, msg.sender);
 
         // Refund the ticket
-        showInstance.refundTickets(showId);
+        showInstance.refundTicket(showId, ticketId);
 
         // Validate the refund amount
         uint256 refundAmount = showInstance.getTicketPricePaid(showId, ticketId);

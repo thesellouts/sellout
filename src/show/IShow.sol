@@ -8,7 +8,6 @@ import { VenueTypes } from "../venue/storage/VenueStorage.sol";
 /// @author taayyohh
 /// @notice Interface for the Show contract, defining the main events, errors, and functions.
 interface IShow is ShowTypes {
-
     /// @notice Event emitted when the status of a show is updated.
     /// @param showId Unique identifier for the show
     /// @param status New status for the show
@@ -50,13 +49,6 @@ interface IShow is ShowTypes {
     /// @param refundAmount Amount refunded to the user
     event TicketRefunded(address indexed user, bytes32 indexed showId, uint256 refundAmount);
 
-    // New event for multiple ticket refunds
-    /// @notice Event emitted when multiple tickes is refunded.
-    /// @param user Address of the user who received the refund
-    /// @param showId Unique identifier for the show
-    /// @param totalRefundAmount Amount refunded to the user
-    event TicketsRefunded(address indexed user, bytes32 showId, uint256 totalRefundAmount, uint256[] ticketIds);
-
 
     /// @notice Event emitted when a refund is withdrawn.
     /// @param user Address of the user who withdrew the refund
@@ -77,7 +69,8 @@ interface IShow is ShowTypes {
     /// @notice Sets the addresses for the Ticket and Venue contracts.
     /// @param _ticketContract Address of the Ticket contract
     /// @param _venueContract Address of the Venue contract
-    function setTicketAndVenueContractAddresses(address _ticketContract, address _venueContract) external;
+    /// @param _referralContract Address of the ReferralModule contract
+    function setProtocolAddresses(address _ticketContract, address _venueContract, address _referralContract) external;
 
     /// @notice Allows users to deposit funds to a show's vault.
     /// @param showId Unique identifier for the show
@@ -130,10 +123,6 @@ interface IShow is ShowTypes {
     /// @notice Payouts the funds from a show's vault.
     /// @param showId Unique identifier for the show
     function payout(bytes32 showId) external;
-
-    /// @notice Allows a ticket owner to refund all their tickets for a show that is either Proposed, Cancelled, or Expired.
-    /// @param showId The unique identifier of the show.
-    function refundTickets(bytes32 showId) external;
 
     /// @notice Allows a ticket owner to refund a specific ticket for a show that is either Proposed, Cancelled, or Expired.
     /// @param showId The unique identifier of the show.
