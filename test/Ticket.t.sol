@@ -31,11 +31,10 @@ contract TestTicket is Test {
         VenueTypes.Venue memory venue = VenueTypes.Venue({
             name: "Concert Hall",
             coordinates: VenueTypes.Coordinates({lat: 100, lon: 80}),
-            radius: 1000,
             totalCapacity: 5000,
-            wallet: address(0x5678),
-            showDate: block.timestamp + 7 days
+            wallet: address(0x5678)
         });
+        uint8 radius = 80;
         uint8 sellOutThreshold = 80;
         uint256 totalCapacity = 1000;
         ShowTypes.TicketPrice memory ticketPrice = ShowTypes.TicketPrice({minPrice: 10, maxPrice: 100});
@@ -44,7 +43,7 @@ contract TestTicket is Test {
         split[1] = 70; // artists
         split[2] = 20; // venue
 
-        bytes32 showId = showInstance.proposeShow(name, description, artists, venue, sellOutThreshold, totalCapacity, ticketPrice, split);
+        bytes32 showId = showInstance.proposeShow(name, description, artists, venue.coordinates, radius, sellOutThreshold, totalCapacity, ticketPrice, split);
 
         // Purchase a ticket
         uint256 calculatedTicketPrice = 10; // Assuming fan status 1
@@ -65,11 +64,10 @@ contract TestTicket is Test {
         VenueTypes.Venue memory venue = VenueTypes.Venue({
             name: "Concert Hall",
             coordinates: VenueTypes.Coordinates({lat: 100, lon: 80}),
-            radius: 1000,
             totalCapacity: 5000,
-            wallet: address(0x5678),
-            showDate: block.timestamp + 7 days
+            wallet: address(0x5678)
         });
+        uint8 radius = 80;
         uint8 sellOutThreshold = 80;
         uint256 totalCapacity = 1000;
         ShowTypes.TicketPrice memory ticketPrice = ShowTypes.TicketPrice({minPrice: 10, maxPrice: 100});
@@ -78,7 +76,7 @@ contract TestTicket is Test {
         split[1] = 70; // artists
         split[2] = 20; // venue
 
-        bytes32 showId = showInstance.proposeShow(name, description, artists, venue, sellOutThreshold, totalCapacity, ticketPrice, split);
+        bytes32 showId = showInstance.proposeShow(name, description, artists, venue.coordinates, radius, sellOutThreshold, totalCapacity, ticketPrice, split);
         uint256 calculatedTicketPrice = 10; // Assuming fan status 1
         ticketInstance.purchaseTickets{value: calculatedTicketPrice}(showId, 1);
 

@@ -16,10 +16,8 @@ interface VenueTypes {
     struct Venue {
         string name; // Name of the venue
         Coordinates coordinates; // Geographical coordinates of the venue
-        uint256 radius; // Radius of acceptable distance around venue
         uint256 totalCapacity; // Total capacity of the venue
         address wallet; // Wallet address associated with the venue
-        uint256 showDate; // Date of the show at the venue
     }
 
     /// @notice Represents a proposal for a venue including details about the venue, proposed dates, and voting information.

@@ -7,16 +7,27 @@ import { Ticket } from "../ticket/Ticket.sol";
 import { ReferralModule } from "../registry/referral/ReferralModule.sol";
 import { VenueTypes } from "../venue/storage/VenueStorage.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { IArtistRegistry } from "../registry/artist/IArtistRegistry.sol";
+import { IOrganizerRegistry } from "../registry/organizer/IOrganizerRegistry.sol";
+import { IVenueRegistry } from "../registry/venue/IVenueRegistry.sol";
 
 /// @title Show
 /// @author taayyohh
 /// @notice Manages show proposals, statuses, and fund distribution
 contract Show is IShow, ShowStorage, ReentrancyGuard {
-    Ticket public ticketInstance;
-    ReferralModule public referralInstance;
     address public ticketContract;
     address public venueContract;
     address public referralContract;
+
+    address public artistRegistryContract;
+    address public organizerRegistryContract;
+    address public venueRegistryContract;
+
+    Ticket public ticketInstance;
+    ReferralModule public referralInstance;
+    IArtistRegistry public artistRegistryInstance;
+    IOrganizerRegistry public organizerRegistryInstance;
+    IVenueRegistry public venueRegistryInstance;
     bool private areContractsSet = false;
 
     // Add a state variable to store the Sellout Protocol Wallet address
@@ -40,7 +51,7 @@ contract Show is IShow, ShowStorage, ReentrancyGuard {
         require(msg.sender == venueContract, "Only the Ticket contract can call this function");
         _;
     }
-    modifier onlyProtocol() {
+    modifier onlyTicketOrVenue() {
         require(
             msg.sender == venueContract ||
             msg.sender == ticketContract ||
@@ -54,30 +65,60 @@ contract Show is IShow, ShowStorage, ReentrancyGuard {
         _;
     }
 
-    /// @notice Sets the Ticket and Venue contract addresses
+    /// @notice Sets the Ticket, Venue, and Registry contract addresses
     /// @param _ticketContract Address of the Ticket contract
     /// @param _venueContract Address of the Venue contract
-    function setProtocolAddresses(address _ticketContract, address _venueContract, address _referralContract) public {
-        require(!areContractsSet, "Ticket and Venue contract addresses already set");
+    /// @param _referralContract Address of the ReferralModule contract
+    /// @param _artistRegistryContract Address of the ArtistRegistry contract
+    /// @param _organizerRegistryContract Address of the OrganizerRegistry contract
+    /// @param _venueRegistryContract Address of the VenueRegistry contract
+    function setProtocolAddresses(
+        address _ticketContract,
+        address _venueContract,
+        address _referralContract,
+        address _artistRegistryContract,
+        address _organizerRegistryContract,
+        address _venueRegistryContract
+    ) public {
+        require(!areContractsSet, "Protocol addresses already set");
+
+        // Set core protocol contracts
         ticketContract = _ticketContract;
         venueContract = _venueContract;
-        referralContract = _referralContract;
+
+        // set contract instances
+        ticketInstance = Ticket(_ticketContract);
         referralInstance = ReferralModule(_referralContract);
-        ticketInstance = Ticket(_ticketContract); // Create an instance of the ticket contract
+        artistRegistryInstance = IArtistRegistry(_artistRegistryContract);
+        organizerRegistryInstance = IOrganizerRegistry(_organizerRegistryContract);
+        venueRegistryInstance = IVenueRegistry(_venueRegistryContract);
+
         areContractsSet = true;
     }
 
     /// @notice Deposits Ether into the vault for a specific show
     /// @param showId Unique identifier for the show
-    function depositToVault(bytes32 showId) external payable onlyProtocol {
+    function depositToVault(bytes32 showId) external payable onlyTicketOrVenue {
         showVault[showId] += msg.value;
     }
+
+    function isOrganizerRegistered(address organizer) internal view returns (bool) {
+        (, , address wallet) = organizerRegistryInstance.getOrganizerInfoByAddress(organizer);
+        return wallet == organizer;
+    }
+
+    function isArtistRegistered(address artist) internal view returns (bool) {
+        (, , address wallet) = artistRegistryInstance.getArtistInfoByAddress(artist);
+        return wallet == artist;
+    }
+
 
     /// @notice Creates a show proposal between one or more artists
     /// @param name Name of the show
     /// @param description Description of the show
     /// @param artists Array of artist addresses
-    /// @param venue Venue details
+    /// @param coordinates desired location of show
+    /// @param radius of desired show
     /// @param sellOutThreshold Sell-out threshold percentage
     /// @param totalCapacity Total capacity of the show
     /// @param ticketPrice Ticket price details
@@ -87,28 +128,45 @@ contract Show is IShow, ShowStorage, ReentrancyGuard {
         string memory name,
         string memory description,
         address[] memory artists,
-        VenueTypes.Venue memory venue,
+        VenueTypes.Coordinates memory coordinates,
+        uint256 radius,
         uint8 sellOutThreshold,
         uint256 totalCapacity,
         TicketPrice memory ticketPrice,
         uint256[] memory split // organizer, artists[], venue
-    ) public returns (bytes32 showId) {
+    ) external returns (bytes32 showId) {
         // Validation checks
         require(bytes(name).length > 0, "Name is required");
-        require(venue.radius > 0, "Venue radius must be greater than 0");
+        require(radius > 0, "Venue radius must be greater than 0");
         require(totalCapacity > 0, "Total capacity must be greater than 0");
         require(artists.length > 0, "At least one artist required");
         require(ticketPrice.maxPrice >= ticketPrice.minPrice, "Max ticket price must be greater or equal to min ticket price");
         require(sellOutThreshold >= 0 && sellOutThreshold <= 100, "Sell-out threshold must be between 0 and 100");
-        require(venue.coordinates.lat >= -90 * 10**6 && venue.coordinates.lat <= 90 * 10**6, "Invalid latitude");
-        require(venue.coordinates.lon >= -180 * 10**6 && venue.coordinates.lon <= 180 * 10**6, "Invalid longitude");
+        require(coordinates.lat >= -90 * 10**6 && coordinates.lat <= 90 * 10**6, "Invalid latitude");
+        require(coordinates.lon >= -180 * 10**6 && coordinates.lon <= 180 * 10**6, "Invalid longitude");
+        require(areContractsSet, "Contract addresses must be set");
+
+        require(isOrganizerRegistered(msg.sender), "Organizer must be registered");
+
+        for (uint256 i = 0; i < artists.length; i++) {
+            require(isArtistRegistered(artists[i]), "All artists must be registered");
+        }
 
         validateSplit(split, artists.length);
 
         // Create a proposal ID by hashing the relevant parameters
         //TODO: add revert if showId exists
-        showId = keccak256(abi.encodePacked(msg.sender, artists, venue.coordinates.lat, venue.coordinates.lon, venue.radius, sellOutThreshold, totalCapacity));
+        showId = keccak256(abi.encodePacked(msg.sender, artists, coordinates.lat, coordinates.lon, radius, sellOutThreshold, totalCapacity));
         uint256 expiry = block.timestamp + 30 days;
+
+
+        // Construct the venue with the coordinates
+        VenueTypes.Venue memory venue = VenueTypes.Venue({
+            name: "",
+            coordinates: coordinates,
+            totalCapacity: totalCapacity,
+            wallet: address(0)
+        });
 
         // Create the show proposal
         shows[showId] = Show({
@@ -117,6 +175,7 @@ contract Show is IShow, ShowStorage, ReentrancyGuard {
             description: description,
             artists: artists,
             organizer: msg.sender,
+            radius: radius,
             venue: venue,
             ticketPrice: ticketPrice,
             sellOutThreshold: sellOutThreshold,
@@ -124,7 +183,8 @@ contract Show is IShow, ShowStorage, ReentrancyGuard {
             status: Status.Proposed,
             isActive: true,
             split: split,
-            expiry: expiry
+            expiry: expiry,
+            showDate: 0
         });
 
         // Map artists to the show
@@ -163,7 +223,7 @@ contract Show is IShow, ShowStorage, ReentrancyGuard {
     /// @notice Updates the status of a show
     /// @param showId Unique identifier for the show
     /// @param _status New status for the show
-    function updateStatus(bytes32 showId, Status _status) public onlyProtocol {
+    function updateStatus(bytes32 showId, Status _status) public onlyTicketOrVenue {
         shows[showId].status = _status;
         emit StatusUpdated(showId, _status);
     }
@@ -248,7 +308,7 @@ contract Show is IShow, ShowStorage, ReentrancyGuard {
     function payout(bytes32 showId) public onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
         require(show.status == Status.Completed, "Show must be Completed");
-        require(block.timestamp == show.venue.showDate + 2 days, "Show cool down has not ended");
+        require(block.timestamp == show.showDate + 2 days, "Show cool down has not ended");
 
         uint256 amount = pendingWithdrawals[showId][msg.sender];
         require(amount > 0, "No funds to withdraw");

@@ -25,11 +25,10 @@ contract TestShow is Test {
         VenueTypes.Venue memory venue = VenueTypes.Venue({
             name: "Venue Name",
             coordinates: VenueTypes.Coordinates({lat: 100, lon: 80}),
-            radius: 1000,
             totalCapacity: 5000,
-            wallet: address(0x5678),
-            showDate: block.timestamp + 7 days
+            wallet: address(0x5678)
         });
+        uint8 radius = 80;
         uint8 sellOutThreshold = 80;
         uint256 totalCapacity = 1000;
         ShowTypes.TicketPrice memory ticketPrice = ShowTypes.TicketPrice({minPrice: 10, maxPrice: 100});
@@ -38,7 +37,7 @@ contract TestShow is Test {
         split[1] = 40; // artists
         split[2] = 20; // venue
 
-        bytes32 showId = showInstance.proposeShow(name, description, artists, venue, sellOutThreshold, totalCapacity, ticketPrice, split);
+        bytes32 showId = showInstance.proposeShow(name, description, artists, venue.coordinates, radius, sellOutThreshold, totalCapacity, ticketPrice, split);
 
         // Validate the result
         (string memory returnedName, , , , , , , , , ) = showInstance.getShowById(showId);
@@ -53,12 +52,11 @@ contract TestShow is Test {
         VenueTypes.Venue memory venue = VenueTypes.Venue({
             name: "Venue Name",
             coordinates: VenueTypes.Coordinates({lat: 80, lon: 100}),
-            radius: 1000,
             wallet: address(0x5678),
-            totalCapacity: 500,
-            showDate: block.timestamp
+            totalCapacity: 500
         });
 
+        uint8 radius = 80;
         uint8 sellOutThreshold = 80;
         uint256 totalCapacity = 1000;
         ShowTypes.TicketPrice memory ticketPrice = ShowTypes.TicketPrice({minPrice: 10, maxPrice: 100});
@@ -67,7 +65,7 @@ contract TestShow is Test {
         split[1] = 40;
         split[2] = 20;
 
-        bytes32 showId = showInstance.proposeShow(name, description, artists, venue, sellOutThreshold, totalCapacity, ticketPrice, split);
+        bytes32 showId = showInstance.proposeShow(name, description, artists, venue.coordinates, radius, sellOutThreshold, totalCapacity, ticketPrice, split);
 
         // Simulate the passage of time by increasing the block timestamp
         vm.warp(block.timestamp + 31 days);

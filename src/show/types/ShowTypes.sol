@@ -34,6 +34,7 @@ interface ShowTypes {
         address organizer;            // Address of the organizer
         address[] artists;            // Addresses of the artists
         VenueTypes.Venue venue;       // Venue details
+        uint256 radius;               // radius for proposed show venue
         TicketPrice ticketPrice;      // Ticket price details
         uint256 sellOutThreshold;     // Threshold for considering the show as sold out
         uint256 totalCapacity;        // Total capacity of the show
@@ -41,5 +42,6 @@ interface ShowTypes {
         bool isActive;                // Whether the show is active
         uint256[] split;              // Split percentages for revenue distribution
         uint256 expiry;               // Expiry timestamp of the show
+        uint256 showDate;             // Final show date
     }
 }

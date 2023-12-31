@@ -56,14 +56,12 @@ interface IVenue {
     /// @param showId Unique identifier for the show.
     /// @param venueName Name of the venue.
     /// @param coordinates Coordinates of the venue location.
-    /// @param radius Radius of the venue.
     /// @param totalCapacity Total capacity of the venue.
     /// @param proposedDates Array of proposed dates for the show.
     function submitProposal(
         bytes32 showId,
         string memory venueName,
         VenueTypes.Coordinates memory coordinates,
-        uint256 radius,
         uint256 totalCapacity,
         uint256[] memory proposedDates
     ) external payable;

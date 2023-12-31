@@ -70,7 +70,18 @@ interface IShow is ShowTypes {
     /// @param _ticketContract Address of the Ticket contract
     /// @param _venueContract Address of the Venue contract
     /// @param _referralContract Address of the ReferralModule contract
-    function setProtocolAddresses(address _ticketContract, address _venueContract, address _referralContract) external;
+    /// @param _artistRegistry Address of the ArtistRegistry contract
+    /// @param _organizerRegistry Address of the OrganizerRegistry contract
+    /// @param _venueRegistry Address of the VenueRegistry contract
+    function setProtocolAddresses(
+        address _ticketContract,
+        address _venueContract,
+        address _referralContract,
+        address _artistRegistry,
+        address _organizerRegistry,
+        address _venueRegistry
+    ) external;
+
 
     /// @notice Allows users to deposit funds to a show's vault.
     /// @param showId Unique identifier for the show
@@ -80,7 +91,8 @@ interface IShow is ShowTypes {
     /// @param name Name of the show
     /// @param description Description of the show
     /// @param artists Array of artist addresses
-    /// @param venue Venue details
+    /// @param coordinates Desired location of show
+    /// @param radius Radius of desired show
     /// @param sellOutThreshold Sell-out threshold percentage
     /// @param totalCapacity Total capacity of the show
     /// @param ticketPrice Ticket price details
@@ -90,7 +102,8 @@ interface IShow is ShowTypes {
         string memory name,
         string memory description,
         address[] memory artists,
-        VenueTypes.Venue memory venue,
+        VenueTypes.Coordinates memory coordinates,
+        uint256 radius,
         uint8 sellOutThreshold,
         uint256 totalCapacity,
         TicketPrice memory ticketPrice,

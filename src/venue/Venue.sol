@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import { Show } from "../show/Show.sol";
+import { IShow } from "../show/IShow.sol";
 import { ShowTypes } from "../show/storage/ShowStorage.sol";
 import { VenueStorage, VenueTypes } from "./storage/VenueStorage.sol";
 import { IVenue } from "./IVenue.sol";
-import { Ticket } from "../ticket/Ticket.sol";
+import { ITicket } from "../ticket/ITicket.sol";
 
 /// @title Venue Contract
 /// @author taayyohh
 /// @notice This contract manages the venue proposals, voting, and acceptance for shows.
 contract Venue is IVenue, VenueStorage {
-    Show public showInstance;
-    Ticket public ticketInstance;
+    IShow public showInstance;
+    ITicket public ticketInstance;
 
     // Constants for durations
     uint256 constant PROPOSAL_PERIOD_DURATION = 7 days;
@@ -25,8 +25,8 @@ contract Venue is IVenue, VenueStorage {
     /// @param _showBaseContractAddress Address of the Show contract.
     /// @param _ticketBaseContractAddress Address of the Ticket contract.
     constructor(address _showBaseContractAddress, address _ticketBaseContractAddress) {
-        showInstance = Show(_showBaseContractAddress);
-        ticketInstance = Ticket(_ticketBaseContractAddress);
+        showInstance = IShow(_showBaseContractAddress);
+        ticketInstance = ITicket(_ticketBaseContractAddress);
     }
 
     modifier onlyOrganizer(bytes32 showId) {
@@ -43,14 +43,12 @@ contract Venue is IVenue, VenueStorage {
     /// @param showId Unique identifier for the show.
     /// @param venueName Name of the venue.
     /// @param coordinates Coordinates of the venue location.
-    /// @param radius Radius of the venue.
     /// @param totalCapacity Total capacity of the venue.
     /// @param proposedDates Array of proposed dates for the show.
     function submitProposal(
         bytes32 showId,
         string memory venueName,
         VenueTypes.Coordinates memory coordinates,
-        uint256 radius,
         uint256 totalCapacity,
         uint256[] memory proposedDates
     ) public payable {
@@ -76,7 +74,6 @@ contract Venue is IVenue, VenueStorage {
         VenueTypes.Venue memory venue;
         venue.name = venueName;
         venue.coordinates = coordinates;
-        venue.radius = radius;
         venue.totalCapacity = totalCapacity;
         venue.wallet = msg.sender;
 

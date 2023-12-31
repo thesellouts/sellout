@@ -27,9 +27,9 @@ contract SellOutFactory {
 
         // Deploying core contracts
         showInstance = new Show(SELLOUT_PROTOCOL_WALLET);
+        referralModuleInstance = new ReferralModule(address(showInstance), SELLOUT_PROTOCOL_WALLET);
         ticketInstance = new Ticket(address(showInstance));
         venueInstance = new Venue(address(showInstance), address(ticketInstance));
-        referralModuleInstance = new ReferralModule(address(showInstance), SELLOUT_PROTOCOL_WALLET);
 
         // Deploying registry contracts with referral module address
         artistRegistryInstance = new ArtistRegistry(address(referralModuleInstance));
@@ -37,7 +37,13 @@ contract SellOutFactory {
         venueRegistryInstance = new VenueRegistry(address(referralModuleInstance));
 
         // Linking contracts together as required
-        showInstance.setProtocolAddresses(address(ticketInstance), address(venueInstance), address(referralModuleInstance));
+        showInstance.setProtocolAddresses(
+            address(ticketInstance),
+            address(venueInstance),
+            address(referralModuleInstance),
+            address(artistRegistryInstance),
+            address(organizerRegistryInstance),
+            address(venueRegistryInstance)
+        );
     }
-
 }
