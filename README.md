@@ -1,6 +1,4 @@
-
-
-
+```
 SellOut Protocol
 
 +------------------+     
@@ -133,3 +131,6 @@ Note:
 Lifecycle Notes:
    - All interactions with the registry are typically done at the onset, as part of setting up profiles for artists, organizers, and venues.
    - These registrations are important as they directly impact the proposing, voting, and execution of shows.
+
+
+```
