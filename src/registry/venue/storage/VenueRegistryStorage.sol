@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "../types/VenueRegistryTypes.sol";
+import { VenueRegistryTypes } from "../types/VenueRegistryTypes.sol";
 
 /// @title VenueRegistryStorage
 /// @notice Storage contract for VenueRegistry.

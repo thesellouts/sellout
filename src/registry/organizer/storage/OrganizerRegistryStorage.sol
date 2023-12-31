@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "../types/OrganizerRegistryTypes.sol";
+import { OrganizerRegistryTypes } from "../types/OrganizerRegistryTypes.sol";
 
 /// @title OrganizerRegistryStorage
 /// @notice Storage contract for OrganizerRegistry.

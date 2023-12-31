@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "./ITicket.sol";
-import "./storage/TicketStorage.sol";
-import "../show/Show.sol";
-import "../show/types/ShowTypes.sol";
+import { ERC1155 } from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { ITicket } from "./ITicket.sol";
+import { TicketStorage } from "./storage/TicketStorage.sol";
+import { Show } from "../show/Show.sol";
+import { ShowTypes } from "../show/types/ShowTypes.sol";
 
 /// @title SellOut Ticket
 /// @author taayyohh

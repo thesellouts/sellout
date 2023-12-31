@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "../types/ArtistRegistryTypes.sol";
+import { ArtistRegistryTypes } from "../types/ArtistRegistryTypes.sol";
 
 /// @title ArtistRegistryStorage
 /// @notice Storage contract for ArtistRegistry.

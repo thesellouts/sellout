@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import { ERC1155 } from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import { ReferralModule } from "../referral/ReferralModule.sol";
 import { IOrganizerRegistry } from "./IOrganizerRegistry.sol";
 import { OrganizerRegistryStorage } from "./storage/OrganizerRegistryStorage.sol";
