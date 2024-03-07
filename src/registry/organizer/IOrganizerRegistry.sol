@@ -4,33 +4,33 @@ pragma solidity 0.8.16;
 /// @title IOrganizerRegistry
 /// @notice Interface for the OrganizerRegistry contract.
 interface IOrganizerRegistry {
-    event OrganizerRegistered(uint256 indexed organizerId, string name);
+    event OrganizerRegistered(uint256 indexed organizerId, string name, address wallet);
     event OrganizerUpdated(uint256 indexed organizerId, string name, string bio);
     event OrganizerDeregistered(uint256 indexed organizerId);
-    event OrganizerWaitlisted(address indexed organizer);
-    event OrganizerAccepted(uint256 indexed organizerId, address organizerAddress);
+    event OrganizerNominated(address indexed nominee, address indexed nominator);
+    event OrganizerAccepted(address indexed nominee);
 
+    /// @notice Nominates an address for organizer status, can only be called by an existing organizer.
+    /// @param nominee The address being nominated for organizer status.
+    function nominate(address nominee) external;
 
-    /// @notice Accepts a waitlisted organizer into the registry.
-    function acceptOrganizer() external;
+    /// @notice Accepts nomination for organizer status. Must be called by the nominee.
+    function acceptNomination() external;
 
-    /// @notice Waitlists an organizer for referral.
-    function waitlistForReferral() external;
+    /// @notice Updates an organizer's profile information.
+    /// @param organizerId The ID of the organizer whose profile is being updated.
+    /// @param name The updated name of the organizer.
+    /// @param bio The updated biography of the organizer.
+    function updateOrganizer(uint256 organizerId, string memory name, string memory bio) external;
 
-    /// @notice Updates an organizer's profile.
-    /// @param _organizerId ID of the organizer updating their profile.
-    /// @param _name Updated name of the organizer.
-    /// @param _bio Updated biography of the organizer.
-    function updateOrganizer(uint256 _organizerId, string memory _name, string memory _bio) external;
+    /// @notice Deregisters an organizer from the registry. Can only be called by the organizer themselves.
+    /// @param organizerId The ID of the organizer being deregistered.
+    function deregisterOrganizer(uint256 organizerId) external;
 
-    /// @notice Allows an organizer to deregister themselves.
-    /// @param _organizerId ID of the organizer deregistering.
-    function deregisterOrganizer(uint256 _organizerId) external;
-
-    /// @notice Retrieves organizer information based on their wallet address.
-    /// @param organizerAddress Address of the organizer to retrieve info for.
-    /// @return name Name of the organizer.
-    /// @return bio Biography of the organizer.
-    /// @return wallet Wallet address of the organizer.
+    /// @notice Retrieves information about an organizer based on their wallet address.
+    /// @param organizerAddress The wallet address of the organizer.
+    /// @return name The name of the organizer.
+    /// @return bio The biography of the organizer.
+    /// @return wallet The wallet address of the organizer.
     function getOrganizerInfoByAddress(address organizerAddress) external view returns (string memory name, string memory bio, address wallet);
 }

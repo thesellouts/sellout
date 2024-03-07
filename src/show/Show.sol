@@ -141,7 +141,7 @@ contract Show is IShow, ShowStorage, ReentrancyGuard {
         require(totalCapacity > 0, "Total capacity must be greater than 0");
         require(artists.length > 0, "At least one artist required");
         require(ticketPrice.maxPrice >= ticketPrice.minPrice, "Max ticket price must be greater or equal to min ticket price");
-        require(sellOutThreshold >= 0 && sellOutThreshold <= 100, "Sell-out threshold must be between 0 and 100");
+        require(sellOutThreshold >= 50 && sellOutThreshold <= 100, "Sell-out threshold must be between 50 and 100");
         require(coordinates.lat >= -90 * 10**6 && coordinates.lat <= 90 * 10**6, "Invalid latitude");
         require(coordinates.lon >= -180 * 10**6 && coordinates.lon <= 180 * 10**6, "Invalid longitude");
         require(areContractsSet, "Contract addresses must be set");
@@ -253,7 +253,7 @@ contract Show is IShow, ShowStorage, ReentrancyGuard {
     }
 
     /// @notice Completes a show and distributes funds
-/// @param showId Unique identifier for the show
+    /// @param showId Unique identifier for the show
     function completeShow(bytes32 showId) public onlyTicketContract {
         Show storage show = shows[showId];
         require(show.status == Status.Accepted, "Show must be Accepted");

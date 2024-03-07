@@ -9,8 +9,6 @@ import { OrganizerRegistry } from "../registry/organizer/OrganizerRegistry.sol";
 import { VenueRegistry } from "../registry/venue/VenueRegistry.sol";
 import { ReferralModule } from "../registry/referral/ReferralModule.sol";
 
-/// @title SellOutFactory
-/// @notice Factory contract to deploy and link all SellOut protocol contracts including Show, Ticket, Venue, registries, and ReferralModule.
 contract SellOutFactory {
     Show public showInstance;
     Ticket public ticketInstance;
@@ -27,7 +25,8 @@ contract SellOutFactory {
 
         // Deploying core contracts
         showInstance = new Show(SELLOUT_PROTOCOL_WALLET);
-        referralModuleInstance = new ReferralModule(address(showInstance), SELLOUT_PROTOCOL_WALLET);
+        // Initialize the ReferralModule with the factory (or another specified address) as admin
+        referralModuleInstance = new ReferralModule(address(this), SELLOUT_PROTOCOL_WALLET);
         ticketInstance = new Ticket(address(showInstance));
         venueInstance = new Venue(address(showInstance), address(ticketInstance));
 
@@ -45,5 +44,8 @@ contract SellOutFactory {
             address(organizerRegistryInstance),
             address(venueRegistryInstance)
         );
+
+        // IMPORTANT: Set permission for OrganizerRegistry to decrement referral credits
+        referralModuleInstance.setDecrementPermission(address(organizerRegistryInstance), true);
     }
 }
