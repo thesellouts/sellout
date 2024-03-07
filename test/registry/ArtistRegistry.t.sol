@@ -2,8 +2,8 @@
 pragma solidity ^0.8.16;
 
 import "forge-std/Test.sol";
-import "../src/registry/referral/ReferralModule.sol";
-import "../src/registry/artist/ArtistRegistry.sol";
+import "../../src/registry/referral/ReferralModule.sol";
+import "../../src/registry/artist/ArtistRegistry.sol";
 
 contract TestArtistRegistry is Test {
     ArtistRegistry public artistRegistry;

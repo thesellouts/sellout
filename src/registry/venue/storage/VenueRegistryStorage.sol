@@ -9,7 +9,7 @@ contract VenueRegistryStorage {
     using VenueRegistryTypes for VenueRegistryTypes.VenueInfo;
     mapping(uint256 => VenueRegistryTypes.VenueInfo) internal venues;
     mapping(address => uint256) internal addressToVenueId; // Mapping to track venue IDs by address
-    mapping(address => bool) public waitlistedVenues;
+    mapping(address => bool) public nominatedVenues;
     uint256 internal currentVenueId;
 
 }
