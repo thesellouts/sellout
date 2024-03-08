@@ -1,83 +1,105 @@
-pragma solidity 0.8.16;
-//
-//import "forge-std/Test.sol";
-//import "../src/show/Show.sol";
-//import "../src/show/types/ShowTypes.sol";
-//import "../src/venue/types/VenueTypes.sol";
-//import "../src/factory/SellOutFactory.sol";
-//
-//contract TestShow is Test {
-//    Show showInstance;
-//    Ticket ticketInstance;
-//
-//    function setUp() public {
-//        SellOutFactory factory = new SellOutFactory();
-//
-//        showInstance = Show(factory.showInstance());
-//        ticketInstance = Ticket(factory.ticketInstance());
-//    }
-//
-//    function testProposeShowWithValidParameters() public {
-//        string memory name = "Sample Show";
-//        string memory description = "A great show!";
-//        address[] memory artists = new address[](1);
-//        artists[0] = address(0x1234);
-//        VenueTypes.Venue memory venue = VenueTypes.Venue({
-//            name: "Venue Name",
-//            coordinates: VenueTypes.Coordinates({lat: 100, lon: 80}),
-//            totalCapacity: 5000,
-//            wallet: address(0x5678)
-//        });
-//        uint8 radius = 80;
-//        uint8 sellOutThreshold = 80;
-//        uint256 totalCapacity = 1000;
-//        ShowTypes.TicketPrice memory ticketPrice = ShowTypes.TicketPrice({minPrice: 10, maxPrice: 100});
-//        uint256[] memory split = new uint256[](3);
-//        split[0] = 40; // organizer
-//        split[1] = 40; // artists
-//        split[2] = 20; // venue
-//
-//        bytes32 showId = showInstance.proposeShow(name, description, artists, venue.coordinates, radius, sellOutThreshold, totalCapacity, ticketPrice, split);
-//
-//        // Validate the result
-//        (string memory returnedName, , , , , , , , , ) = showInstance.getShowById(showId);
-//        assertEq(returnedName, name, "Show name does not match");
-//    }
-////
-////    function testShowExpiry() public {
-////        string memory name = "Expired Show";
-////        string memory description = "A show that has expired!";
-////        address[] memory artists = new address[](1);
-////        artists[0] = address(0x1234);
-////        VenueTypes.Venue memory venue = VenueTypes.Venue({
-////            name: "Venue Name",
-////            coordinates: VenueTypes.Coordinates({lat: 80, lon: 100}),
-////            wallet: address(0x5678),
-////            totalCapacity: 500
-////        });
-////
-////        uint8 radius = 80;
-////        uint8 sellOutThreshold = 80;
-////        uint256 totalCapacity = 1000;
-////        ShowTypes.TicketPrice memory ticketPrice = ShowTypes.TicketPrice({minPrice: 10, maxPrice: 100});
-////        uint256[] memory split = new uint256[](3);
-////        split[0] = 40;
-////        split[1] = 40;
-////        split[2] = 20;
-////
-////        bytes32 showId = showInstance.proposeShow(name, description, artists, venue.coordinates, radius, sellOutThreshold, totalCapacity, ticketPrice, split);
-////
-////        // Simulate the passage of time by increasing the block timestamp
-////        vm.warp(block.timestamp + 31 days);
-////
-////        // Simulate the expiry check
-//////        ticketInstance.checkAndUpdateExpiry(showId);
-////
-////        // Validate that the show status is "Expired"
-////        Show.Status status = showInstance.getShowStatus(showId);
-////        assertEq(uint(status), uint(ShowTypes.Status.Expired));
-////    }
-//
-//}
-//
-//
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.16;
+
+import "forge-std/Test.sol";
+import "../src/show/Show.sol";
+import "../src/ticket/Ticket.sol";
+import "../src/registry/organizer/OrganizerRegistry.sol";
+import "../src/registry/artist/ArtistRegistry.sol";
+import "../src/registry/venue/VenueRegistry.sol";
+import "../src/registry/referral/ReferralModule.sol";
+import { VenueTypes } from "../src/venue/storage/VenueStorage.sol";
+import { ShowTypes } from "../src/show/types/ShowTypes.sol";
+
+contract ShowTest is Test {
+    Show public show;
+    Ticket public ticket;
+    OrganizerRegistry public organizerRegistry;
+    ArtistRegistry public artistRegistry;
+    VenueRegistry public venueRegistry;
+    ReferralModule public referralModule;
+
+    address public organizer = address(0x123);
+    address public artist = address(0x456);
+
+    function setUpOrganizerAndArtist() internal {
+        // Set permissions for decrementing referral credits
+        referralModule.setCreditControlPermission(address(organizerRegistry), true);
+        referralModule.setCreditControlPermission(address(artistRegistry), true);
+
+        // Increment referral credits to allow registration
+        referralModule.incrementReferralCredits(organizer, 0, 1, 0);
+        referralModule.incrementReferralCredits(artist, 1, 0, 0);
+
+        // Register organizer and artist
+        vm.startPrank(organizer);
+        organizerRegistry.nominate(organizer);
+        organizerRegistry.acceptNomination();
+        vm.stopPrank();
+
+        vm.startPrank(artist);
+        artistRegistry.nominate(artist);
+        artistRegistry.acceptNomination();
+        vm.stopPrank();
+    }
+
+    function setUp() public {
+        referralModule = new ReferralModule(address(this), address(this));
+        organizerRegistry = new OrganizerRegistry(address(referralModule));
+        artistRegistry = new ArtistRegistry(address(referralModule));
+        venueRegistry = new VenueRegistry(address(referralModule));
+        show = new Show(address(this));
+        ticket = new Ticket(address(show));
+
+        show.setProtocolAddresses(address(ticket), address(venueRegistry), address(referralModule), address(artistRegistry), address(organizerRegistry), address(venueRegistry));
+
+        setUpOrganizerAndArtist();
+    }
+
+    function testProposeShow() public {
+        string memory name = "Test Show";
+        string memory description = "This is a test show description.";
+        address[] memory artists = new address[](1);
+        artists[0] = artist;
+        VenueTypes.Coordinates memory coordinates = VenueTypes.Coordinates({lat: 1000000, lon: -1000000});
+        uint256 radius = 50;
+        uint8 sellOutThreshold = 80;
+        uint256 totalCapacity = 200;
+        ShowTypes.TicketPrice memory ticketPrice = ShowTypes.TicketPrice({minPrice: 0.1 ether, maxPrice: 1 ether});
+        uint256[] memory split = new uint256[](3); // organizer, artists, venue
+        split[0] = 50; split[1] = 25; split[2] = 25;
+
+        vm.prank(organizer);
+        bytes32 showId = show.proposeShow(name, description, artists, coordinates, radius, sellOutThreshold, totalCapacity, ticketPrice, split);
+
+        // Simplified assertion to check show status
+        ShowTypes.Status status = show.getShowStatus(showId);
+        assertEq(uint(status), uint(ShowTypes.Status.Proposed), "Show status should be Proposed.");
+    }
+
+    function testProposeShowWithUnregisteredOrganizer() public {
+        // Assuming `artist` is already registered in the setup
+        string memory name = "Unregistered Organizer Show";
+        string memory description = "Show with unregistered organizer";
+        address[] memory artists = new address[](1);
+        artists[0] = artist;
+        VenueTypes.Coordinates memory coordinates = VenueTypes.Coordinates(0, 0);
+        uint256 radius = 100;
+        uint8 sellOutThreshold = 70;
+        uint256 totalCapacity = 300;
+        ShowTypes.TicketPrice memory ticketPrice = ShowTypes.TicketPrice(0.05 ether, 0.2 ether);
+        uint256[] memory split = new uint256[](3);
+        split[0] = 50; // Organizer's share
+        split[1] = 30; // Artist's share
+        split[2] = 20; // Venue's share
+
+        address unregisteredOrganizer = address(0xdead);
+        vm.startPrank(unregisteredOrganizer);
+        vm.expectRevert("Organizer does not exist");
+        show.proposeShow(name, description, artists, coordinates, radius, sellOutThreshold, totalCapacity, ticketPrice, split);
+        vm.stopPrank();
+    }
+
+
+    // Additional tests can be added here following the same pattern
+}

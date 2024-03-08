@@ -18,7 +18,7 @@ contract TestArtistRegistry is Test {
         artistRegistry = new ArtistRegistry(address(referralModule));
 
         // Setting permission for the ArtistRegistry to decrement referral credits
-        referralModule.setDecrementPermission(address(artistRegistry), true);
+        referralModule.setCreditControlPermission(address(artistRegistry), true);
 
         // Giving referral credits to a user
         referralModule.incrementReferralCredits(userWithReferralCredits, 1, 0, 0); // artist = 1, organizer = 0, venue = 0

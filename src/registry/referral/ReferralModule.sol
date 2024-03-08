@@ -49,7 +49,7 @@ contract ReferralModule {
      * @param contractAddress The address of the contract.
      * @param permission True if the contract is allowed to decrement credits, false otherwise.
      */
-    function setDecrementPermission(address contractAddress, bool permission) public {
+    function setCreditControlPermission(address contractAddress, bool permission) public {
         require(msg.sender == selloutProtocolWallet, "Only the sellout protocol wallet can set permissions");
         canDecrementCredits[contractAddress] = permission;
         emit PermissionToUpdateCredits(contractAddress, permission);

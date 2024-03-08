@@ -18,7 +18,7 @@ contract TestVenueRegistry is Test {
         venueRegistry = new VenueRegistry(address(referralModule));
 
         // Setting permission for the OrganizerRegistry to decrement referral credits
-        referralModule.setDecrementPermission(address(venueRegistry), true);
+        referralModule.setCreditControlPermission(address(venueRegistry), true);
 
         // Giving referral credits to a user
         referralModule.incrementReferralCredits(userWithReferralCredits, 0, 0, 1); // artist = 0, organizer = 1, venue = 0

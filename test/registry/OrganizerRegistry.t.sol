@@ -18,7 +18,7 @@ contract TestOrganizerRegistry is Test {
         organizerRegistry = new OrganizerRegistry(address(referralModule));
 
         // Setting permission for the OrganizerRegistry to decrement referral credits
-        referralModule.setDecrementPermission(address(organizerRegistry), true);
+        referralModule.setCreditControlPermission(address(organizerRegistry), true);
 
         // Giving referral credits to a user
         referralModule.incrementReferralCredits(userWithReferralCredits, 0, 1, 0); // artist = 0, organizer = 1, venue = 0

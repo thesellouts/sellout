@@ -46,6 +46,6 @@ contract SellOutFactory {
         );
 
         // IMPORTANT: Set permission for OrganizerRegistry to decrement referral credits
-        referralModuleInstance.setDecrementPermission(address(organizerRegistryInstance), true);
+        referralModuleInstance.setCreditControlPermission(address(organizerRegistryInstance), true);
     }
 }
