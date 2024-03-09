@@ -1,20 +1,26 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.20;
 
 import { IShow } from "./IShow.sol";
 import { ShowStorage, ShowTypes } from "./storage/ShowStorage.sol";
+
 import { Ticket } from "../ticket/Ticket.sol";
 import { ReferralModule } from "../registry/referral/ReferralModule.sol";
 import { VenueTypes } from "../venue/storage/VenueStorage.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { IArtistRegistry } from "../registry/artist/IArtistRegistry.sol";
 import { IOrganizerRegistry } from "../registry/organizer/IOrganizerRegistry.sol";
 import { IVenueRegistry } from "../registry/venue/IVenueRegistry.sol";
 
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+
+
 /// @title Show
 /// @author taayyohh
 /// @notice Manages show proposals, statuses, and fund distribution
-contract Show is IShow, ShowStorage, ReentrancyGuard {
+contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, UUPSUpgradeable, OwnableUpgradeable {
     address public ticketContract;
     address public venueContract;
     address public referralContract;
@@ -33,8 +39,9 @@ contract Show is IShow, ShowStorage, ReentrancyGuard {
     // Add a state variable to store the Sellout Protocol Wallet address
     address public SELLOUT_PROTOCOL_WALLET;
 
-    constructor(address _selloutProtocolWallet) {
-        // Store the Sellout Protocol Wallet address
+    function initialize(address _selloutProtocolWallet) public initializer {
+        __ReentrancyGuard_init();
+        __Ownable_init(_selloutProtocolWallet);
         SELLOUT_PROTOCOL_WALLET = _selloutProtocolWallet;
     }
 
@@ -101,6 +108,9 @@ contract Show is IShow, ShowStorage, ReentrancyGuard {
     function depositToVault(bytes32 showId) external payable onlyTicketOrVenue {
         showVault[showId] += msg.value;
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
 
     function isOrganizerRegistered(address organizer) internal view returns (bool) {
         (, , address wallet) = organizerRegistryInstance.getOrganizerInfoByAddress(organizer);

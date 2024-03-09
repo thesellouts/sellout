@@ -1,26 +1,38 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.20;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "./types/VenueRegistryTypes.sol";
-import "./storage/VenueRegistryStorage.sol";
-import "./IVenueRegistry.sol";
-import "../referral/ReferralModule.sol";
+import { VenueRegistryTypes } from "./types/VenueRegistryTypes.sol";
+import { VenueRegistryStorage } from "./storage/VenueRegistryStorage.sol";
+import { IVenueRegistry } from "./IVenueRegistry.sol";
+
+import { ReferralModule } from "../referral/ReferralModule.sol";
+import { ReferralTypes } from "../referral/types/ReferralTypes.sol";
+
+import { ERC1155Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 
 /**
  * @title VenueRegistry
  * @dev Manages venue profiles using ERC1155 tokens and incorporates a referral system for venue registration.
  */
-contract VenueRegistry is ERC1155, IVenueRegistry, VenueRegistryStorage {
+contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, VenueRegistryStorage, UUPSUpgradeable, OwnableUpgradeable {
     ReferralModule private referralModule;
 
     /**
-     * @dev Initializes the VenueRegistry with a metadata URI for the tokens and the ReferralModule's address.
+    * @dev Initializes the contract with a metadata URI and the ReferralModule address.
      * @param _referralModuleAddress Address of the ReferralModule contract.
      */
-    constructor(address _referralModuleAddress) ERC1155("https://api.yourapp.com/metadata/{id}.json") {
+    function initialize(address initialOwner, address _referralModuleAddress) public initializer {
+        __ERC1155_init("https://api.yourapp.com/metadata/{id}.json");
+        __Ownable_init(initialOwner);
+        __UUPSUpgradeable_init();
         referralModule = ReferralModule(_referralModuleAddress);
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
      * @dev Registers a venue with the provided name and biography. Only callable internally.
@@ -44,7 +56,7 @@ contract VenueRegistry is ERC1155, IVenueRegistry, VenueRegistryStorage {
      * @param nominee The address being nominated as a venue.
      */
     function nominate(address nominee) public {
-        ReferralModule.ReferralCredits memory credits = referralModule.getReferralCredits(msg.sender);
+        ReferralTypes.ReferralCredits memory credits = referralModule.getReferralCredits(msg.sender);
         require(credits.venue > 0, "Insufficient venue referral credits");
 
         referralModule.decrementReferralCredits(msg.sender, 0, 0, 1);

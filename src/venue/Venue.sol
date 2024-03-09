@@ -1,16 +1,22 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.20;
+
+import { VenueStorage, VenueTypes } from "./storage/VenueStorage.sol";
+import { IVenue } from "./IVenue.sol";
+
+import { ITicket } from "../ticket/ITicket.sol";
 
 import { IShow } from "../show/IShow.sol";
 import { ShowTypes } from "../show/storage/ShowStorage.sol";
-import { VenueStorage, VenueTypes } from "./storage/VenueStorage.sol";
-import { IVenue } from "./IVenue.sol";
-import { ITicket } from "../ticket/ITicket.sol";
+
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /// @title Venue Contract
 /// @author taayyohh
 /// @notice This contract manages the venue proposals, voting, and acceptance for shows.
-contract Venue is IVenue, VenueStorage {
+contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableUpgradeable {
     IShow public showInstance;
     ITicket public ticketInstance;
 
@@ -21,10 +27,13 @@ contract Venue is IVenue, VenueStorage {
     uint256 constant PROPOSAL_DATE_MINIMUM_FUTURE = 30 days;
     uint256 constant PROPOSAL_PERIOD_EXTENSION_THRESHOLD = 6 hours;
 
-    /// @notice Constructor to initialize the Venue contract with Show and Ticket contract addresses.
+    /// @notice Initializes the Venue contract with Show and Ticket contract addresses.
     /// @param _showBaseContractAddress Address of the Show contract.
     /// @param _ticketBaseContractAddress Address of the Ticket contract.
-    constructor(address _showBaseContractAddress, address _ticketBaseContractAddress) {
+    function initialize(address initialOwner,address _showBaseContractAddress, address _ticketBaseContractAddress) public initializer {
+        __Ownable_init(initialOwner);
+        __UUPSUpgradeable_init();
+
         showInstance = IShow(_showBaseContractAddress);
         ticketInstance = ITicket(_ticketBaseContractAddress);
     }
@@ -38,6 +47,8 @@ contract Venue is IVenue, VenueStorage {
         require(showInstance.isOrganizer(msg.sender, showId) || showInstance.isArtist(msg.sender, showId), "Not authorized");
         _;
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /// @notice Submit a proposal for a venue for a specific show.
     /// @param showId Unique identifier for the show.

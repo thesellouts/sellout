@@ -1,41 +1,48 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
-import "../../src/registry/referral/ReferralModule.sol";
-import "../../src/registry/organizer/OrganizerRegistry.sol";
+import { ReferralModule } from "../../src/registry/referral/ReferralModule.sol";
+import { OrganizerRegistry } from "../../src/registry/organizer/OrganizerRegistry.sol";
+import { ERC1967Proxy } from "@openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract TestOrganizerRegistry is Test {
-    OrganizerRegistry public organizerRegistry;
-    ReferralModule public referralModule;
-    address public userWithReferralCredits = address(0x123);
-    address public nominee = address(0x124);
+contract OrganizerRegistryTest is Test {
+    ReferralModule referralModule;
+    OrganizerRegistry organizerRegistry;
+    address SELLOUT_PROTOCOL_WALLET = address(1);
+    address NOMINEE = address(2);
 
-    function setUp() public {
-        // Initialize the ReferralModule with the test contract acting as both showContract and selloutProtocolWallet
-        referralModule = new ReferralModule(address(this), address(this));
+    function setUp() external {
+        // Deploy ReferralModule through a proxy
+        bytes memory initDataReferral = abi.encodeWithSelector(ReferralModule.initialize.selector, SELLOUT_PROTOCOL_WALLET);
+        ERC1967Proxy proxyReferral = new ERC1967Proxy(address(new ReferralModule()), initDataReferral);
+        referralModule = ReferralModule(address(proxyReferral));
 
-        organizerRegistry = new OrganizerRegistry(address(referralModule));
+        // Deploy OrganizerRegistry through a proxy
+        bytes memory initDataOrganizerRegistry = abi.encodeWithSelector(OrganizerRegistry.initialize.selector, SELLOUT_PROTOCOL_WALLET, address(referralModule));
+        ERC1967Proxy proxyOrganizerRegistry = new ERC1967Proxy(address(new OrganizerRegistry()), initDataOrganizerRegistry);
+        organizerRegistry = OrganizerRegistry(address(proxyOrganizerRegistry));
 
-        // Setting permission for the OrganizerRegistry to decrement referral credits
-        referralModule.setCreditControlPermission(address(organizerRegistry), true);
+        // Set permission for the OrganizerRegistry to decrement referral credits
+        vm.prank(SELLOUT_PROTOCOL_WALLET);
+        referralModule.setCreditControlPermission(address(proxyOrganizerRegistry), true);
 
-        // Giving referral credits to a user
-        referralModule.incrementReferralCredits(userWithReferralCredits, 0, 1, 0); // artist = 0, organizer = 1, venue = 0
+        // Adding some referral credits for testing
+        vm.prank(address(proxyOrganizerRegistry));
+        referralModule.incrementReferralCredits(address(this), 0, 10, 0); // Adding organizer credits for simplicity
     }
 
     function testOrganizerNominationAndAcceptance() public {
-        // Nominate a new organizer
-        vm.prank(userWithReferralCredits);
-        organizerRegistry.nominate(nominee);
+        // Assume this contract has referral credits to nominate organizers
+        organizerRegistry.nominate(NOMINEE); // Nominate a new organizer
 
-        // Accept the nomination
-        vm.prank(nominee);
+        // Accept the nomination from the nominated organizer's perspective
+        vm.prank(NOMINEE);
         organizerRegistry.acceptNomination();
 
-        // Verify the nomination was successful by checking if the nominee now has organizer info
-        (, , address wallet) = organizerRegistry.getOrganizerInfoByAddress(nominee);
-        assertTrue(wallet == nominee, "Nominee should have organizer info after acceptance");
+        // Verify the organizer's registration
+        (,, address wallet) = organizerRegistry.getOrganizerInfoByAddress(NOMINEE);
+        assertEq(wallet, NOMINEE, "The organizer's wallet address should match the nominated address.");
     }
 
     function testOrganizerUpdate() public {
@@ -47,11 +54,11 @@ contract TestOrganizerRegistry is Test {
         string memory newBio = "Updated Organizer Bio";
 
         // Update the organizer's information
-        vm.prank(nominee);
+        vm.prank(NOMINEE);
         organizerRegistry.updateOrganizer(1, newName, newBio); // Assuming ID 1 for simplicity, adjust as needed
 
         // Verify the update was successful
-        (string memory name, string memory bio, ) = organizerRegistry.getOrganizerInfoByAddress(nominee);
+        (string memory name, string memory bio, ) = organizerRegistry.getOrganizerInfoByAddress(NOMINEE);
         assertEq(name, newName, "Organizer name was not updated correctly.");
         assertEq(bio, newBio, "Organizer bio was not updated correctly.");
     }
@@ -61,11 +68,11 @@ contract TestOrganizerRegistry is Test {
         testOrganizerNominationAndAcceptance();
 
         // Deregister the organizer
-        vm.prank(nominee);
+        vm.prank(NOMINEE);
         organizerRegistry.deregisterOrganizer(1); // Assuming ID 1 for simplicity, adjust as needed
 
         // Attempt to fetch deregistered organizer info, check for default or empty values
-        (string memory name, string memory bio, address wallet) = organizerRegistry.getOrganizerInfoByAddress(nominee);
+        (string memory name, string memory bio, address wallet) = organizerRegistry.getOrganizerInfoByAddress(NOMINEE);
         assertEq(wallet, address(0), "Organizer wallet should be default address.");
         assertEq(name, "", "Organizer name should be empty.");
         assertEq(bio, "", "Organizer bio should be empty.");

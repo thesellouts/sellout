@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.20;
 
-import { ERC1155 } from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { ITicket } from "./ITicket.sol";
 import { TicketStorage } from "./storage/TicketStorage.sol";
-import { Show } from "../show/Show.sol";
+
+import { IShow } from "../show/IShow.sol";
 import { ShowTypes } from "../show/types/ShowTypes.sol";
+
+import { Strings } from "@openzeppelin-contracts/utils/Strings.sol";
+
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { ERC1155Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /// @title SellOut Ticket
 /// @author taayyohh
 /// @notice A contract for managing ticket sales for shows using the ERC1155 standard
-contract Ticket is ITicket, TicketStorage, ERC1155, ReentrancyGuard {
-    Show public showInstance;
+contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable, OwnableUpgradeable {
+    IShow public showInstance;
 
     // Mapping from token ID to its URI
     mapping(uint256 => string) private tokenURIs;
@@ -23,16 +29,25 @@ contract Ticket is ITicket, TicketStorage, ERC1155, ReentrancyGuard {
 
     /// @notice Constructor to initialize the contract with the Show contract address
     /// @param _showContractAddress The address of the Show contract
-    constructor(address _showContractAddress) ERC1155("https://sellout.onchain.haus/") {
-        showInstance = Show(_showContractAddress);
-        defaultURI = "https://sellout.onchain.haus/"; // Set the default URI
+    function initialize(address initialOwner, address _showContractAddress) public initializer {
+        __ERC1155_init("https://sellout.onchain.haus/");
+        __ReentrancyGuard_init();
+        __Ownable_init(initialOwner);
+        __UUPSUpgradeable_init();
+
+        showInstance = IShow(_showContractAddress);
+        defaultURI = "https://sellout.onchain.haus/";
     }
+
 
     /// @notice Modifier to ensure only the Show contract can call certain functions
     modifier onlyShowContract() {
         require(msg.sender == address(showInstance), "Only the Show contract can call this function");
         _;
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
 
     /// @notice Purchase multiple tickets for a specific show
     /// @param showId The ID of the show

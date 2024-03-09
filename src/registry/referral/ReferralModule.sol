@@ -1,75 +1,62 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.20;
+
+import { ReferralStorage } from "./storage/ReferralStorage.sol";
+import { ReferralTypes } from "./types/ReferralTypes.sol";
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /**
- * @title ReferralModule
- * @dev Manages referral credits for artists, organizers, and venues within a decentralized protocol.
+ * @title Referral Module
+ * @dev This contract manages referral credits within a decentralized protocol, supporting upgradeability.
+ * It allows for tracking and modifying referral credits for artists, organizers, and venues.
  */
-contract ReferralModule {
-    /**
-     * @dev Stores the number of referral credits for artists, organizers, and venues.
-     */
-    struct ReferralCredits {
-        uint256 artist;
-        uint256 organizer;
-        uint256 venue;
-    }
-
-    /// @dev Maps addresses to their respective referral credits.
-    mapping(address => ReferralCredits) private referralCredits;
-
-    /// @notice Authorized address to manage show-related functionalities.
-    address public showContract;
-
-    /// @notice Authorized address to manage sellout protocol wallet-related functionalities.
-    address public selloutProtocolWallet;
-
-    /// @dev Maps addresses to their permission to decrement referral credits.
-    mapping(address => bool) public canDecrementCredits;
-
-    /// @notice Emitted when referral credits are updated.
-    event ReferralCreditsUpdated(address indexed referrer, ReferralCredits credits);
-
-    /// @notice Emitted when permission to decrement credits is updated.
-    event PermissionToUpdateCredits(address indexed contractAddress, bool permission);
+contract ReferralModule is Initializable, ReferralStorage, OwnableUpgradeable, UUPSUpgradeable  {
 
     /**
-     * @notice Initializes the contract with show contract and sellout protocol wallet addresses.
-     * @param _showContract The address of the Show contract.
-     * @param _selloutProtocolWallet The address of the Sellout Protocol Wallet.
+     * @dev Initializes the contract by setting the initial owner and preparing it for upgradeability.
+     * @param initialOwner Address to be set as the initial owner.
      */
-    constructor(address _showContract, address _selloutProtocolWallet) {
-        require(_showContract != address(0) && _selloutProtocolWallet != address(0), "Invalid address");
-        showContract = _showContract;
-        selloutProtocolWallet = _selloutProtocolWallet;
+    function initialize(address initialOwner) public initializer {
+        __Ownable_init(initialOwner);
+        __UUPSUpgradeable_init();
     }
 
     /**
-     * @notice Sets the permission for a contract to decrement referral credits.
-     * @param contractAddress The address of the contract.
-     * @param permission True if the contract is allowed to decrement credits, false otherwise.
+     * @dev Ensures only the owner can authorize contract upgrades.
+     * @param newImplementation Address of the new contract implementation.
      */
-    function setCreditControlPermission(address contractAddress, bool permission) public {
-        require(msg.sender == selloutProtocolWallet, "Only the sellout protocol wallet can set permissions");
-        canDecrementCredits[contractAddress] = permission;
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    /**
+     * @dev Sets or revokes permission for an address to decrement referral credits.
+     * @param contractAddress The address to update permission for.
+     * @param permission True to allow, false to revoke.
+     */
+    function setCreditControlPermission(address contractAddress, bool permission) public onlyOwner {
+        isCreditor[contractAddress] = permission;
         emit PermissionToUpdateCredits(contractAddress, permission);
     }
 
+    /**
+     * @dev Modifier to allow only authorized addresses to execute a function.
+     */
     modifier onlyAuthorized() {
-        require(msg.sender == showContract || msg.sender == selloutProtocolWallet || canDecrementCredits[msg.sender], "Unauthorized");
+        require(isCreditor[msg.sender], "Unauthorized");
         _;
     }
 
     /**
-     * @notice Increments referral credits for a specific referrer.
-     * @dev Only authorized addresses can call this function.
-     * @param referrer The address of the referrer.
-     * @param artistCredits The number of artist credits to add.
-     * @param organizerCredits The number of organizer credits to add.
-     * @param venueCredits The number of venue credits to add.
+     * @dev Increments referral credits for a given referrer.
+     * @param referrer The address of the referrer whose credits are to be incremented.
+     * @param artistCredits Number of artist credits to add.
+     * @param organizerCredits Number of organizer credits to add.
+     * @param venueCredits Number of venue credits to add.
      */
     function incrementReferralCredits(address referrer, uint256 artistCredits, uint256 organizerCredits, uint256 venueCredits) public onlyAuthorized {
-        ReferralCredits storage credits = referralCredits[referrer];
+        ReferralTypes.ReferralCredits storage credits = referralCredits[referrer];
         credits.artist += artistCredits;
         credits.organizer += organizerCredits;
         credits.venue += venueCredits;
@@ -77,32 +64,27 @@ contract ReferralModule {
     }
 
     /**
-     * @notice Decrements referral credits for a specific referrer.
-     * @dev Only authorized addresses or those with permission can call this function.
-     * @param referrer The address of the referrer.
-     * @param artistCredits The number of artist credits to subtract.
-     * @param organizerCredits The number of organizer credits to subtract.
-     * @param venueCredits The number of venue credits to subtract.
+     * @dev Decrements referral credits for a given referrer.
+     * @param referrer The address of the referrer whose credits are to be decremented.
+     * @param artistCredits Number of artist credits to remove.
+     * @param organizerCredits Number of organizer credits to remove.
+     * @param venueCredits Number of venue credits to remove.
      */
     function decrementReferralCredits(address referrer, uint256 artistCredits, uint256 organizerCredits, uint256 venueCredits) public onlyAuthorized {
-        ReferralCredits storage credits = referralCredits[referrer];
-        require(credits.artist >= artistCredits, "Insufficient artist credits");
-        require(credits.organizer >= organizerCredits, "Insufficient organizer credits");
-        require(credits.venue >= venueCredits, "Insufficient venue credits");
-
+        ReferralTypes.ReferralCredits storage credits = referralCredits[referrer];
+        require(credits.artist >= artistCredits && credits.organizer >= organizerCredits && credits.venue >= venueCredits, "Insufficient credits");
         credits.artist -= artistCredits;
         credits.organizer -= organizerCredits;
         credits.venue -= venueCredits;
-
         emit ReferralCreditsUpdated(referrer, credits);
     }
 
     /**
-     * @notice Retrieves the referral credits for a specific referrer.
-     * @param referrer The address of the referrer.
-     * @return The referral credits for the referrer.
+     * @dev Retrieves the referral credits for a specified address.
+     * @param referrer The address to retrieve referral credits for.
+     * @return The referral credits of the specified address.
      */
-    function getReferralCredits(address referrer) public view returns (ReferralCredits memory) {
+    function getReferralCredits(address referrer) public view returns (ReferralTypes.ReferralCredits memory) {
         return referralCredits[referrer];
     }
 }

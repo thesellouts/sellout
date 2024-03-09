@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.20;
 
-import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
+import { Counters } from "@openzeppelin-contracts/utils/Counters.sol";
 import { TicketTypes } from  "../types/TicketTypes.sol";
 
 /// @title TicketStorage

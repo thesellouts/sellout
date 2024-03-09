@@ -1,18 +1,34 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.20;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "./IOrganizerRegistry.sol"; // Adjust the path as necessary
-import "./storage/OrganizerRegistryStorage.sol"; // Adjust the path as necessary
-import "./types/OrganizerRegistryTypes.sol";
-import "../referral/ReferralModule.sol"; // Adjust the path as necessary
+import { IOrganizerRegistry } from "./IOrganizerRegistry.sol";
+import { OrganizerRegistryStorage } from "./storage/OrganizerRegistryStorage.sol";
+import { OrganizerRegistryTypes } from "./types/OrganizerRegistryTypes.sol";
 
-contract OrganizerRegistry is ERC1155, IOrganizerRegistry, OrganizerRegistryStorage {
+import { ReferralModule } from "../referral/ReferralModule.sol";
+import { ReferralTypes } from "../referral/types/ReferralTypes.sol";
+
+import { ERC1155Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+
+contract OrganizerRegistry is Initializable, ERC1155Upgradeable, IOrganizerRegistry, OrganizerRegistryStorage, UUPSUpgradeable, OwnableUpgradeable {
     ReferralModule private referralModule;
 
-    constructor(address _referralModuleAddress) ERC1155("https://api.yourapp.com/metadata/{id}.json") {
+    /**
+    * @dev Initializes the contract with a metadata URI and the ReferralModule address.
+     * @param _referralModuleAddress Address of the ReferralModule contract.
+     */
+    function initialize(address initialOwner, address _referralModuleAddress) public initializer {
+        __ERC1155_init("https://api.yourapp.com/metadata/{id}.json");
+        __Ownable_init(initialOwner);
+        __UUPSUpgradeable_init();
         referralModule = ReferralModule(_referralModuleAddress);
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     // Register an organizer
     function registerOrganizer(string memory name, string memory bio) internal {
@@ -29,7 +45,7 @@ contract OrganizerRegistry is ERC1155, IOrganizerRegistry, OrganizerRegistryStor
 
     // Nominate another address for organizer status
     function nominate(address nominee) public {
-        ReferralModule.ReferralCredits memory credits = referralModule.getReferralCredits(msg.sender);
+        ReferralTypes.ReferralCredits memory credits = referralModule.getReferralCredits(msg.sender);
         require(credits.organizer > 0, "Insufficient organizer referral credits");
 
         referralModule.decrementReferralCredits(msg.sender, 0, 1, 0);

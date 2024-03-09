@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.20;
 
 import { ShowTypes } from "./types/ShowTypes.sol";
 import { VenueTypes } from "../venue/storage/VenueStorage.sol";
@@ -203,7 +203,15 @@ interface IShow is ShowTypes {
     /// @return Status of the show
     function getShowStatus(bytes32 showId) external view returns (Status);
 
-    /// @notice Retrieves the ticket price details of a show.
+    /**
+      * @notice Retrieves the organizer's address for a given show ID.
+     * @param showId The unique identifier for the show.
+     * @return The address of the organizer of the show.
+     */
+    function getOrganizer(bytes32 showId) external view returns (address);
+
+
+        /// @notice Retrieves the ticket price details of a show.
     /// @param showId Unique identifier for the show
     /// @return Ticket price details
     function getTicketPrice(bytes32 showId) external view returns (TicketPrice memory);

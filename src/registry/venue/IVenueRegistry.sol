@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.20;
 
 /// @title IVenueRegistry
 /// @notice Interface for the VenueRegistry contract that manages venue profiles with ERC1155 tokens.

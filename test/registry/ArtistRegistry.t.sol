@@ -1,41 +1,48 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
-import "../../src/registry/referral/ReferralModule.sol";
-import "../../src/registry/artist/ArtistRegistry.sol";
+import { ReferralModule } from "../../src/registry/referral/ReferralModule.sol";
+import { ArtistRegistry } from "../../src/registry/artist/ArtistRegistry.sol";
+import { ERC1967Proxy } from "@openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract TestArtistRegistry is Test {
-    ArtistRegistry public artistRegistry;
-    ReferralModule public referralModule;
-    address public userWithReferralCredits = address(0x123);
-    address public nominee = address(0x124);
+contract ArtistRegistryTest is Test {
+    ReferralModule referralModule;
+    ArtistRegistry artistRegistry;
+    address SELLOUT_PROTOCOL_WALLET = address(1);
+    address NOMINEE = address(2);
 
-    function setUp() public {
-        // Initialize the ReferralModule with the test contract acting as both showContract and selloutProtocolWallet
-        referralModule = new ReferralModule(address(this), address(this));
+    function setUp() external {
+        // Deploy ReferralModule through a proxy
+        bytes memory initDataReferral = abi.encodeWithSelector(ReferralModule.initialize.selector, SELLOUT_PROTOCOL_WALLET);
+        ERC1967Proxy proxyReferral = new ERC1967Proxy(address(new ReferralModule()), initDataReferral);
+        referralModule = ReferralModule(address(proxyReferral));
 
-        artistRegistry = new ArtistRegistry(address(referralModule));
+        // Deploy ArtistRegistry through a proxy
+        bytes memory initDataArtistRegistry = abi.encodeWithSelector(ArtistRegistry.initialize.selector, SELLOUT_PROTOCOL_WALLET, address(referralModule));
+        ERC1967Proxy proxyArtistRegistry = new ERC1967Proxy(address(new ArtistRegistry()), initDataArtistRegistry);
+        artistRegistry = ArtistRegistry(address(proxyArtistRegistry));
 
-        // Setting permission for the ArtistRegistry to decrement referral credits
-        referralModule.setCreditControlPermission(address(artistRegistry), true);
+        // Set permission for the ArtistRegistry to decrement referral credits
+        vm.prank(SELLOUT_PROTOCOL_WALLET);
+        referralModule.setCreditControlPermission(address(proxyArtistRegistry), true);
 
-        // Giving referral credits to a user
-        referralModule.incrementReferralCredits(userWithReferralCredits, 1, 0, 0); // artist = 1, organizer = 0, venue = 0
+        // Adding some referral credits for testing
+        vm.prank(address(proxyArtistRegistry));
+        referralModule.incrementReferralCredits(address(this), 10, 10, 10); // Adding credits to this contract for simplicity
     }
 
     function testArtistNominationAndAcceptance() public {
-        // Nominate a new artist
-        vm.prank(userWithReferralCredits);
-        artistRegistry.nominate(nominee);
+        // Assume this contract has referral credits to nominate artists
+        artistRegistry.nominate(NOMINEE); // Nominate a new artist
 
-        // Accept the nomination
-        vm.prank(nominee);
+        // Accept the nomination from the nominated artist's perspective
+        vm.prank(NOMINEE);
         artistRegistry.acceptNomination();
 
-        // Verify the nomination was successful by checking if the nominee now has artist info
-        (, , address wallet) = artistRegistry.getArtistInfoByAddress(nominee);
-        assertTrue(wallet == nominee, "Nominee should have artist info after acceptance");
+        // Verify the artist's registration
+        (,, address wallet) = artistRegistry.getArtistInfoByAddress(NOMINEE);
+        assertEq(wallet, NOMINEE, "The artist's wallet address should match the nominated address.");
     }
 
     function testArtistUpdate() public {
@@ -47,11 +54,11 @@ contract TestArtistRegistry is Test {
         string memory newBio = "Updated Artist Bio";
 
         // Update the artist's information
-        vm.prank(nominee);
+        vm.prank(NOMINEE);
         artistRegistry.updateArtist(1, newName, newBio); // Assuming ID 1 for simplicity, adjust as needed
 
         // Verify the update was successful
-        (string memory name, string memory bio, ) = artistRegistry.getArtistInfoByAddress(nominee);
+        (string memory name, string memory bio, ) = artistRegistry.getArtistInfoByAddress(NOMINEE);
         assertEq(name, newName, "Artist name was not updated correctly.");
         assertEq(bio, newBio, "Artist bio was not updated correctly.");
     }
@@ -61,11 +68,11 @@ contract TestArtistRegistry is Test {
         testArtistNominationAndAcceptance();
 
         // Deregister the artist
-        vm.prank(nominee);
+        vm.prank(NOMINEE);
         artistRegistry.deregisterArtist(1); // Assuming ID 1 for simplicity, adjust as needed
 
         // Attempt to fetch deregistered artist info, check for default or empty values
-        (string memory name, string memory bio, address wallet) = artistRegistry.getArtistInfoByAddress(nominee);
+        (string memory name, string memory bio, address wallet) = artistRegistry.getArtistInfoByAddress(NOMINEE);
         assertEq(wallet, address(0), "Artist wallet should be default address.");
         assertEq(name, "", "Artist name should be empty.");
         assertEq(bio, "", "Artist bio should be empty.");
