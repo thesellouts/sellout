@@ -30,13 +30,13 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     /// @notice Constructor to initialize the contract with the Show contract address
     /// @param _showContractAddress The address of the Show contract
     function initialize(address initialOwner, address _showContractAddress) public initializer {
-        __ERC1155_init("https://sellout.onchain.haus/");
+        __ERC1155_init("https://metadata.sellouts.app/ticket/{id}.json");
         __ReentrancyGuard_init();
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
 
         showInstance = IShow(_showContractAddress);
-        defaultURI = "https://sellout.onchain.haus/";
+        defaultURI = "https://metadata.sellouts.app/ticket/";
     }
 
 
@@ -53,6 +53,11 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     /// @param showId The ID of the show
     /// @param amount The amount of tickets to purchase
     function purchaseTickets(bytes32 showId, uint256 amount) public payable nonReentrant {
+        uint256 totalPreviouslyPurchased = ticketsPurchasedCount[showId][msg.sender];
+        uint256 totalTicketsSold = showInstance.getTotalTicketsSold(showId);
+
+        require(totalPreviouslyPurchased + amount <= MAX_TICKETS_PER_WALLET, "Exceeds maximum tickets per wallet");
+
         require(showInstance.getShowStatus(showId) == ShowTypes.Status.Proposed, "Show is not available for ticket purchase");
         require(showInstance.getTotalTicketsSold(showId) + amount <= showInstance.getTotalCapacity(showId), "Not enough tickets available");
 
@@ -68,13 +73,14 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         ticketsPurchasedCount[showId][msg.sender] += amount;
 
         // Unique token for each show, fan status, and purchase count
-        uint256 tokenId = uint256(keccak256(abi.encodePacked(showId, fanStatus, ticketsPurchasedCount[showId][msg.sender])));
-        _mint(msg.sender, tokenId, amount, ""); // Minting the specified amount of tickets
+        uint256 tokenId = uint256(keccak256(abi.encodePacked(showId, msg.sender, totalTicketsSold, amount)));
+        _mint(msg.sender, tokenId, amount, "");
 
         showInstance.addTokenIdToWallet(showId, msg.sender, tokenId);
         showInstance.setTicketPricePaid(showId, tokenId, msg.value);
         showInstance.setTicketOwnership(msg.sender, showId, true);
         showInstance.updateExpiry(showId, block.timestamp + 30 days);
+        showInstance.setTotalTicketsSold(showId, amount);
 
         emit TicketPurchased(msg.sender, showId, tokenId, amount, fanStatus);
     }
@@ -104,9 +110,10 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         }
     }
 
-    /// @notice Determine the fan status based on the percentage of tickets sold
-    /// @param showId The ID of the show
-    /// @return The fan status (1-10)
+     // @notice Determines a fan's status based on the percentage of tickets sold.
+     // @dev Used internally to calculate dynamic ticket pricing.
+     // @param showId The unique identifier of the show.
+     // @return The fan status, a number between 1 and 10.
     function determineFanStatus(bytes32 showId) internal view returns (uint256) {
         uint256 totalCapacity = showInstance.getTotalCapacity(showId);
         uint256 totalTicketsSoldForShow = showInstance.getTotalTicketsSold(showId);
@@ -117,16 +124,20 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         return fanStatus > 0 ? fanStatus : 1; // Ensure the fan status is at least 1
     }
 
-    /// @notice Sets the URI for a given token ID
-    /// @param showId The ID of the show for which to set the URI
-    /// @param tokenId The token ID for which to set the URI
-    /// @param newURI The new URI to set
+    // @notice Sets the URI for a specific token ID.
+    // @dev Can only be called by the organizer of the show related to the token.
+    // @param showId The unique identifier of the show.
+    // @param tokenId The token ID for which to set the URI.
+    // @param newURI The new URI for the token.
     function setTokenURI(bytes32 showId, uint256 tokenId, string memory newURI) public {
         require(msg.sender == showInstance.getOrganizer(showId), "Caller is not the organizer of this show");
         tokenURIs[tokenId] = newURI;
         emit URI(newURI, tokenId);
     }
 
+    // @notice Retrieves the URI for a specific token ID.
+    // @param tokenId The token ID for which to retrieve the URI.
+    // @return The URI of the specified token.
     function uri(uint256 tokenId) public view override returns (string memory) {
         string memory _tokenURI = tokenURIs[tokenId];
         if (bytes(_tokenURI).length > 0) {
@@ -136,17 +147,12 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         }
     }
 
-    // Function to set the default URI for tickets, restricted to the organizer of a specific show
+    // @notice Sets the default URI for tickets related to a specific show.
+    // @dev Can only be set by the organizer of the show.
+    // @param newDefaultURI The new default URI for tickets.
+    // @param showId The unique identifier of the show.
     function setDefaultURI(string memory newDefaultURI, bytes32 showId) public {
         require(showInstance.isOrganizer(msg.sender, showId), "Caller is not the organizer");
         defaultURI = newDefaultURI;
-    }
-
-
-    /// @notice Retrieves the organizer address for a specific show
-    /// @param showId The unique identifier of the show
-    /// @return The address of the organizer of the show
-    function getOrganizer(bytes32 showId) public view returns (address) {
-        return showInstance.getOrganizer(showId);
     }
 }

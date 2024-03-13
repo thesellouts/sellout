@@ -11,5 +11,7 @@ contract ArtistRegistryStorage {
     mapping(uint256 => ArtistRegistryTypes.ArtistInfo) internal artists;
     mapping(address => uint256) internal addressToArtistId; // Mapping to track artist IDs by address
     mapping(address => bool) public nominatedArtists;
+
     uint256 internal currentArtistId;
+
 }

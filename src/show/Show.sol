@@ -17,7 +17,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 
-/// @title Show
+/// @title Sellout Show
 /// @author taayyohh
 /// @notice Manages show proposals, statuses, and fund distribution
 contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, UUPSUpgradeable, OwnableUpgradeable {
@@ -36,7 +36,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     IVenueRegistry public venueRegistryInstance;
     bool private areContractsSet = false;
 
-    // Add a state variable to store the Sellout Protocol Wallet address
     address public SELLOUT_PROTOCOL_WALLET;
 
     function initialize(address _selloutProtocolWallet) public initializer {
@@ -113,12 +112,12 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
 
     function isOrganizerRegistered(address organizer) internal view returns (bool) {
-        (, , address wallet) = organizerRegistryInstance.getOrganizerInfoByAddress(organizer);
+        (, , address wallet) = organizerRegistryInstance.getOrganizer(organizer);
         return wallet == organizer;
     }
 
     function isArtistRegistered(address artist) internal view returns (bool) {
-        (, , address wallet) = artistRegistryInstance.getArtistInfoByAddress(artist);
+        (, , address wallet) = artistRegistryInstance.getArtist(artist);
         return wallet == artist;
     }
 
@@ -389,6 +388,16 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     function setTicketPricePaid(bytes32 showId, uint256 ticketId, uint256 price) external onlyTicketContract {
         ticketPricePaid[showId][ticketId] = price;
     }
+
+    // @notice Sets the price paid for a specific ticket of a show.
+    // @param showId The unique identifier of the show.
+    // @param ticketId The unique identifier of the ticket within the show.
+    // @param price The price paid for the ticket.
+    // @dev This function can only be called by the ticket contract (as indicated by the onlyTicketContract modifier).
+    function setTotalTicketsSold(bytes32 showId, uint256 amount) external onlyTicketContract {
+        totalTicketsSold[showId] = totalTicketsSold[showId] + amount;
+    }
+
 
     // @notice Sets the ownership status of a ticket for a specific user and show.
     // @param user The address of the user.

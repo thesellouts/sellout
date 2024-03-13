@@ -38,10 +38,10 @@ contract OrganizerRegistryTest is Test {
 
         // Accept the nomination from the nominated organizer's perspective
         vm.prank(NOMINEE);
-        organizerRegistry.acceptNomination();
+        organizerRegistry.acceptNomination("Sellout Organizer", "The best organizer");
 
         // Verify the organizer's registration
-        (,, address wallet) = organizerRegistry.getOrganizerInfoByAddress(NOMINEE);
+        (,, address wallet) = organizerRegistry.getOrganizer(NOMINEE);
         assertEq(wallet, NOMINEE, "The organizer's wallet address should match the nominated address.");
     }
 
@@ -52,15 +52,17 @@ contract OrganizerRegistryTest is Test {
         // New name and biography for the organizer
         string memory newName = "Updated Organizer Name";
         string memory newBio = "Updated Organizer Bio";
+        address newAddr = address(3);
 
         // Update the organizer's information
         vm.prank(NOMINEE);
-        organizerRegistry.updateOrganizer(1, newName, newBio); // Assuming ID 1 for simplicity, adjust as needed
+        organizerRegistry.updateOrganizer(1, newName, newBio, newAddr); // Assuming ID 1 for simplicity, adjust as needed
 
         // Verify the update was successful
-        (string memory name, string memory bio, ) = organizerRegistry.getOrganizerInfoByAddress(NOMINEE);
+        (string memory name, string memory bio, address wallet) = organizerRegistry.getOrganizer(NOMINEE);
         assertEq(name, newName, "Organizer name was not updated correctly.");
         assertEq(bio, newBio, "Organizer bio was not updated correctly.");
+        assertEq(wallet, newAddr, "Organizer wallet was not updated correctly.");
     }
 
     function testOrganizerDeregistration() public {
@@ -72,7 +74,7 @@ contract OrganizerRegistryTest is Test {
         organizerRegistry.deregisterOrganizer(1); // Assuming ID 1 for simplicity, adjust as needed
 
         // Attempt to fetch deregistered organizer info, check for default or empty values
-        (string memory name, string memory bio, address wallet) = organizerRegistry.getOrganizerInfoByAddress(NOMINEE);
+        (string memory name, string memory bio, address wallet) = organizerRegistry.getOrganizer(NOMINEE);
         assertEq(wallet, address(0), "Organizer wallet should be default address.");
         assertEq(name, "", "Organizer name should be empty.");
         assertEq(bio, "", "Organizer bio should be empty.");

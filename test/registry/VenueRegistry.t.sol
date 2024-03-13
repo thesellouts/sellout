@@ -38,10 +38,10 @@ contract VenueRegistryTest is Test {
 
         // Accept the nomination from the nominated venue's perspective
         vm.prank(NOMINEE);
-        venueRegistry.acceptNomination();
+        venueRegistry.acceptNomination("Sellout Venue", "The Venue.");
 
         // Verify the venue's registration
-        (,, address wallet) = venueRegistry.getVenueInfoByAddress(NOMINEE);
+        (,, address wallet) = venueRegistry.getVenue(NOMINEE);
         assertEq(wallet, NOMINEE, "The venue's wallet address should match the nominated address.");
     }
 
@@ -52,15 +52,18 @@ contract VenueRegistryTest is Test {
         // New name and biography for the venue
         string memory newName = "Updated Venue Name";
         string memory newBio = "Updated Venue Bio";
+        address newAddr = address(3);
 
         // Update the venue's information
         vm.prank(NOMINEE);
-        venueRegistry.updateVenue(1, newName, newBio); // Assuming ID 1 for simplicity, adjust as needed
+        venueRegistry.updateVenue(1, newName, newBio, newAddr); // Assuming ID 1 for simplicity, adjust as needed
 
         // Verify the update was successful
-        (string memory name, string memory bio, ) = venueRegistry.getVenueInfoByAddress(NOMINEE);
+        (string memory name, string memory bio, address wallet) = venueRegistry.getVenue(NOMINEE);
         assertEq(name, newName, "Venue name was not updated correctly.");
         assertEq(bio, newBio, "Venue bio was not updated correctly.");
+        assertEq(wallet, newAddr, "Venue wallet was not updated correctly.");
+
     }
 
     function testVenueDeregistration() public {
@@ -72,7 +75,7 @@ contract VenueRegistryTest is Test {
         venueRegistry.deregisterVenue(1); // Assuming ID 1 for simplicity, adjust as needed
 
         // Attempt to fetch deregistered venue info, check for default or empty values
-        (string memory name, string memory bio, address wallet) = venueRegistry.getVenueInfoByAddress(NOMINEE);
+        (string memory name, string memory bio, address wallet) = venueRegistry.getVenue(NOMINEE);
         assertEq(wallet, address(0), "Venue wallet should be default address.");
         assertEq(name, "", "Venue name should be empty.");
         assertEq(bio, "", "Venue bio should be empty.");

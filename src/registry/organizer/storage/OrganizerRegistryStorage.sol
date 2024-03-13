@@ -9,7 +9,8 @@ contract OrganizerRegistryStorage {
     using OrganizerRegistryTypes for OrganizerRegistryTypes.OrganizerInfo;
 
     mapping(uint256 => OrganizerRegistryTypes.OrganizerInfo) internal organizers;
-    mapping(address => uint256) internal addressToOrganizerId; // Mapping to track organizer IDs by address
+    mapping(address => uint256) internal addressToOrganizerId;
     mapping(address => bool) public nominatedOrganizers;
+
     uint256 internal currentOrganizerId;
 }

@@ -29,19 +29,19 @@ contract ArtistRegistryTest is Test {
 
         // Adding some referral credits for testing
         vm.prank(address(proxyArtistRegistry));
-        referralModule.incrementReferralCredits(address(this), 10, 10, 10); // Adding credits to this contract for simplicity
+        referralModule.incrementReferralCredits(address(this), 10, 10, 10);
     }
 
     function testArtistNominationAndAcceptance() public {
         // Assume this contract has referral credits to nominate artists
-        artistRegistry.nominate(NOMINEE); // Nominate a new artist
+        artistRegistry.nominate(NOMINEE);
 
         // Accept the nomination from the nominated artist's perspective
         vm.prank(NOMINEE);
-        artistRegistry.acceptNomination();
+        artistRegistry.acceptNomination("Sellout Artist", "The Greatest Artist");
 
         // Verify the artist's registration
-        (,, address wallet) = artistRegistry.getArtistInfoByAddress(NOMINEE);
+        (,, address wallet) = artistRegistry.getArtist(NOMINEE);
         assertEq(wallet, NOMINEE, "The artist's wallet address should match the nominated address.");
     }
 
@@ -52,15 +52,17 @@ contract ArtistRegistryTest is Test {
         // New name and biography for the artist
         string memory newName = "Updated Artist Name";
         string memory newBio = "Updated Artist Bio";
+        address newAddr = address(3);
 
         // Update the artist's information
         vm.prank(NOMINEE);
-        artistRegistry.updateArtist(1, newName, newBio); // Assuming ID 1 for simplicity, adjust as needed
+        artistRegistry.updateArtist(1, newName, newBio, newAddr);
 
         // Verify the update was successful
-        (string memory name, string memory bio, ) = artistRegistry.getArtistInfoByAddress(NOMINEE);
+        (string memory name, string memory bio, address addr) = artistRegistry.getArtist(NOMINEE);
         assertEq(name, newName, "Artist name was not updated correctly.");
         assertEq(bio, newBio, "Artist bio was not updated correctly.");
+        assertEq(addr, newAddr, "Artist address was not updated correctly.");
     }
 
     function testArtistDeregistration() public {
@@ -69,10 +71,10 @@ contract ArtistRegistryTest is Test {
 
         // Deregister the artist
         vm.prank(NOMINEE);
-        artistRegistry.deregisterArtist(1); // Assuming ID 1 for simplicity, adjust as needed
+        artistRegistry.deregisterArtist(1);
 
         // Attempt to fetch deregistered artist info, check for default or empty values
-        (string memory name, string memory bio, address wallet) = artistRegistry.getArtistInfoByAddress(NOMINEE);
+        (string memory name, string memory bio, address wallet) = artistRegistry.getArtist(NOMINEE);
         assertEq(wallet, address(0), "Artist wallet should be default address.");
         assertEq(name, "", "Artist name should be empty.");
         assertEq(bio, "", "Artist bio should be empty.");

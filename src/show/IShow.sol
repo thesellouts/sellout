@@ -162,6 +162,12 @@ interface IShow is ShowTypes {
     /// @param owns Ownership status of the ticket
     function setTicketOwnership(address user, bytes32 showId, bool owns) external;
 
+
+    /// @notice Sets the total tickets sold for a specific show.
+    /// @param showId The unique identifier of the show.
+    /// @param amount The amount to add to the total tickets sold.
+    function setTotalTicketsSold(bytes32 showId, uint256 amount) external;
+
     /// @notice Adds a token ID to a wallet for a specific show.
     /// @param showId Unique identifier for the show
     /// @param wallet Address of the wallet

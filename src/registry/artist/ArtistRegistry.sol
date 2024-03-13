@@ -13,19 +13,17 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-/**
- * @title ArtistRegistry
- * @dev Manages artist profiles with ERC1155 tokens, incorporating a referral system.
- */
+// @title ArtistRegistry
+// @author taayyohh
+// @notice Manages artist profiles with ERC1155 tokens, incorporating a referral system.
 contract ArtistRegistry is Initializable, ERC1155Upgradeable, IArtistRegistry, ArtistRegistryStorage, UUPSUpgradeable, OwnableUpgradeable {
     ReferralModule private referralModule;
+    mapping(uint256 => string) private _tokenURIs;
 
-    /**
-     * @dev Initializes the contract with a metadata URI and the ReferralModule address.
-     * @param _referralModuleAddress Address of the ReferralModule contract.
-     */
+    // @dev Initializes the contract with a metadata URI and the ReferralModule address.
+    // @param _referralModuleAddress Address of the ReferralModule contract.
     function initialize(address initialOwner, address _referralModuleAddress) public initializer {
-        __ERC1155_init("https://api.yourapp.com/metadata/{id}.json");
+        __ERC1155_init("https://metadata.sellouts.app/artist/{id}.json");
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
         referralModule = ReferralModule(_referralModuleAddress);
@@ -33,74 +31,18 @@ contract ArtistRegistry is Initializable, ERC1155Upgradeable, IArtistRegistry, A
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-
-    /**
-     * @dev Registers a new artist with provided name and biography.
-     * @param _name Name of the artist.
-     * @param _bio Biography of the artist.
-     */
-    function registerArtist(string memory _name, string memory _bio) internal {
-        currentArtistId++;
-        uint256 artistId = currentArtistId;
-        address walletAddress = msg.sender;
-
-        artists[artistId] = ArtistRegistryTypes.ArtistInfo(_name, _bio, walletAddress);
-        addressToArtistId[walletAddress] = artistId;
-
-        _mint(walletAddress, artistId, 1, "");
-        emit ArtistRegistered(artistId, _name);
-    }
-
-    /**
-     * @dev Waitlists an artist for registration.
-     * @param _artist Address of the artist to be waitlisted.
-     */
-    function nominateArtist(address _artist) internal {
-        nominatedArtists[_artist] = true;
-        emit ArtistNominated(_artist);
-    }
-
-    /**
-     * @notice Allows an artist to accept their nomination and complete the registration.
-     */
-    function acceptNomination() public {
-        require(nominatedArtists[msg.sender], "Not waitlisted");
+    /// @notice Accepts artist's nomination and registers them with provided name and bio.
+    /// @param _name The artist's name to be registered.
+    /// @param _bio The artist's biography or description.
+    function acceptNomination(string memory _name, string memory _bio) public {
+        require(nominatedArtists[msg.sender], "No nomination found");
         nominatedArtists[msg.sender] = false;
-        registerArtist("", ""); // Placeholder for actual name and bio
+        registerArtist(_name, _bio);
         emit ArtistAccepted(currentArtistId, msg.sender);
     }
 
-    /**
-     * @notice Nominate an artist for registration using a referral credit.
-     * @param nominee Address of the artist being nominated.
-     */
-    function nominate(address nominee) public {
-        ReferralTypes.ReferralCredits memory credits = referralModule.getReferralCredits(msg.sender);
-        require(credits.artist > 0, "Insufficient artist referral credits");
-
-        referralModule.decrementReferralCredits(msg.sender, 1, 0, 0);
-        nominateArtist(nominee);
-    }
-
-    /**
-     * @notice Updates an artist's profile information.
-     * @param _artistId ID of the artist being updated.
-     * @param _name New name of the artist.
-     * @param _bio New biography of the artist.
-     */
-    function updateArtist(uint256 _artistId, string memory _name, string memory _bio) public {
-        require(_artistId <= currentArtistId && artists[_artistId].wallet == msg.sender, "Unauthorized");
-
-        artists[_artistId].name = _name;
-        artists[_artistId].bio = _bio;
-
-        emit ArtistUpdated(_artistId, _name, _bio);
-    }
-
-    /**
-     * @notice Allows an artist to deregister themselves.
-     * @param _artistId ID of the artist being deregistered.
-     */
+     // @notice Allows an artist to deregister themselves.
+     // @param _artistId ID of the artist being deregistered.
     function deregisterArtist(uint256 _artistId) public {
         require(_artistId <= currentArtistId && artists[_artistId].wallet == msg.sender, "Unauthorized");
 
@@ -110,18 +52,87 @@ contract ArtistRegistry is Initializable, ERC1155Upgradeable, IArtistRegistry, A
         emit ArtistDeregistered(_artistId);
     }
 
-    /**
-     * @notice Retrieves information about an artist by their wallet address.
-     * @param artistAddress Wallet address of the artist.
-     * @return name Name of the artist.
-     * @return bio Biography of the artist.
-     * @return wallet Wallet address of the artist.
-     */
-    function getArtistInfoByAddress(address artistAddress) external view returns (string memory name, string memory bio, address wallet) {
+     // @notice Retrieves information about an artist by their wallet address.
+     // @param artist Address Wallet address of the artist.
+     // @return name Name of the artist.
+     // @return bio Biography of the artist.
+     // @return wallet Wallet address of the artist.
+    function getArtist(address artistAddress) external view returns (string memory name, string memory bio, address wallet) {
         uint256 artistId = addressToArtistId[artistAddress];
         require(artistId != 0, "Artist does not exist");
 
         ArtistRegistryTypes.ArtistInfo memory artist = artists[artistId];
         return (artist.name, artist.bio, artist.wallet);
+    }
+
+     // @notice Nominate an artist for registration using a referral credit.
+     // @param nominee Address of the artist being nominated.
+    function nominate(address nominee) public {
+        ReferralTypes.ReferralCredits memory credits = referralModule.getReferralCredits(msg.sender);
+        require(credits.artist > 0, "Insufficient artist referral credits");
+
+        referralModule.decrementReferralCredits(msg.sender, 1, 0, 0);
+        nominateArtist(nominee);
+    }
+
+     // @dev Waitlists an artist for registration.
+     // @param _artist Address of the artist to be waitlisted.
+    function nominateArtist(address _artist) internal {
+        nominatedArtists[_artist] = true;
+        emit ArtistNominated(_artist);
+    }
+
+     // @dev Registers a new artist with provided name and biography.
+     // @param _name Name of the artist.
+     // @param _bio Biography of the artist.
+    function registerArtist(string memory _name, string memory _bio) internal {
+        currentArtistId++;
+        uint256 artistId = currentArtistId;
+        address walletAddress = msg.sender;
+
+        artists[artistId] = ArtistRegistryTypes.ArtistInfo(_name, _bio, walletAddress);
+        addressToArtistId[walletAddress] = artistId;
+
+        _mint(walletAddress, artistId, 1, "");
+        emit ArtistRegistered(artistId, _name, walletAddress);
+    }
+
+    // @notice Sets the URI for a given token ID
+    // @param tokenId The token ID for which to set the URI
+    // @param newURI The new URI to set
+    function setTokenURI(uint256 tokenId, string memory newURI) public {
+        require(
+            msg.sender == owner() || msg.sender == artists[tokenId].wallet,
+            "Caller is not the owner or the artist"
+        );
+
+        _tokenURIs[tokenId] = newURI;
+        emit URI(newURI, tokenId);
+    }
+
+    // @notice Updates an artist's profile information.
+    // @param _artistId ID of the artist being updated.
+    // @param _name New name of the artist.
+    // @param _bio New biography of the artist.
+    // @param _wallet New biography of the artist.
+    function updateArtist(uint256 _artistId, string memory _name, string memory _bio, address _wallet) public {
+        require(_artistId <= currentArtistId && artists[_artistId].wallet == msg.sender, "Unauthorized");
+
+        artists[_artistId].name = _name;
+        artists[_artistId].bio = _bio;
+        artists[_artistId].wallet = _wallet;
+
+        emit ArtistUpdated(_artistId, _name, _bio, _wallet);
+    }
+
+    /// @notice Returns the URI for a specific token.
+    /// @param tokenId The ID of the token.
+    /// @return The URI of the token.
+    function uri(uint256 tokenId) public view override returns (string memory) {
+        string memory customURI = _tokenURIs[tokenId];
+        if (bytes(customURI).length > 0) {
+            return customURI;
+        }
+        return super.uri(tokenId);
     }
 }

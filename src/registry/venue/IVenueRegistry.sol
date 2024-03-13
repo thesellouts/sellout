@@ -8,7 +8,7 @@ interface IVenueRegistry {
     event VenueRegistered(uint256 indexed venueId, string name);
 
     /// @dev Emitted when a venue's profile is updated.
-    event VenueUpdated(uint256 indexed venueId, string name, string bio);
+    event VenueUpdated(uint256 indexed venueId, string name, string bio, address wallet);
 
     /// @dev Emitted when a venue deregisters from the registry.
     event VenueDeregistered(uint256 indexed venueId);
@@ -19,24 +19,11 @@ interface IVenueRegistry {
     /// @dev Emitted when a nominated venue accepts its nomination and completes registration.
     event VenueAccepted(uint256 indexed venueId, address venueAddress);
 
-    /**
-     * @notice Nominates a venue for registration, utilizing a referral credit.
-     * @param nominee The address of the venue being nominated.
-     */
-    function nominate(address nominee) external;
 
     /**
      * @notice Accepts the nomination for venue registration by the nominated venue.
      */
-    function acceptNomination() external;
-
-    /**
-     * @notice Allows a venue to update their profile with new name and bio.
-     * @param _venueId The unique identifier of the venue.
-     * @param _name The new name of the venue.
-     * @param _bio The new biography or description of the venue.
-     */
-    function updateVenue(uint256 _venueId, string memory _name, string memory _bio) external;
+    function acceptNomination(string memory _name, string memory _bio) external;
 
     /**
      * @notice Allows a venue to deregister itself from the registry.
@@ -51,5 +38,25 @@ interface IVenueRegistry {
      * @return bio The biography or description of the venue.
      * @return wallet The wallet address of the venue.
      */
-    function getVenueInfoByAddress(address venueAddress) external view returns (string memory name, string memory bio, address wallet);
+    function getVenue(address venueAddress) external view returns (string memory name, string memory bio, address wallet);
+
+    /**
+     * @notice Nominates a venue for registration, utilizing a referral credit.
+     * @param nominee The address of the venue being nominated.
+     */
+    function nominate(address nominee) external;
+
+    /// @notice Sets the URI for a given token ID
+    /// @param tokenId The token ID for which to set the URI
+    /// @param newURI The new URI to set
+    function setTokenURI(uint256 tokenId, string calldata newURI) external;
+
+    /**
+     * @notice Allows a venue to update their profile with new name and bio.
+     * @param _venueId The unique identifier of the venue.
+     * @param _name The new name of the venue.
+     * @param _bio The new biography or description of the venue.
+     * @param _wallet The new biography or description of the venue.
+     */
+    function updateVenue(uint256 _venueId, string memory _name, string memory _bio, address _wallet) external;
 }
