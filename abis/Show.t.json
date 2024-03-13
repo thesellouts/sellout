@@ -1,1 +1,0 @@
-{"abi":[],"bytecode":{"object":"0x","linkReferences":{}},"deployedBytecode":{"object":"0x","linkReferences":{}},"ast":{"absolutePath":"test/Show.t.sol","id":2,"exportedSymbols":{},"nodeType":"SourceUnit","src":"34:5565:0","nodes":[{"id":1,"nodeType":"PragmaDirective","src":"34:23:0","nodes":[],"literals":["solidity","0.8",".20"]}],"license":"MIT"},"id":0}

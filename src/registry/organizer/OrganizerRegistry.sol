@@ -104,7 +104,6 @@ contract OrganizerRegistry is Initializable, ERC1155Upgradeable, IOrganizerRegis
         organizer.name = name;
         organizer.bio = bio;
         organizer.wallet = wallet;
-
         emit OrganizerUpdated(organizerId, name, bio, wallet);
     }
 

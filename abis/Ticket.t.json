@@ -1,1 +1,0 @@
-{"abi":[],"bytecode":{"object":"0x","linkReferences":{}},"deployedBytecode":{"object":"0x","linkReferences":{}},"ast":{"absolutePath":"test/Ticket.t.sol","id":49788,"exportedSymbols":{},"nodeType":"SourceUnit","src":"32:4329:68","nodes":[{"id":49787,"nodeType":"PragmaDirective","src":"32:23:68","nodes":[],"literals":["solidity","0.8",".20"]}],"license":"MIT"},"id":68}
