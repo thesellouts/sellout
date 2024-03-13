@@ -21,11 +21,18 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     ITicket public ticketInstance;
 
     // Constants for durations
-    uint256 constant PROPOSAL_PERIOD_DURATION = 7 days;
-    uint256 constant PUBLIC_VOTING_PERIOD_DURATION = 3 days;
-    uint256 constant PROPOSAL_DATE_EXTENSION = 1 days;
-    uint256 constant PROPOSAL_DATE_MINIMUM_FUTURE = 30 days;
-    uint256 constant PROPOSAL_PERIOD_EXTENSION_THRESHOLD = 6 hours;
+//    uint256 constant PROPOSAL_PERIOD_DURATION = 7 days;
+//    uint256 constant PUBLIC_VOTING_PERIOD_DURATION = 3 days;
+//    uint256 constant PROPOSAL_DATE_EXTENSION = 1 days;
+//    uint256 constant PROPOSAL_DATE_MINIMUM_FUTURE = 30 days;
+//    uint256 constant PROPOSAL_PERIOD_EXTENSION_THRESHOLD = 6 hours;
+
+    // Constants for durations adjusted for quick testing
+    uint256 constant PROPOSAL_PERIOD_DURATION = 2 hours; // From 7 days
+    uint256 constant PUBLIC_VOTING_PERIOD_DURATION = 10 minutes; // From 3 days
+    uint256 constant PROPOSAL_DATE_EXTENSION = 5 minutes; // From 1 day
+    uint256 constant PROPOSAL_DATE_MINIMUM_FUTURE = 45 minutes; // From 30 days
+    uint256 constant PROPOSAL_PERIOD_EXTENSION_THRESHOLD = 2 minutes; // From 6 hours
 
     /// @notice Initializes the Venue contract with Show and Ticket contract addresses.
     /// @param _showBaseContractAddress Address of the Show contract.
