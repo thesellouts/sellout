@@ -267,4 +267,12 @@ interface IShow is ShowTypes {
     /// @param showId Unique identifier for the show
     /// @return true if the address owns a ticket for the show, false otherwise
     function isTicketOwner(address owner, bytes32 showId, uint256 ticketId) external view returns (bool);
+
+    /**
+    * @notice Retrieves the refund amount owed to a specific address for a given show.
+     * @param showId The unique identifier of the show.
+     * @param user The address of the user.
+     * @return amountOwed The amount of refund owed to the user for the specified show.
+     */
+    function getPendingRefund(bytes32 showId, address user) external view returns (uint256 amountOwed);
 }

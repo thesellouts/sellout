@@ -2,15 +2,14 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
-import "../src/ticket/Ticket.sol";
+import "../src/show/Show.sol";
 
 contract DeployImplementation is Script {
     function run() external {
         vm.startBroadcast();
 
-        // Deploy the new Ticket contract
-        Ticket newTicket = new Ticket();
-        console.log("New Ticket Implementation deployed at", address(newTicket));
+        Show newShow = new Show();
+        console.log("NewShowImplementation deployed at", address(newShow));
 
         vm.stopBroadcast();
     }
