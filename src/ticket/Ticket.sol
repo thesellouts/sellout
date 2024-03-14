@@ -78,7 +78,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
 
         showInstance.addTokenIdToWallet(showId, msg.sender, tokenId);
         showInstance.setTicketPricePaid(showId, tokenId, msg.value);
-        showInstance.setTicketOwnership(msg.sender, showId, true);
         showInstance.updateExpiry(showId, block.timestamp + 30 days);
         showInstance.setTotalTicketsSold(showId, amount);
 

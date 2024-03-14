@@ -116,7 +116,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         }
 
         require(votingPeriods[showId].isPeriodActive, "Voting period is not active");
-        require(showInstance.isTicketOwner(msg.sender, showId), "Not a ticket owner");
+        require(showInstance.hasTicket(msg.sender, showId), "Not a ticket owner");
         require(!hasTicketOwnerVoted[showId][msg.sender], "Already voted");
         showProposals[showId][proposalIndex].votes++;
         hasTicketOwnerVoted[showId][msg.sender] = true;

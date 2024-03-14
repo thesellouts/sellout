@@ -87,6 +87,14 @@ interface IShow is ShowTypes {
     /// @param showId Unique identifier for the show
     function depositToVault(bytes32 showId) external payable;
 
+    /**
+   * @notice Checks if a wallet owns at least one ticket for a specific show.
+     * @param wallet The address to check for ticket ownership.
+     * @param showId The unique identifier of the show.
+     * @return ownsTicket A boolean indicating whether the wallet owns at least one ticket to the show.
+     */
+    function hasTicket(address wallet, bytes32 showId) external view returns (bool ownsTicket);
+
     /// @notice Proposes a new show.
     /// @param name Name of the show
     /// @param description Description of the show
@@ -155,13 +163,6 @@ interface IShow is ShowTypes {
     /// @param ticketId Unique identifier for the ticket
     /// @param price Price paid for the ticket
     function setTicketPricePaid(bytes32 showId, uint256 ticketId, uint256 price) external;
-
-    /// @notice Sets the ownership status of a ticket for a user.
-    /// @param user Address of the user
-    /// @param showId Unique identifier for the show
-    /// @param owns Ownership status of the ticket
-    function setTicketOwnership(address user, bytes32 showId, bool owns) external;
-
 
     /// @notice Sets the total tickets sold for a specific show.
     /// @param showId The unique identifier of the show.

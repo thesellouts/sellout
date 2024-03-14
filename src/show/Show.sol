@@ -334,7 +334,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     // @param ticketId The ID of the ticket to be refunded.
     function refundTicket(bytes32 showId, uint256 ticketId) public {
         require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Cancelled || shows[showId].status == Status.Expired, "Funds are locked");
-        require(isTicketOwner(msg.sender, showId), "User does not own the ticket for this show");
+        require(isTicketOwner(msg.sender, showId, ticketId), "User does not own the ticket for this show");
         require(getTicketPricePaid(showId, ticketId) > 0, "Ticket not purchased");
 
         uint256 refundAmount = getTicketPricePaid(showId, ticketId);
@@ -345,6 +345,9 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
         // Delete ticket information
         delete ticketPricePaid[showId][ticketId];
+
+        // Remove ticket ID from the walletToShowToTokenIds mapping
+        removeTicketId(showId, msg.sender, ticketId);
 
         // Call to ERC1155 Ticket contract to burn the ticket
         ticketInstance.burnTokens(ticketId, 1, msg.sender);
@@ -363,6 +366,46 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
         emit TicketRefunded(msg.sender, showId, refundAmount);
     }
+
+
+    // * @notice Removes a specific ticket ID for a given wallet and show.
+    // * @param showId The unique identifier of the show.
+    // * @param wallet The address of the wallet owning the ticket.
+    // * @param ticketId The ID of the ticket to be removed.
+    // *
+    function removeTicketId(bytes32 showId, address wallet, uint256 ticketId) internal {
+        uint256[] storage ticketIds = walletToShowToTokenIds[showId][wallet];
+        for (uint256 i = 0; i < ticketIds.length; i++) {
+            if (ticketIds[i] == ticketId) {
+                ticketIds[i] = ticketIds[ticketIds.length - 1];
+                ticketIds.pop();
+                break;
+            }
+        }
+    }
+
+    /// @notice Check if an address owns a ticket for a specific show
+    /// @param owner The address to check
+    /// @param showId The ID of the show
+    /// @return true if the address owns a ticket for the show, false otherwise
+    function isTicketOwner(address owner, bytes32 showId, uint256 ticketId) public view returns (bool) {
+        uint256[] memory ticketIds = walletToShowToTokenIds[showId][owner];
+        for (uint256 i = 0; i < ticketIds.length; i++) {
+            if (ticketIds[i] == ticketId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// @notice Checks if a wallet owns at least one ticket for a specific show
+    /// @param wallet The address to check for ticket ownership.
+    /// @param showId The unique identifier of the show.
+    /// @return ownsTicket A boolean indicating whether the wallet owns at least one ticket to the show.
+    function hasTicket(address wallet, bytes32 showId) public view returns (bool ownsTicket) {
+        return walletToShowToTokenIds[showId][wallet].length > 0;
+    }
+
 
     // @notice Allows a user to withdraw their refund for a show.
     // @param showId The unique identifier of the show.
@@ -398,15 +441,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         totalTicketsSold[showId] = totalTicketsSold[showId] + amount;
     }
 
-
-    // @notice Sets the ownership status of a ticket for a specific user and show.
-    // @param user The address of the user.
-    // @param showId The unique identifier of the show.
-    // @param owns Boolean indicating whether the user owns a ticket for the show.
-    // @dev This function can only be called by the ticket contract (as indicated by the onlyTicketContract modifier).
-    function setTicketOwnership(address user, bytes32 showId, bool owns) external onlyTicketContract {
-        ticketOwnership[user][showId] = owns;
-    }
 
     // @notice Adds a token ID to a user's wallet for a specific show.
     // @param showId The unique identifier of the show.
@@ -534,14 +568,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @return true if the user is an artist, false otherwise
     function isArtist(address user, bytes32 showId) public view returns (bool) {
         return isArtistMapping[showId][user];
-    }
-
-    /// @notice Check if an address owns a ticket for a specific show
-    /// @param owner The address to check
-    /// @param showId The ID of the show
-    /// @return true if the address owns a ticket for the show, false otherwise
-    function isTicketOwner(address owner, bytes32 showId) public view returns (bool) {
-        return ticketOwnership[owner][showId];
     }
 
     /// @notice Validates the split percentages between organizer, artists, and venue
