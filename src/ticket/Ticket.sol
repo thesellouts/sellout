@@ -88,8 +88,8 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     /// @notice Burns a specific amount of tokens, removing them from circulation
     /// @param tokenId The ID of the token type to be burned
     /// @param amount The amount of tokens to be burned
-    function burnTokens(uint256 tokenId, uint256 amount) public onlyShowContract {
-        _burn(msg.sender, tokenId, amount);
+    function burnTokens(uint256 tokenId, uint256 amount, address owner) public onlyShowContract {
+        _burn(owner, tokenId, amount);
     }
 
     /// @notice Calculate the ticket price based on fan status

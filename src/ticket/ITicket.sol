@@ -22,7 +22,7 @@ interface ITicket is TicketTypes {
     /// @notice Burns a specific amount of tokens, removing them from circulation
     /// @param tokenId The ID of the token type to be burned
     /// @param amount The amount of tokens to be burned
-    function burnTokens(uint256 tokenId, uint256 amount) external;
+    function burnTokens(uint256 tokenId, uint256 amount, address owner) external;
 
     /// @notice Sets the URI for a given token ID
     /// @param showId The ID of the show for which to set the URI

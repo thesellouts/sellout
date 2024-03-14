@@ -347,7 +347,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         delete ticketPricePaid[showId][ticketId];
 
         // Call to ERC1155 Ticket contract to burn the ticket
-        ticketInstance.burnTokens(ticketId, 1);
+        ticketInstance.burnTokens(ticketId, 1, msg.sender);
 
         uint256 proposalThresholdValue = (getSellOutThreshold(showId) * getTotalCapacity(showId)) / 100;
         require(showVault[showId] >= refundAmount, "Insufficient funds in show vault");
