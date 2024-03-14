@@ -1,0 +1,100 @@
+{
+  "transactions": [
+    {
+      "hash": "0x6f18adbb9591d894cd94ba2c177ce6c7bc353229988eeebd6bb8fd64e6a4a051",
+      "transactionType": "CALL",
+      "contractName": null,
+      "contractAddress": "0x41cC97a7C6Ff998505Fed2e90eE34E1D59a9B1A8",
+      "function": "setProtocolAddresses(address,address,address,address,address,address)",
+      "arguments": [
+        "0xFdEA6cDe4329A9d2a9DDa2C259BeDdeD96033c90",
+        "0xFdEA6cDe4329A9d2a9DDa2C259BeDdeD96033c90",
+        "0xDa4a9D7dB16727dab839c19ee26c903F58CC7Fb1",
+        "0x1b1C1BaD7eb07c13266b8B184Dbb126472D8855a",
+        "0x96e3b0762C160DDD8fd9DF684C12f444dF3CcC8e",
+        "0xcf4fcd7C5b45E0e5A242631c181A85C0540fF516"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0x1dd37d479ac16113ff8f160210ee209944d2b28d",
+        "to": "0x41cc97a7c6ff998505fed2e90ee34e1d59a9b1a8",
+        "gas": "0x41c74",
+        "value": "0x0",
+        "data": "0xf8121873000000000000000000000000fdea6cde4329a9d2a9dda2c259bedded96033c90000000000000000000000000fdea6cde4329a9d2a9dda2c259bedded96033c90000000000000000000000000da4a9d7db16727dab839c19ee26c903f58cc7fb10000000000000000000000001b1c1bad7eb07c13266b8b184dbb126472d8855a00000000000000000000000096e3b0762c160ddd8fd9df684c12f444df3ccc8e000000000000000000000000cf4fcd7c5b45e0e5a242631c181a85c0540ff516",
+        "nonce": "0x8c",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": "ERC1967Proxy",
+      "contractAddress": "0xDa4a9D7dB16727dab839c19ee26c903F58CC7Fb1",
+      "function": null,
+      "arguments": null,
+      "transaction": {
+        "type": "0x02",
+        "from": "0x1dd37d479ac16113ff8f160210ee209944d2b28d",
+        "to": "0xda4a9d7db16727dab839c19ee26c903f58cc7fb1",
+        "gas": "0x11c94",
+        "value": "0x0",
+        "data": "0x9e9cad290000000000000000000000001b1c1bad7eb07c13266b8b184dbb126472d8855a0000000000000000000000000000000000000000000000000000000000000001",
+        "nonce": "0x8d",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": "ERC1967Proxy",
+      "contractAddress": "0xDa4a9D7dB16727dab839c19ee26c903F58CC7Fb1",
+      "function": null,
+      "arguments": null,
+      "transaction": {
+        "type": "0x02",
+        "from": "0x1dd37d479ac16113ff8f160210ee209944d2b28d",
+        "to": "0xda4a9d7db16727dab839c19ee26c903f58cc7fb1",
+        "gas": "0x11c94",
+        "value": "0x0",
+        "data": "0x9e9cad2900000000000000000000000096e3b0762c160ddd8fd9df684c12f444df3ccc8e0000000000000000000000000000000000000000000000000000000000000001",
+        "nonce": "0x8e",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": "ERC1967Proxy",
+      "contractAddress": "0xDa4a9D7dB16727dab839c19ee26c903F58CC7Fb1",
+      "function": null,
+      "arguments": null,
+      "transaction": {
+        "type": "0x02",
+        "from": "0x1dd37d479ac16113ff8f160210ee209944d2b28d",
+        "to": "0xda4a9d7db16727dab839c19ee26c903f58cc7fb1",
+        "gas": "0x11c94",
+        "value": "0x0",
+        "data": "0x9e9cad29000000000000000000000000cf4fcd7c5b45e0e5a242631c181a85c0540ff5160000000000000000000000000000000000000000000000000000000000000001",
+        "nonce": "0x8f",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [
+    "0x6f18adbb9591d894cd94ba2c177ce6c7bc353229988eeebd6bb8fd64e6a4a051"
+  ],
+  "returns": {},
+  "timestamp": 1710434755,
+  "chain": 11155111,
+  "commit": "a2cd2b2"
+}

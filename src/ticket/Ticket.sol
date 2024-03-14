@@ -53,24 +53,21 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     /// @param showId The ID of the show
     /// @param amount The amount of tickets to purchase
     function purchaseTickets(bytes32 showId, uint256 amount) public payable nonReentrant {
-        uint256 totalPreviouslyPurchased = ticketsPurchasedCount[showId][msg.sender];
-        uint256 totalTicketsSold = showInstance.getTotalTicketsSold(showId);
+        require(showInstance.getShowStatus(showId) == ShowTypes.Status.Proposed, "Show is not available for ticket purchase");
 
+        uint256[] memory totalPreviouslyPurchasedTokenIds = showInstance.getWalletTokenIds(showId, msg.sender);
+        uint256 totalPreviouslyPurchased = totalPreviouslyPurchasedTokenIds.length;
         require(totalPreviouslyPurchased + amount <= MAX_TICKETS_PER_WALLET, "Exceeds maximum tickets per wallet");
 
-        require(showInstance.getShowStatus(showId) == ShowTypes.Status.Proposed, "Show is not available for ticket purchase");
+        uint256 totalTicketsSold = showInstance.getTotalTicketsSold(showId);
         require(showInstance.getTotalTicketsSold(showId) + amount <= showInstance.getTotalCapacity(showId), "Not enough tickets available");
 
         uint256 fanStatus = determineFanStatus(showId);
         ShowTypes.TicketPrice memory ticketPrice = showInstance.getTicketPrice(showId);
-
         uint256 calculatedTicketPrice = calculateTicketPrice(fanStatus, ticketPrice.minPrice, ticketPrice.maxPrice) * amount;
 
         require(msg.value == calculatedTicketPrice, "Incorrect payment amount");
         showInstance.depositToVault{value: msg.value}(showId);
-
-        // Increment the purchase counter for this user for this show
-        ticketsPurchasedCount[showId][msg.sender] += amount;
 
         // Unique token for each show, fan status, and purchase count
         uint256 tokenId = uint256(keccak256(abi.encodePacked(showId, msg.sender, totalTicketsSold, amount)));

@@ -20,12 +20,11 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
  */
 contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, VenueRegistryStorage, UUPSUpgradeable, OwnableUpgradeable {
     ReferralModule private referralModule;
+
     mapping(uint256 => string) private _tokenURIs;
 
-    /**
-    * @dev Initializes the contract with a metadata URI and the ReferralModule address.
-     * @param _referralModuleAddress Address of the ReferralModule contract.
-     */
+    // @notice Initializes the contract with a metadata URI and the ReferralModule address.
+    // @param _referralModuleAddress Address of the ReferralModule contract.
     function initialize(address initialOwner, address _referralModuleAddress) public initializer {
         __ERC1155_init("https://metadata.sellouts.app/venue/{id}.json");
         __Ownable_init(initialOwner);
@@ -36,9 +35,9 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
 
-    /**
-     * @notice Accepts the nomination to become a registered venue.
-     */
+    // @notice Accepts the nomination to become a registered venue.
+    // @param _name Name of the nominated Venue.
+    // @param _bio Bio of the nominated Venue.
     function acceptNomination(string memory _name, string memory _bio) public {
         require(nominatedVenues[msg.sender], "No nomination found");
         nominatedVenues[msg.sender] = false;
