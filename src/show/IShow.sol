@@ -266,5 +266,5 @@ interface IShow is ShowTypes {
     /// @param owner Address to check
     /// @param showId Unique identifier for the show
     /// @return true if the address owns a ticket for the show, false otherwise
-    function isTicketOwner(address owner, bytes32 showId) external view returns (bool);
+    function isTicketOwner(address owner, bytes32 showId, uint256 ticketId) external view returns (bool);
 }
