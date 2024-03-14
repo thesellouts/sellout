@@ -1,0 +1,14 @@
+#!/bin/bash
+
+export ETH_RPC_URL=""
+export PRIVATE_KEY=""
+export ETHERSCAN_API_KEY=""
+export SELLOUT_PROTOCOL_WALLET=""
+
+# Set the address of the proxy you want to upgrade
+export PROXY_ADDRESS="0x8406e793409bE7A70c304785cfEa1dBcD91fECc4"
+export NEW_IMPLEMENTATION_ADDRESS="0x5cF69cfA4cB5e77b6bD7F701b623aEbDfCA75E4B" # The address of the newly deployed implementation contract
+
+# Run the Forge script to upgrade the proxy to the new implementation
+forge script DeployShowProxy.s.sol:DeployShowProxy --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key YOUR_ETHERSCAN_API_KEY
+
