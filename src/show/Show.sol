@@ -229,10 +229,22 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         }
     }
 
+
+
+    // @notice Checks if the total tickets sold for a show has reached or exceeded the sell-out threshold.
+    // @param showId The unique identifier for the show
+    function checkAndUpdateShowStatus(bytes32 showId) public onlyTicketOrVenue {
+        Show storage show = shows[showId];
+        uint256 soldTickets = getTotalTicketsSold(showId);
+        if (soldTickets >= show.totalCapacity * show.sellOutThreshold / 100 && show.status == Status.Proposed) {
+            updateStatus(showId, Status.SoldOut);
+        }
+    }
+
     /// @notice Updates the status of a show
     /// @param showId Unique identifier for the show
     /// @param _status New status for the show
-    function updateStatus(bytes32 showId, Status _status) public onlyTicketOrVenue {
+    function updateStatus(bytes32 showId, Status _status) internal {
         shows[showId].status = _status;
         emit StatusUpdated(showId, _status);
     }
@@ -329,44 +341,53 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         emit Withdrawal(showId, msg.sender, amount);
     }
 
-    // @notice Allows a ticket owner to refund a specific ticket for a show that is either Proposed, Cancelled, or Expired.
-    // @param showId The unique identifier of the show.
-    // @param ticketId The ID of the ticket to be refunded.
+
+    /// @notice Allows a ticket owner to refund a specific ticket for a show.
+    /// @dev This function now also checks if the show's status should be updated from 'SoldOut' to 'Proposed'
+    /// if the total tickets sold falls below the sellout threshold after the refund.
+    /// @param showId The unique identifier of the show.
+    /// @param ticketId The ID of the ticket to be refunded.
     function refundTicket(bytes32 showId, uint256 ticketId) public {
-        require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Cancelled || shows[showId].status == Status.Expired, "Funds are locked");
+        require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Cancelled || shows[showId].status == Status.Expired || shows[showId].status == Status.SoldOut, "Funds are locked");
         require(isTicketOwner(msg.sender, showId, ticketId), "User does not own the ticket for this show");
-        require(getTicketPricePaid(showId, ticketId) > 0, "Ticket not purchased");
-
         uint256 refundAmount = getTicketPricePaid(showId, ticketId);
+        require(refundAmount > 0, "Ticket not purchased");
 
-        // Update total tickets sold
-        require(totalTicketsSold[showId] > 0, "No tickets sold for this show");
+        // Update total tickets sold and potentially the show status
+        updateTicketsSoldAndShowStatusAfterRefund(showId, ticketId, refundAmount);
+
+        // Refund logic
+        payable(msg.sender).transfer(refundAmount);
+        emit TicketRefunded(msg.sender, showId, refundAmount);
+    }
+
+    /// @dev Updates total tickets sold and potentially the show status after a ticket refund.
+    /// @param showId The unique identifier of the show.
+    /// @param ticketId The ID of the ticket being refunded.
+    /// @param refundAmount The amount to be refunded.
+    function updateTicketsSoldAndShowStatusAfterRefund(bytes32 showId, uint256 ticketId, uint256 refundAmount) internal {
+        Show storage show = shows[showId];
+
+        // Decrease total tickets sold
         totalTicketsSold[showId]--;
-
-        // Delete ticket information
-        delete ticketPricePaid[showId][ticketId];
-
-        // Remove ticket ID from the walletToShowToTokenIds mapping
-        removeTicketId(showId, msg.sender, ticketId);
-
-        // Call to ERC1155 Ticket contract to burn the ticket
-        ticketInstance.burnTokens(ticketId, 1, msg.sender);
-
-        uint256 proposalThresholdValue = (getSellOutThreshold(showId) * getTotalCapacity(showId)) / 100;
-        require(showVault[showId] >= refundAmount, "Insufficient funds in show vault");
-
-        if (totalTicketsSold[showId] <= proposalThresholdValue) {
-            shows[showId].status = ShowTypes.Status.Proposed;
-            emit StatusUpdated(showId, ShowTypes.Status.Proposed);
-        }
 
         // Update the show vault and pending withdrawals
         showVault[showId] -= refundAmount;
         pendingWithdrawals[showId][msg.sender] += refundAmount;
 
-        emit TicketRefunded(msg.sender, showId, refundAmount);
-    }
+        // Update show status if needed
+        uint256 soldTickets = totalTicketsSold[showId];
+        uint256 sellOutThresholdTickets = (show.totalCapacity * show.sellOutThreshold) / 100;
+        if (soldTickets < sellOutThresholdTickets && show.status == Status.SoldOut) {
+            show.status = Status.Proposed;
+            emit StatusUpdated(showId, Status.Proposed);
+        }
 
+        // Perform cleanup for the refunded ticket
+        delete ticketPricePaid[showId][ticketId];
+        removeTicketId(showId, msg.sender, ticketId);
+        ticketInstance.burnTokens(ticketId, 1, msg.sender);
+    }
 
     // * @notice Removes a specific ticket ID for a given wallet and show.
     // * @param showId The unique identifier of the show.
@@ -419,6 +440,17 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     // @notice Allows a user to withdraw their refund for a show.
     // @param showId The unique identifier of the show.
     function withdrawRefund(bytes32 showId) public nonReentrant {
+        Show storage show = shows[showId];
+
+        // Check if the show is in an appropriate status for refunds
+        require(
+            show.status == Status.Refunded ||
+            show.status == Status.Expired ||
+            show.status == Status.Cancelled ||
+            show.status == Status.Proposed,
+            "Refunds are not available for this show status"
+        );
+
         uint256 amount = pendingWithdrawals[showId][msg.sender];
         require(amount > 0, "No funds to withdraw");
         require(address(this).balance >= amount, "Insufficient funds in the contract");
@@ -429,7 +461,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         payable(msg.sender).transfer(amount);
         emit RefundWithdrawn(msg.sender, showId, amount);
     }
-
 
 
     // @notice Sets the price paid for a specific ticket of a show.

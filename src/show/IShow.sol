@@ -123,11 +123,6 @@ interface IShow is ShowTypes {
     /// @param expiry New expiry time for the show
     function updateExpiry(bytes32 showId, uint256 expiry) external;
 
-    /// @notice Updates the status of a show.
-    /// @param showId Unique identifier for the show
-    /// @param _status New status for the show
-    function updateStatus(bytes32 showId, Status _status) external;
-
     /// @notice Updates the venue details of a show.
     /// @param showId Unique identifier for the show
     /// @param newVenue New venue details for the show
@@ -275,4 +270,10 @@ interface IShow is ShowTypes {
      * @return amountOwed The amount of refund owed to the user for the specified show.
      */
     function getPendingRefund(bytes32 showId, address user) external view returns (uint256 amountOwed);
+
+    /**
+    * @notice Checks and updates the show status based on ticket sales and sell-out threshold.
+     * @param showId The unique identifier for the show to check and update the status of.
+     */
+    function checkAndUpdateShowStatus(bytes32 showId) external;
 }

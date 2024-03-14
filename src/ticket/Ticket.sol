@@ -77,6 +77,7 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         showInstance.setTicketPricePaid(showId, tokenId, msg.value);
         showInstance.updateExpiry(showId, block.timestamp + 30 days);
         showInstance.setTotalTicketsSold(showId, amount);
+        showInstance.checkAndUpdateShowStatus(showId);
 
         emit TicketPurchased(msg.sender, showId, tokenId, amount, fanStatus);
     }
