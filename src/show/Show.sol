@@ -276,9 +276,11 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
     /// @notice Completes a show and distributes funds
     /// @param showId Unique identifier for the show
-    function completeShow(bytes32 showId) public onlyTicketContract {
+    function completeShow(bytes32 showId) public onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
-        require(show.status == Status.Accepted, "Show must be Accepted");
+        require(show.status == Status.Upcoming, "Show must be Upcoming");
+//        require(block.timestamp >= show.showDate, "Show has not yet been completed");
+
 
         uint256 totalAmount = showVault[showId];
         require(totalAmount > 0, "No funds to distribute");
@@ -330,7 +332,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     function payout(bytes32 showId) public onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
         require(show.status == Status.Completed, "Show must be Completed");
-        require(block.timestamp == show.showDate + 2 days, "Show cool down has not ended");
+        require(block.timestamp >= show.showDate + 5 minutes, "Show cool down has not ended"); //TODO: CHANGE BACK TO LONGER TIME
 
         uint256 amount = pendingWithdrawals[showId][msg.sender];
         require(amount > 0, "No funds to withdraw");
