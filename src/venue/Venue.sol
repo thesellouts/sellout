@@ -174,27 +174,50 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     /// @param showId Unique identifier for the show.
     /// @param dateIndex Index of the date to vote for.
     function voteForDate(bytes32 showId, uint256 dateIndex) public onlyAuthorized(showId) {
+        // Ensure the selected proposal index is valid for the showId.
+        require(selectedProposalIndex[showId] < showProposals[showId].length, "No selected proposal for this show");
+
+        // Ensure the dateIndex is within the range of proposed dates for the selected proposal.
         require(dateIndex < showProposals[showId][selectedProposalIndex[showId]].proposedDates.length, "Invalid date index");
 
-        uint256 previousDateIndex = previousDateVote[showId][msg.sender];
-        require(previousDateIndex != dateIndex, "Already voted for this date");
+        // Checking if the voting period has ended is critical for date voting as well.
+        require(proposalPeriod[showId].endTime != 0 && block.timestamp > proposalPeriod[showId].endTime, "Voting period has not ended yet");
 
-        // Decrement the vote count for the previously voted date (if any)
-        if (hasDateVoted[showId][msg.sender]) {
+        bool hasVotedForDateBefore = hasDateVoted[showId][msg.sender];
+        uint256 previousDateIndex = previousDateVote[showId][msg.sender];
+
+        // Allow changing the vote to a different date
+        if (hasVotedForDateBefore && previousDateIndex != dateIndex) {
+            // Safe to decrement as Solidity 0.8.x handles underflow by reverting
             dateVotes[showId][previousDateIndex]--;
         }
 
-        // Increment the vote count for the newly voted date
+        // Increment the vote count for the new date
         dateVotes[showId][dateIndex]++;
         hasDateVoted[showId][msg.sender] = true;
-        previousDateVote[showId][msg.sender] = dateIndex; // Update the user's previous date vote
+        previousDateVote[showId][msg.sender] = dateIndex;
         emit DateVoted(showId, msg.sender, dateIndex);
 
-        // Check if all required votes have been received
-        uint256 requiredVotes = showInstance.getNumberOfVoters(showId); // Assuming this returns the count of organizer plus artists
-        if (dateVotes[showId][dateIndex] == requiredVotes) {
+        // Check if all required votes have been received to accept the date
+        uint256 requiredVotes = showInstance.getNumberOfVoters(showId);
+        if (dateVotes[showId][dateIndex] >= requiredVotes) {
             acceptDate(showId, dateIndex);
         }
+    }
+
+    /// @notice Accepts a proposed date after date voting has ended.
+    /// @dev Updates the selected date for the show and sets the show's status to Upcoming.
+    /// @param showId Unique identifier for the show.
+    /// @param dateIndex Index of the proposed date to accept.
+    function acceptDate(bytes32 showId, uint256 dateIndex) internal {
+        // Assuming dateIndex is valid and within the range of proposedDates
+        // for the selected proposal
+        uint256 acceptedDate = showProposals[showId][selectedProposalIndex[showId]].proposedDates[dateIndex];
+        selectedDate[showId] = acceptedDate; // Update the selected date for the show
+        emit DateAccepted(showId, acceptedDate);
+
+        // Update the show's status to Upcoming
+        showInstance.updateStatus(showId, ShowTypes.Status.Upcoming);
     }
 
     /// @notice Starts the proposal period for a show.
@@ -215,15 +238,6 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         emit PublicVotingPeriodStarted(showId, votingPeriods[showId].endTime);
     }
 
-
-    /// @notice Accepts a proposed date after date voting has ended.
-    /// @dev Updates the selected date for the show.
-    /// @param showId Unique identifier for the show.
-    /// @param date The proposed date to accept.
-    function acceptDate(bytes32 showId, uint256 date) internal {
-        selectedDate[showId] = date;
-        emit DateAccepted(showId, date);
-    }
 
     /// @notice Retrieves the proposal period for a specific venue.
     /// @param showId The unique identifier of the venue.
