@@ -245,7 +245,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @notice Updates the status of a show
     /// @param showId Unique identifier for the show
     /// @param _status New status for the show
-    function updateStatus(bytes32 showId, Status _status) internal {
+    function updateStatus(bytes32 showId, Status _status) public onlyTicketOrVenue  {
         shows[showId].status = _status;
         emit StatusUpdated(showId, _status);
     }

@@ -276,4 +276,10 @@ interface IShow is ShowTypes {
      * @param showId The unique identifier for the show to check and update the status of.
      */
     function checkAndUpdateShowStatus(bytes32 showId) external;
+
+    /**
+   * @notice Checks and updates the show status based on ticket sales and sell-out threshold.
+     * @param showId The unique identifier for the show to check and update the status of.
+     */
+    function updateStatus(bytes32 showId, Status status) external;
 }

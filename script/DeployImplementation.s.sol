@@ -2,14 +2,14 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
-import "../src/venue/Venue.sol";
+import "../src/show/Show.sol";
 
 contract DeployImplementation is Script {
     function run() external {
         vm.startBroadcast();
 
-        Venue newVenue = new Venue();
-        console.log("NewVenueImplementation deployed at", address(newVenue));
+        Show newShow = new Show();
+        console.log("NewShowImplementation deployed at", address(newShow));
 
         vm.stopBroadcast();
     }

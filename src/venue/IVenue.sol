@@ -12,7 +12,8 @@ interface IVenue {
     /// @param showId Unique identifier for the show.
     /// @param proposer Address of the proposer.
     /// @param venueName Name of the proposed venue.
-    event ProposalSubmitted(bytes32 indexed showId, address indexed proposer, string venueName);
+    /// @param bribe The amount of bribe paid for the proposal.
+    event ProposalSubmitted(bytes32 indexed showId, address indexed proposer, string venueName, uint256 bribe);
 
     /// @notice Emitted when a ticket holder votes for a venue proposal.
     /// @param showId Unique identifier for the show.

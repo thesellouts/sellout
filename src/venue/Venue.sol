@@ -89,15 +89,16 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
             proposalPeriod[showId].endTime += PROPOSAL_DATE_EXTENSION; // Extend by 1 day if within the last 6 hours
         }
 
+        bytes32 venueId = keccak256(abi.encodePacked(venueName, coordinates.lat, coordinates.lon, totalCapacity));
         VenueTypes.Venue memory venue;
         venue.name = venueName;
         venue.coordinates = coordinates;
         venue.totalCapacity = totalCapacity;
         venue.wallet = msg.sender;
-        venue.venueId = keccak256(abi.encodePacked(venueName, coordinates.lat, coordinates.lon, totalCapacity));
+        venue.venueId = venueId;
 
 
-    VenueTypes.Proposal memory proposal;
+        VenueTypes.Proposal memory proposal;
         proposal.venue = venue;
         proposal.proposedDates = proposedDates;
         proposal.proposer = msg.sender;
@@ -105,13 +106,14 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         proposal.votes = 0;
         proposal.accepted = false;
         showProposals[showId].push(proposal);
-        emit ProposalSubmitted(showId, msg.sender, venueName);
+        emit ProposalSubmitted(showId, msg.sender, venueName, msg.value);
     }
 
     /// @notice Allows a ticket holder to vote for a venue proposal.
     /// @param showId Unique identifier for the show.
     /// @param proposalIndex Index of the proposal to vote for.
     function ticketHolderVenueVote(bytes32 showId, uint256 proposalIndex) public {
+        //TODO: rules to enfore order of ticket holder, then artists/organizers
         // If the voting period has never been started (endTime is 0) and is not active, start it
         if (votingPeriods[showId].endTime == 0 && !votingPeriods[showId].isPeriodActive) {
             startPublicVotingPeriod(showId);
@@ -130,12 +132,15 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     /// @param proposalIndex Index of the proposal to vote for.
     function vote(bytes32 showId, uint256 proposalIndex) public onlyAuthorized(showId) {
         require(proposalIndex < showProposals[showId].length, "Invalid proposal index");
+        require(proposalPeriod[showId].endTime != 0 && block.timestamp > proposalPeriod[showId].endTime, "Voting period has not ended yet");
 
+        bool hasVotedBefore = hasVoted[showId][msg.sender];
         uint256 previousProposalIndex = previousVote[showId][msg.sender];
-        require(previousProposalIndex != proposalIndex, "Already voted for this venue");
 
-        // Decrement the vote count for the previously voted proposal (if any)
-        if (hasVoted[showId][msg.sender]) {
+        // Check if the user is trying to vote for a different proposal
+        if(hasVotedBefore) {
+            require(previousProposalIndex != proposalIndex, "Already voted for this venue");
+            // Decrement the vote count for the previously voted proposal
             showProposals[showId][previousProposalIndex].votes--;
         }
 
@@ -146,11 +151,24 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         emit ProposalVoted(showId, msg.sender, proposalIndex);
 
         // Check if all required votes have been received
-        uint256 requiredVotes = showInstance.getNumberOfVoters(showId); // Assuming this returns the count of organizer plus artists
-        if (showProposals[showId][proposalIndex].votes == requiredVotes) {
+        uint256 requiredVotes = showInstance.getNumberOfVoters(showId);
+        if (showProposals[showId][proposalIndex].votes >= requiredVotes) {
+            // If the proposal reaches the required votes, accept the proposal
             acceptProposal(showId, proposalIndex);
         }
     }
+
+    /// @notice Accepts a proposal once it has received the required votes.
+    /// @param showId Unique identifier for the show.
+    /// @param proposalIndex Index of the proposal to accept.
+    function acceptProposal(bytes32 showId, uint256 proposalIndex) internal {
+        showProposals[showId][proposalIndex].accepted = true;
+        selectedProposalIndex[showId] = proposalIndex;
+        // Update show status to indicate that a venue has been selected (or another status if applicable)
+        showInstance.updateStatus(showId, ShowTypes.Status.Accepted);
+        emit ProposalAccepted(showId, proposalIndex);
+    }
+
 
     /// @notice Allows an authorized user (organizer or artist) to vote for a proposed date.
     /// @param showId Unique identifier for the show.
@@ -197,15 +215,6 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         emit PublicVotingPeriodStarted(showId, votingPeriods[showId].endTime);
     }
 
-    /// @notice Accepts a proposal after voting has ended.
-    /// @dev Sets the proposal as accepted and updates the selected proposal index.
-    /// @param showId Unique identifier for the show.
-    /// @param proposalIndex Index of the proposal to accept.
-    function acceptProposal(bytes32 showId, uint256 proposalIndex) internal {
-        showProposals[showId][proposalIndex].accepted = true;
-        selectedProposalIndex[showId] = proposalIndex;
-        emit ProposalAccepted(showId, proposalIndex);
-    }
 
     /// @notice Accepts a proposed date after date voting has ended.
     /// @dev Updates the selected date for the show.
