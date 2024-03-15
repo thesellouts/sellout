@@ -80,4 +80,70 @@ interface IVenue {
     /// @param showId Unique identifier for the show.
     /// @param dateIndex Index of the date to vote for.
     function voteForDate(bytes32 showId, uint256 dateIndex) external;
+
+    /// @notice Retrieves the proposal period for a specific venue
+    /// @param venueId Unique identifier of the venue
+    /// @return Proposal period structure for the venue
+    function getProposalPeriod(bytes32 venueId) external view returns (VenueTypes.ProposalPeriod memory);
+
+    /// @notice Retrieves all proposals made for a specific venue
+    /// @param venueId Unique identifier of the venue
+    /// @return Array of proposals for the venue
+    function getShowProposals(bytes32 venueId) external view returns (VenueTypes.Proposal[] memory);
+
+    /// @notice Checks if a user has voted on a venue proposal
+    /// @param venueId Unique identifier of the venue
+    /// @param user Address of the user
+    /// @return Boolean indicating if the user has voted
+    function getHasVoted(bytes32 venueId, address user) external view returns (bool);
+
+    /// @notice Retrieves the voting period for a specific venue
+    /// @param venueId Unique identifier of the venue
+    /// @return Voting period structure for the venue
+    function getVotingPeriods(bytes32 venueId) external view returns (VenueTypes.VotingPeriod memory);
+
+    /// @notice Checks if a ticket owner has voted for a venue
+    /// @param venueId Unique identifier of the venue
+    /// @param user Address of the ticket owner
+    /// @return Boolean indicating if the ticket owner has voted
+    function getHasTicketOwnerVoted(bytes32 venueId, address user) external view returns (bool);
+
+    /// @notice Retrieves the previous vote of a user for a venue
+    /// @param venueId Unique identifier of the venue
+    /// @param user Address of the user
+    /// @return The previous vote of the user
+    function getPreviousVote(bytes32 venueId, address user) external view returns (uint256);
+
+    /// @notice Retrieves the number of votes for a specific date for a venue
+    /// @param venueId Unique identifier of the venue
+    /// @param date The specific date in question
+    /// @return Number of votes for the date
+    function getDateVotes(bytes32 venueId, uint256 date) external view returns (uint256);
+
+    /// @notice Retrieves the previous date vote of a user for a venue
+    /// @param venueId Unique identifier of the venue
+    /// @param user Address of the user
+    /// @return The previous date vote of the user
+    function getPreviousDateVote(bytes32 venueId, address user) external view returns (uint256);
+
+    /// @notice Checks if a user has voted for a date for a venue
+    /// @param venueId Unique identifier of the venue
+    /// @param user Address of the user
+    /// @return Boolean indicating if the user has voted for a date
+    function getHasDateVoted(bytes32 venueId, address user) external view returns (bool);
+
+    /// @notice Retrieves the selected date for a venue
+    /// @param venueId Unique identifier of the venue
+    /// @return The selected date for the venue
+    function getSelectedDate(bytes32 venueId) external view returns (uint256);
+
+    /// @notice Retrieves the index of the selected proposal for a venue
+    /// @param venueId Unique identifier of the venue
+    /// @return The index of the selected proposal
+    function getSelectedProposalIndex(bytes32 venueId) external view returns (uint256);
+
+    /// @notice Retrieves the amount of refund owed to a proposer
+    /// @param user Address of the proposer
+    /// @return The amount of refund owed
+    function getRefunds(address user) external view returns (uint256);
 }

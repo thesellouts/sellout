@@ -348,7 +348,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @param showId The unique identifier of the show.
     /// @param ticketId The ID of the ticket to be refunded.
     function refundTicket(bytes32 showId, uint256 ticketId) public {
-        require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Cancelled || shows[showId].status == Status.Expired || shows[showId].status == Status.SoldOut, "Funds are locked");
+        require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Cancelled || shows[showId].status == Status.Expired, "Funds are locked or show is sold out");
         require(isTicketOwner(msg.sender, showId, ticketId), "User does not own the ticket for this show");
         uint256 refundAmount = getTicketPricePaid(showId, ticketId);
         require(refundAmount > 0, "Ticket not purchased");
