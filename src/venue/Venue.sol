@@ -94,8 +94,10 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         venue.coordinates = coordinates;
         venue.totalCapacity = totalCapacity;
         venue.wallet = msg.sender;
+        venue.venueId = keccak256(abi.encodePacked(venueName, coordinates.lat, coordinates.lon, totalCapacity));
 
-        VenueTypes.Proposal memory proposal;
+
+    VenueTypes.Proposal memory proposal;
         proposal.venue = venue;
         proposal.proposedDates = proposedDates;
         proposal.proposer = msg.sender;

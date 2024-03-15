@@ -174,7 +174,8 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
             name: "",
             coordinates: coordinates,
             totalCapacity: totalCapacity,
-            wallet: address(0)
+            wallet: address(0),
+            venueId: bytes32(0)
         });
 
         // Create the show proposal

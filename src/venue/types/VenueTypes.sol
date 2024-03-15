@@ -18,6 +18,7 @@ interface VenueTypes {
         Coordinates coordinates; // Geographical coordinates of the venue
         uint256 totalCapacity; // Total capacity of the venue
         address wallet; // Wallet address associated with the venue
+        bytes32 venueId;
     }
 
     /// @notice Represents a proposal for a venue including details about the venue, proposed dates, and voting information.
