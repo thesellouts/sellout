@@ -217,86 +217,86 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     }
 
     /// @notice Retrieves the proposal period for a specific venue.
-    /// @param venueId The unique identifier of the venue.
+    /// @param showId The unique identifier of the venue.
     /// @return The proposal period of the venue.
-    function getProposalPeriod(bytes32 venueId) public view returns (ProposalPeriod memory) {
-        return proposalPeriod[venueId];
+    function getProposalPeriod(bytes32 showId) public view returns (ProposalPeriod memory) {
+        return proposalPeriod[showId];
     }
 
     /// @notice Retrieves all the proposals for a specific venue.
-    /// @param venueId The unique identifier of the venue.
+    /// @param showId The unique identifier of the venue.
     /// @return An array of proposals for the venue.
-    function getShowProposals(bytes32 venueId) public view returns (Proposal[] memory) {
-        return showProposals[venueId];
+    function getShowProposals(bytes32 showId) public view returns (Proposal[] memory) {
+        return showProposals[showId];
     }
 
     /// @notice Checks if a specific address has voted for a venue proposal.
-    /// @param venueId The unique identifier of the venue.
+    /// @param showId The unique identifier of the venue.
     /// @param user The address of the user.
     /// @return True if the user has voted, false otherwise.
-    function getHasVoted(bytes32 venueId, address user) public view returns (bool) {
-        return hasVoted[venueId][user];
+    function getHasVoted(bytes32 showId, address user) public view returns (bool) {
+        return hasVoted[showId][user];
     }
 
     /// @notice Retrieves the voting period for a specific venue.
-    /// @param venueId The unique identifier of the venue.
+    /// @param showId The unique identifier of the venue.
     /// @return The voting period of the venue.
-    function getVotingPeriods(bytes32 venueId) public view returns (VotingPeriod memory) {
-        return votingPeriods[venueId];
+    function getVotingPeriods(bytes32 showId) public view returns (VotingPeriod memory) {
+        return votingPeriods[showId];
     }
 
     /// @notice Checks if a ticket owner has voted for a venue.
-    /// @param venueId The unique identifier of the venue.
+    /// @param showId The unique identifier of the venue.
     /// @param user The address of the user.
     /// @return True if the ticket owner has voted, false otherwise.
-    function getHasTicketOwnerVoted(bytes32 venueId, address user) public view returns (bool) {
-        return hasTicketOwnerVoted[venueId][user];
+    function getHasTicketOwnerVoted(bytes32 showId, address user) public view returns (bool) {
+        return hasTicketOwnerVoted[showId][user];
     }
 
     /// @notice Retrieves the previous vote of an address for a venue.
-    /// @param venueId The unique identifier of the venue.
+    /// @param showId The unique identifier of the venue.
     /// @param user The address of the user.
     /// @return The previous vote of the user.
-    function getPreviousVote(bytes32 venueId, address user) public view returns (uint256) {
-        return previousVote[venueId][user];
+    function getPreviousVote(bytes32 showId, address user) public view returns (uint256) {
+        return previousVote[showId][user];
     }
 
-    /// @notice Retrieves the votes for specific dates for a venue.
-    /// @param venueId The unique identifier of the venue.
+    /// @notice Retrieves the votes for specific dates for a show.
+    /// @param showId The unique identifier of the show.
     /// @param date The date for which votes are being queried.
     /// @return The number of votes for the specified date.
-    function getDateVotes(bytes32 venueId, uint256 date) public view returns (uint256) {
-        return dateVotes[venueId][date];
+    function getDateVotes(bytes32 showId, uint256 date) public view returns (uint256) {
+        return dateVotes[showId][date];
     }
 
-    /// @notice Retrieves the previous date vote of an address for a venue.
-    /// @param venueId The unique identifier of the venue.
+    /// @notice Retrieves the previous date vote of an address for a show.
+    /// @param showId The unique identifier of the show.
     /// @param user The address of the user.
     /// @return The previous date vote of the user.
-    function getPreviousDateVote(bytes32 venueId, address user) public view returns (uint256) {
-        return previousDateVote[venueId][user];
+    function getPreviousDateVote(bytes32 showId, address user) public view returns (uint256) {
+        return previousDateVote[showId][user];
     }
 
-    /// @notice Checks if an address has voted for a date for a venue.
-    /// @param venueId The unique identifier of the venue.
+    /// @notice Checks if an address has voted for a date for a show.
+    /// @param showId The unique identifier of the show.
     /// @param user The address of the user.
     /// @return True if the user has voted for a date, false otherwise.
-    function getHasDateVoted(bytes32 venueId, address user) public view returns (bool) {
-        return hasDateVoted[venueId][user];
+    function getHasDateVoted(bytes32 showId, address user) public view returns (bool) {
+        return hasDateVoted[showId][user];
     }
 
-    /// @notice Retrieves the selected date for each venue.
-    /// @param venueId The unique identifier of the venue.
-    /// @return The selected date for the venue.
-    function getSelectedDate(bytes32 venueId) public view returns (uint256) {
-        return selectedDate[venueId];
+    /// @notice Retrieves the selected date for each show.
+    /// @param showId The unique identifier of the show.
+    /// @return The selected date for the show.
+    function getSelectedDate(bytes32 showId) public view returns (uint256) {
+        return selectedDate[showId];
     }
 
-    /// @notice Retrieves the index of the selected proposal for each venue.
-    /// @param venueId The unique identifier of the venue.
-    /// @return The index of the selected proposal for the venue.
-    function getSelectedProposalIndex(bytes32 venueId) public view returns (uint256) {
-        return selectedProposalIndex[venueId];
+    /// @notice Retrieves the index of the selected proposal for each show.
+    /// @param showId The unique identifier of the show.
+    /// @return The index of the selected proposal for the show.
+    function getSelectedProposalIndex(bytes32 showId) public view returns (uint256) {
+        return selectedProposalIndex[showId];
     }
 
     /// @notice Retrieves the refunds owed to a proposer.
