@@ -40,10 +40,6 @@ contract ShowStorage is ShowTypes {
     // Mapping to store show details by show ID
     mapping(bytes32 => Show) public shows;
 
-    // Mapping from show ID to its ticket tiers
-    mapping(bytes32 => ShowTypes.TicketTier[]) public showTicketTiers;
-
-
     // Mapping to track whether a given address is an artist for a specific show
     mapping(bytes32 => mapping(address => bool)) public isArtistMapping;
 

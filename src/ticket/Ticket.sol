@@ -83,8 +83,8 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         _mintBatch(msg.sender, ids, amounts, "");
 
         showInstance.consumeTicketTier(showId, tierIndex, amount);
-        showInstance.updateStatusIfSoldOut(showId);
         showInstance.setTotalTicketsSold(showId, amount);
+        showInstance.updateStatusIfSoldOut(showId);
 
         emit TicketPurchased(msg.sender, showId, ids[amount-1], amount, tierIndex);
     }
@@ -97,7 +97,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
      * @return tierIndex The index of the ticket tier.
      */
     function getTicketPricePaidAndTierIndex(bytes32 showId, uint256 ticketId) public view returns (uint256 price, uint256 tierIndex) {
-        require(ticketIdToTierIndex[ticketId] != 0, "Ticket or tier index does not exist");
         uint256 _price = showInstance.getTicketPricePaid(showId, ticketId);
         uint256 _tierIndex = ticketIdToTierIndex[ticketId];
         return (_price, _tierIndex);

@@ -134,6 +134,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         }
 
         validateSplit(split, artists.length);
+        validateTotalTicketsAcrossTiers(_ticketTiers, totalCapacity);
 
         showId = keccak256(abi.encodePacked(msg.sender, artists, coordinates.lat, coordinates.lon, radius, sellOutThreshold, totalCapacity));
 
@@ -159,10 +160,8 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         show.expiry = block.timestamp + 30 days;
         show.showDate = 0;
 
-        // Correct way to add ticket tiers
         for (uint i = 0; i < _ticketTiers.length; i++) {
             show.ticketTiers.push(_ticketTiers[i]);
-            showTicketTiers[showId].push(_ticketTiers[i]);
         }
 
         for (uint i = 0; i < artists.length; i++) {
@@ -182,14 +181,17 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     // @param tierIndex The index of the ticket tier.
     // @param amount The number of tickets to consume.
     function consumeTicketTier(bytes32 showId, uint256 tierIndex, uint256 amount) external onlyTicketOrVenue {
-        require(tierIndex < showTicketTiers[showId].length, "Invalid ticket tier index");
-        ShowTypes.TicketTier storage tier = showTicketTiers[showId][tierIndex];
+        Show storage show = shows[showId];
+        require(tierIndex < show.ticketTiers.length, "Invalid ticket tier index");
+
+        ShowTypes.TicketTier storage tier = show.ticketTiers[tierIndex];
         require(tier.ticketsAvailable >= amount, "Not enough tickets available in this tier");
 
         tier.ticketsAvailable -= amount;
 
         emit TicketTierConsumed(showId, tierIndex, amount);
     }
+
 
     /// @notice Deposits Ether into the vault for a specific show
     /// @param showId Unique identifier for the show
@@ -610,6 +612,18 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         }
         require(sum == 100, "Split percentages must sum to 100");
     }
+
+    /// @notice Validates that the total tickets across all tiers match the total capacity of the show
+    /// @param ticketTiers Array of ticket tiers for the show
+    /// @param totalCapacity Total capacity of the show
+    function validateTotalTicketsAcrossTiers(ShowTypes.TicketTier[] memory ticketTiers, uint256 totalCapacity) internal pure {
+        uint256 totalTicketsAcrossTiers = 0;
+        for (uint i = 0; i < ticketTiers.length; i++) {
+            totalTicketsAcrossTiers += ticketTiers[i].ticketsAvailable;
+        }
+        require(totalTicketsAcrossTiers == totalCapacity, "Total tickets across tiers must equal total capacity");
+    }
+
 
     function getOrganizer(bytes32 showId) public view returns (address) {
         return shows[showId].organizer;
