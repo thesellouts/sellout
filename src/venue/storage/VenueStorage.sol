@@ -21,7 +21,6 @@ contract VenueStorage is VenueTypes {
     // Mapping to store the voting period for each venue
     mapping(bytes32 => VotingPeriod) public votingPeriods;
 
-
     // Mapping to check if a ticket owner has voted for a venue
     mapping(bytes32 => mapping(address => bool)) public hasTicketOwnerVoted;
 

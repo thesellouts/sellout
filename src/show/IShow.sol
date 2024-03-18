@@ -117,6 +117,12 @@ interface IShow is ShowTypes {
     /// @return amountOwed The total refund amount owed to the specified user.
     function getPendingRefund(bytes32 showId, address user) external view returns (uint256 amountOwed);
 
+    /// @notice Retrieves the pending refund amount owed to a specific user for a given show.
+    /// @param showId The unique identifier of the show.
+    /// @param user The address of the user.
+    /// @return amountOwed The total refund amount owed to the specified user.
+    function getPendingPayout(bytes32 showId, address user) external view returns (uint256 amountOwed);
+
     /// @notice Retrieves the sell-out threshold for a specific show, expressed as a percentage.
     /// @param showId The unique identifier of the show.
     /// @return The sell-out threshold percentage for the show.

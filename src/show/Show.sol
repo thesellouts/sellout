@@ -382,6 +382,14 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         return pendingRefunds[showId][user];
     }
 
+    /// @notice Retrieves the refund amount owed to a specific address for a given show.
+    /// @param showId The unique identifier of the show.
+    /// @param user The address of the user.
+    /// @return amountOwed The amount of refund owed to the user for the specified show.
+    function getPendingPayout(bytes32 showId, address user) public view returns (uint256 amountOwed) {
+        return pendingPayouts[showId][user];
+    }
+
 
     /// @notice Check if an address owns a ticket for a specific show
     /// @param owner The address to check
