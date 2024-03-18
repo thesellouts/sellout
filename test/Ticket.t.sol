@@ -84,7 +84,7 @@ pragma solidity 0.8.20;
 //        uint256 ticketId = 1;
 //
 //        // Get the initial balance of the user
-//        uint256 initialBalance = showInstance.pendingWithdrawals(showId, msg.sender);
+//        uint256 initialBalance = showInstance.pendingRefunds(showId, msg.sender);
 //
 //        // Refund the ticket
 //        showInstance.refundTicket(showId, ticketId);
@@ -92,13 +92,13 @@ pragma solidity 0.8.20;
 //        // Validate the refund amount
 //        uint256 refundAmount = showInstance.getTicketPricePaid(showId, ticketId);
 //        uint256 expectedBalance = initialBalance + refundAmount;
-//        assertEq(showInstance.pendingWithdrawals(showId, msg.sender), expectedBalance, "Refund amount incorrect");
+//        assertEq(showInstance.pendingRefunds(showId, msg.sender), expectedBalance, "Refund amount incorrect");
 //
 //        // Withdraw the refund
 //        showInstance.withdrawRefund(showId);
 //
 //       // Validate the withdrawal
-//        assertEq(showInstance.pendingWithdrawals(showId, msg.sender), 0, "Withdrawal failed");
+//        assertEq(showInstance.pendingRefunds(showId, msg.sender), 0, "Withdrawal failed");
 ////        assertEq(address(msg.sender).balance, expectedBalance, "Balance incorrect after withdrawal");
 //    }
 //

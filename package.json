@@ -1,11 +1,11 @@
 {
   "private": false,
   "name": "@lucidlabs/sellout-protocol",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "sold out shows.",
   "main": "index.js",
   "keywords": [],
-  "author": "",
+  "author": "@lucidlabs",
   "license": "ISC",
   "devDependencies": {
     "solhint": "^3.3.7",

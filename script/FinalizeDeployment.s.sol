@@ -32,6 +32,7 @@ contract FinalizeDeployment is Script {
         IReferralModule(referralModuleAddress).setCreditControlPermission(artistRegistryAddress, true);
         IReferralModule(referralModuleAddress).setCreditControlPermission(organizerRegistryAddress, true);
         IReferralModule(referralModuleAddress).setCreditControlPermission(venueRegistryAddress, true);
+        IReferralModule(referralModuleAddress).setCreditControlPermission(showAddress, true);
 
         vm.stopBroadcast();
     }

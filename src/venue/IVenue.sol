@@ -15,24 +15,6 @@ interface IVenue {
     /// @param bribe The amount of bribe paid for the proposal.
     event ProposalSubmitted(bytes32 indexed showId, address indexed proposer, string venueName, uint256 bribe);
 
-    /// @notice Emitted when a ticket holder votes for a venue proposal.
-    /// @param showId Unique identifier for the show.
-    /// @param voter Address of the voter.
-    /// @param proposalIndex Index of the proposal being voted for.
-    event VenueVoted(bytes32 indexed showId, address indexed voter, uint256 proposalIndex);
-
-    /// @notice Emitted when an authorized user (organizer or artist) votes for a venue proposal.
-    /// @param showId Unique identifier for the show.
-    /// @param voter Address of the voter.
-    /// @param proposalIndex Index of the proposal being voted for.
-    event ProposalVoted(bytes32 indexed showId, address indexed voter, uint256 proposalIndex);
-
-    /// @notice Emitted when an authorized user (organizer or artist) votes for a proposed date.
-    /// @param showId Unique identifier for the show.
-    /// @param voter Address of the voter.
-    /// @param dateIndex Index of the date being voted for.
-    event DateVoted(bytes32 indexed showId, address indexed voter, uint256 dateIndex);
-
     /// @notice Emitted when a proposal period starts.
     /// @param showId Unique identifier for the show.
     /// @param endTime End time of the proposal period.
@@ -42,6 +24,29 @@ interface IVenue {
     /// @param showId Unique identifier for the show.
     /// @param endTime End time of the voting period.
     event PublicVotingPeriodStarted(bytes32 indexed showId, uint256 endTime);
+
+    /// @notice Emitted when an authorized user (organizer or artist) votes for a venue proposal.
+    /// @param showId Unique identifier for the show.
+    /// @param voter Address of the voter.
+    /// @param proposalIndex Index of the proposal being voted for.
+    event ProposalVoted(bytes32 indexed showId, address indexed voter, uint256 proposalIndex);
+
+
+    /// @notice Emitted when a ticket holder votes for a venue proposal.
+    /// @param showId Unique identifier for the show.
+    /// @param voter Address of the voter.
+    /// @param proposalIndex Index of the proposal being voted for.
+    event VenueVoted(bytes32 indexed showId, address indexed voter, uint256 proposalIndex);
+
+
+    /// @notice Emitted when an authorized user (organizer or artist) votes for a proposed date.
+    /// @param showId Unique identifier for the show.
+    /// @param voter Address of the voter.
+    /// @param dateIndex Index of the date being voted for.
+    event DateVoted(bytes32 indexed showId, address indexed voter, uint256 dateIndex);
+
+
+
 
     /// @notice Emitted when a proposal is accepted.
     /// @param showId Unique identifier for the show.

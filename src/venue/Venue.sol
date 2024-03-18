@@ -22,17 +22,20 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
 
     // Constants for durations
 //    uint256 constant PROPOSAL_PERIOD_DURATION = 7 days;
+//    uint256 constant TICKET_HOLDER_VOTING_DURATION = 3 days;
 //    uint256 constant PUBLIC_VOTING_PERIOD_DURATION = 3 days;
 //    uint256 constant PROPOSAL_DATE_EXTENSION = 1 days;
 //    uint256 constant PROPOSAL_DATE_MINIMUM_FUTURE = 30 days;
 //    uint256 constant PROPOSAL_PERIOD_EXTENSION_THRESHOLD = 6 hours;
 
+
     // Constants for durations adjusted for quick testing
     uint256 constant PROPOSAL_PERIOD_DURATION = 2 hours; // From 7 days
-    uint256 constant PUBLIC_VOTING_PERIOD_DURATION = 10 minutes; // From 3 days
+    uint256 constant PUBLIC_VOTING_PERIOD_DURATION = 30 minutes; // From 3 days
     uint256 constant PROPOSAL_DATE_EXTENSION = 5 minutes; // From 1 day
     uint256 constant PROPOSAL_DATE_MINIMUM_FUTURE = 45 minutes; // From 30 days
     uint256 constant PROPOSAL_PERIOD_EXTENSION_THRESHOLD = 2 minutes; // From 6 hours
+    uint256 constant TICKET_HOLDER_VOTING_DURATION = 30 minutes;
 
     /// @notice Initializes the Venue contract with Show and Ticket contract addresses.
     /// @param _showBaseContractAddress Address of the Show contract.
@@ -89,6 +92,12 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
             proposalPeriod[showId].endTime += PROPOSAL_DATE_EXTENSION; // Extend by 1 day if within the last 6 hours
         }
 
+        ticketHolderVotingActive[showId] = true;
+        ticketHolderVotingPeriods[showId] = VenueTypes.VotingPeriod({
+            endTime: block.timestamp + TICKET_HOLDER_VOTING_DURATION,
+            isPeriodActive: true
+        });
+
         bytes32 venueId = keccak256(abi.encodePacked(venueName, coordinates.lat, coordinates.lon, totalCapacity));
         VenueTypes.Venue memory venue;
         venue.name = venueName;
@@ -96,7 +105,6 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         venue.totalCapacity = totalCapacity;
         venue.wallet = msg.sender;
         venue.venueId = venueId;
-
 
         VenueTypes.Proposal memory proposal;
         proposal.venue = venue;
@@ -113,13 +121,8 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     /// @param showId Unique identifier for the show.
     /// @param proposalIndex Index of the proposal to vote for.
     function ticketHolderVenueVote(bytes32 showId, uint256 proposalIndex) public {
-        //TODO: rules to enfore order of ticket holder, then artists/organizers
-        // If the voting period has never been started (endTime is 0) and is not active, start it
-        if (votingPeriods[showId].endTime == 0 && !votingPeriods[showId].isPeriodActive) {
-            startPublicVotingPeriod(showId);
-        }
-
-        require(votingPeriods[showId].isPeriodActive, "Voting period is not active");
+        require(ticketHolderVotingActive[showId], "Ticket holder voting is not active");
+        require(block.timestamp <= ticketHolderVotingPeriods[showId].endTime, "Ticket holder voting period has ended");
         require(showInstance.hasTicket(msg.sender, showId), "Not a ticket owner");
         require(!hasTicketOwnerVoted[showId][msg.sender], "Already voted");
         showProposals[showId][proposalIndex].votes++;
@@ -133,6 +136,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     function vote(bytes32 showId, uint256 proposalIndex) public onlyAuthorized(showId) {
         require(proposalIndex < showProposals[showId].length, "Invalid proposal index");
         require(proposalPeriod[showId].endTime != 0 && block.timestamp > proposalPeriod[showId].endTime, "Voting period has not ended yet");
+        require(!ticketHolderVotingActive[showId] || block.timestamp > ticketHolderVotingPeriods[showId].endTime, "Ticket holder voting phase must conclude first");
 
         bool hasVotedBefore = hasVoted[showId][msg.sender];
         uint256 previousProposalIndex = previousVote[showId][msg.sender];
@@ -162,13 +166,19 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     /// @param showId Unique identifier for the show.
     /// @param proposalIndex Index of the proposal to accept.
     function acceptProposal(bytes32 showId, uint256 proposalIndex) internal {
+        require(proposalIndex < showProposals[showId].length, "Invalid proposal index");
+        VenueTypes.Venue memory venue = showProposals[showId][proposalIndex].venue;
         showProposals[showId][proposalIndex].accepted = true;
         selectedProposalIndex[showId] = proposalIndex;
-        // Update show status to indicate that a venue has been selected (or another status if applicable)
+
+        // Update show status to indicate that a venue has been selected
         showInstance.updateStatus(showId, ShowTypes.Status.Accepted);
+
+        // Update the venue information in the Show contract
+        showInstance.updateShowVenue(showId, venue);
+
         emit ProposalAccepted(showId, proposalIndex);
     }
-
 
     /// @notice Allows an authorized user (organizer or artist) to vote for a proposed date.
     /// @param showId Unique identifier for the show.
@@ -228,16 +238,6 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         proposalPeriod[showId].endTime = block.timestamp + PROPOSAL_PERIOD_DURATION;
         emit ProposalPeriodStarted(showId, proposalPeriod[showId].endTime);
     }
-
-    /// @notice Starts the public voting period for a show.
-    /// @dev Sets the voting period as active and sets the end time to 1 week from the current timestamp.
-    /// @param showId Unique identifier for the show.
-    function startPublicVotingPeriod(bytes32 showId) internal {
-        votingPeriods[showId].isPeriodActive = true;
-        votingPeriods[showId].endTime = block.timestamp + PUBLIC_VOTING_PERIOD_DURATION;
-        emit PublicVotingPeriodStarted(showId, votingPeriods[showId].endTime);
-    }
-
 
     /// @notice Retrieves the proposal period for a specific venue.
     /// @param showId The unique identifier of the venue.

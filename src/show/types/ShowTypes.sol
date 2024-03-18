@@ -22,10 +22,12 @@ interface ShowTypes {
     }
 
     /// @notice Struct representing the price range for tickets to a show.
-    struct TicketPrice {
-        uint256 minPrice; // Minimum ticket price
-        uint256 maxPrice; // Maximum ticket price
+    struct TicketTier {
+        string name;
+        uint256 price;
+        uint256 ticketsAvailable;
     }
+
 
     /// @notice Struct representing the details of a show.
     struct Show {
@@ -36,7 +38,7 @@ interface ShowTypes {
         address[] artists;            // Addresses of the artists
         VenueTypes.Venue venue;       // Venue details
         uint256 radius;               // radius for proposed show venue
-        TicketPrice ticketPrice;      // Ticket price details
+        TicketTier[] ticketTiers;     // tiers of tickets
         uint256 sellOutThreshold;     // Threshold for considering the show as sold out
         uint256 totalCapacity;        // Total capacity of the show
         Status status;                // Current status of the show
