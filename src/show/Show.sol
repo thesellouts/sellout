@@ -162,6 +162,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         // Correct way to add ticket tiers
         for (uint i = 0; i < _ticketTiers.length; i++) {
             show.ticketTiers.push(_ticketTiers[i]);
+            showTicketTiers[showId].push(_ticketTiers[i]);
         }
 
         for (uint i = 0; i < artists.length; i++) {
