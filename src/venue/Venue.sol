@@ -94,7 +94,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
 
         ticketHolderVotingActive[showId] = true;
         ticketHolderVotingPeriods[showId] = VenueTypes.VotingPeriod({
-            endTime: block.timestamp + TICKET_HOLDER_VOTING_DURATION,
+            endTime: block.timestamp + TICKET_HOLDER_VOTING_DURATION, // TODO: add proposal period
             isPeriodActive: true
         });
 

@@ -232,7 +232,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         Show storage show = shows[showId];
         require(show.status == Status.Upcoming, "Show must be Upcoming");
 //        require(block.timestamp >= show.showDate + 2 days, "Show has not yet been completed");
-        require(block.timestamp >= show.showDate + 30 minutes, "Show has not yet been completed");
+        require(block.timestamp >= show.showDate + 30 minutes, "Show has not yet been completed"); //TODO: check this is correct
 
         uint256 totalAmount = showVault[showId];
         require(totalAmount > 0, "No funds to distribute");
@@ -353,7 +353,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @param showId The unique identifier of the show to update.
     /// @param newVenue The new venue information to be set for the show.
     function updateShowVenue(bytes32 showId, VenueTypes.Venue calldata newVenue) external onlyVenueContract {
-        require(shows[showId].status == Status.Proposed, "Venue can only be updated for shows in Proposed status.");
+        require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Accepted, "Venue can only be updated for shows in Proposed or Accepted status.");
         shows[showId].venue = newVenue;
         emit VenueUpdated(showId, newVenue);
     }
