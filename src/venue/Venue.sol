@@ -22,20 +22,15 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
 
     // Constants for durations
 //    uint256 constant PROPOSAL_PERIOD_DURATION = 7 days;
-//    uint256 constant TICKET_HOLDER_VOTING_DURATION = 3 days;
-//    uint256 constant PUBLIC_VOTING_PERIOD_DURATION = 3 days;
 //    uint256 constant PROPOSAL_DATE_EXTENSION = 1 days;
 //    uint256 constant PROPOSAL_DATE_MINIMUM_FUTURE = 30 days;
 //    uint256 constant PROPOSAL_PERIOD_EXTENSION_THRESHOLD = 6 hours;
 
-
     // Constants for durations adjusted for quick testing
     uint256 constant PROPOSAL_PERIOD_DURATION = 2 hours; // From 7 days
-    uint256 constant PUBLIC_VOTING_PERIOD_DURATION = 30 minutes; // From 3 days
     uint256 constant PROPOSAL_DATE_EXTENSION = 5 minutes; // From 1 day
     uint256 constant PROPOSAL_DATE_MINIMUM_FUTURE = 45 minutes; // From 30 days
     uint256 constant PROPOSAL_PERIOD_EXTENSION_THRESHOLD = 2 minutes; // From 6 hours
-    uint256 constant TICKET_HOLDER_VOTING_DURATION = 30 minutes;
 
     /// @notice Initializes the Venue contract with Show and Ticket contract addresses.
     /// @param _showBaseContractAddress Address of the Show contract.
@@ -84,6 +79,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
             require(proposedDates[i] > proposalPeriod[showId].endTime + PROPOSAL_DATE_MINIMUM_FUTURE, "Proposed date must be 60 days in the future");
         }
 
+        // start proposal period on first submission
         if (!proposalPeriod[showId].isPeriodActive) {
             startProposalPeriod(showId);
         }
@@ -91,12 +87,6 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         if (block.timestamp >= proposalPeriod[showId].endTime - PROPOSAL_PERIOD_EXTENSION_THRESHOLD) {
             proposalPeriod[showId].endTime += PROPOSAL_DATE_EXTENSION; // Extend by 1 day if within the last 6 hours
         }
-
-        ticketHolderVotingActive[showId] = true;
-        ticketHolderVotingPeriods[showId] = VenueTypes.VotingPeriod({
-            endTime: block.timestamp + TICKET_HOLDER_VOTING_DURATION, // TODO: add proposal period
-            isPeriodActive: true
-        });
 
         bytes32 venueId = keccak256(abi.encodePacked(venueName, coordinates.lat, coordinates.lon, totalCapacity));
         VenueTypes.Venue memory venue;
@@ -117,16 +107,18 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         emit ProposalSubmitted(showId, msg.sender, venueName, msg.value);
     }
 
-    /// @notice Allows a ticket holder to vote for a venue proposal.
+    /// @notice Allows a ticket holder to vote for a venue proposal during the proposal period.
     /// @param showId Unique identifier for the show.
     /// @param proposalIndex Index of the proposal to vote for.
     function ticketHolderVenueVote(bytes32 showId, uint256 proposalIndex) public {
-        require(ticketHolderVotingActive[showId], "Ticket holder voting is not active");
-        require(block.timestamp <= ticketHolderVotingPeriods[showId].endTime, "Ticket holder voting period has ended");
         require(showInstance.hasTicket(msg.sender, showId), "Not a ticket owner");
+        require(block.timestamp <= proposalPeriod[showId].endTime, "Proposal period has ended");
         require(!hasTicketOwnerVoted[showId][msg.sender], "Already voted");
+        require(proposalIndex < showProposals[showId].length, "Invalid proposal index");
+
         showProposals[showId][proposalIndex].votes++;
         hasTicketOwnerVoted[showId][msg.sender] = true;
+
         emit VenueVoted(showId, msg.sender, proposalIndex);
     }
 
@@ -231,11 +223,16 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     }
 
     /// @notice Starts the proposal period for a show.
-    /// @dev Sets the proposal period as active and sets the end time to 2 weeks from the current timestamp.
     /// @param showId Unique identifier for the show.
     function startProposalPeriod(bytes32 showId) internal {
         proposalPeriod[showId].isPeriodActive = true;
         proposalPeriod[showId].endTime = block.timestamp + PROPOSAL_PERIOD_DURATION;
+        ticketHolderVotingActive[showId] = true;
+        ticketHolderVotingPeriods[showId] = VenueTypes.VotingPeriod({
+            endTime: proposalPeriod[showId].endTime, // Ticket holder voting ends when proposal period ends
+            isPeriodActive: true
+        });
+
         emit ProposalPeriodStarted(showId, proposalPeriod[showId].endTime);
     }
 

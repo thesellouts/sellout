@@ -15,6 +15,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 
 /**
  * @title SellOut Ticket
+ * @author taayyohh
  * @notice Implements ticket sales for shows using the ERC1155 standard. Supporting arbitrary ticket tiers.
  * @dev Extends ERC1155 for ticket tokenization.
  */
@@ -69,16 +70,26 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
 
         showInstance.depositToVault{value: msg.value}(showId);
 
-        // Mint tickets in batch for efficiency
         uint256[] memory ids = new uint256[](amount);
         uint256[] memory amounts = new uint256[](amount);
         for (uint256 i = 0; i < amount; i++) {
-            ids[i] = ++lastTicketNumberForShow[showId];
+            uint256 tokenId = uint256(keccak256(abi.encode(
+                showId,
+                tierIndex,
+                lastTicketNumberForShow[showId] + 1
+            )));
+            ids[i] = tokenId;
             amounts[i] = 1;
-            ticketIdToTierIndex[ids[i]] = tierIndex; // Associate each ticket ID with its tier index
-            showInstance.addTokenIdToWallet(showId, msg.sender, ids[i]);
-            showInstance.setTicketPricePaid(showId, ids[i], pricePerTicket);
-            showInstance.setTicketOwnership(showId, msg.sender, ids[i], true);
+
+            // Associate each ticket ID with its tier index
+            ticketIdToTierIndex[tokenId] = tierIndex;
+
+            // Update other mappings and increment the last ticket number
+            showInstance.addTokenIdToWallet(showId, msg.sender, tokenId);
+            showInstance.setTicketPricePaid(showId, tokenId, pricePerTicket);
+            showInstance.setTicketOwnership(showId, msg.sender, tokenId, true);
+
+            lastTicketNumberForShow[showId]++;
         }
         _mintBatch(msg.sender, ids, amounts, "");
 
@@ -101,7 +112,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         uint256 _tierIndex = ticketIdToTierIndex[ticketId];
         return (_price, _tierIndex);
     }
-
 
     /**
      * @notice Burns a specified amount of tokens, removing them from circulation.
