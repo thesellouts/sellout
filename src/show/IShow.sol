@@ -30,6 +30,15 @@ interface IShow is ShowTypes {
     /// @param amount Number of tickets consumed
     event TicketTierConsumed(bytes32 indexed showId, uint256 indexed tierIndex, uint256 amount);
 
+    /**
+    * @notice Event emitted when ERC20 tokens are deposited into a show's vault.
+     * @param showId The unique identifier of the show receiving the deposit.
+     * @param tokenAddress The address of the ERC20 token being deposited.
+     * @param depositor The address of the account making the deposit.
+     * @param amount The amount of ERC20 tokens deposited.
+     */
+    event ERC20Deposited(bytes32 indexed showId, address indexed tokenAddress, address indexed depositor, uint256 amount);
+
 
     /// @notice Emitted upon the proposal of a new show.
     /// @param showId The unique identifier of the proposed show.
@@ -71,7 +80,8 @@ interface IShow is ShowTypes {
     /// @param showId The unique identifier of the show.
     /// @param recipient The address of the recipient who received the funds.
     /// @param amount The amount of funds withdrawn.
-    event Withdrawal(bytes32 indexed showId, address indexed recipient, uint256 amount);
+    /// @param paymentToken erc20 the ticket was priced in.
+    event Withdrawal(bytes32 indexed showId, address indexed recipient, uint256 amount, address paymentToken);
 
     // Functions
 
@@ -100,6 +110,13 @@ interface IShow is ShowTypes {
     /// @notice Allows the deposit of funds into a show's vault, contributing towards the show's financial pool.
     /// @param showId The unique identifier of the show for which the funds are being deposited.
     function depositToVault(bytes32 showId) external payable;
+
+    /// @notice Deposits specified ERC20 tokens into the vault for a specific show.
+    /// @dev Requires approval for the contract to transfer tokens on behalf of the sender.
+    /// @param showId Unique identifier for the show.
+    /// @param amount Amount of ERC20 tokens to deposit.
+    /// @param paymentToken Address of the ERC20 token to deposit.
+    function depositToVaultERC20(bytes32 showId, uint256 amount, address paymentToken) external;
 
     /// @notice Retrieves the number of voters for a specific show, including both artists and the organizer.
     /// @param showId The unique identifier of the show.
@@ -227,6 +244,7 @@ interface IShow is ShowTypes {
     /// @param totalCapacity The total number of tickets available for the show.
     /// @param ticketTiers An array of `TicketTier` structs, each representing a distinct ticket pricing and availability tier.
     /// @param split An array representing the revenue split percentages among the organizer, artists, and venue.
+    /// @param currencyAddress Zero address for ETH, token address for erc20
     /// @return showId The unique identifier of the newly proposed show.
     function proposeShow(
         string memory name,
@@ -237,7 +255,8 @@ interface IShow is ShowTypes {
         uint8 sellOutThreshold,
         uint256 totalCapacity,
         ShowTypes.TicketTier[] memory ticketTiers,
-        uint256[] memory split
+        uint256[] memory split,
+        address currencyAddress
     ) external returns (bytes32 showId);
 
     /// @notice Allows a ticket owner to request a refund for a specific ticket of a show, under certain conditions.

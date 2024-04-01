@@ -22,6 +22,9 @@ contract TicketStorage is TicketTypes {
     // Mapping from ticket ID to tier index
     mapping(uint256 => uint256) public ticketIdToTierIndex;
 
+    // Mapping from ticket ID to show ID
+    mapping(uint256 => bytes32) internal tokenIdToShowId;
+
     /// @dev Mapping from show ID to the last ticket number issued for that show.
     /// This helps in generating new ticket IDs for new ticket purchases.
     mapping(bytes32 => uint256) internal lastTicketNumberForShow;

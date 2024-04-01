@@ -15,6 +15,7 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import { ERC20Upgradeable } from  "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 
 /// @title Sellout Show
@@ -87,16 +88,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         areContractsSet = true;
     }
 
-    function isOrganizerRegistered(address organizer) internal view returns (bool) {
-        (, , address wallet) = organizerRegistryInstance.getOrganizer(organizer);
-        return wallet == organizer;
-    }
-
-    function isArtistRegistered(address artist) internal view returns (bool) {
-        (, , address wallet) = artistRegistryInstance.getArtist(artist);
-        return wallet == artist;
-    }
-
     /// @notice Creates a show proposal between one or more artists
     /// @param name Name of the show
     /// @param description Description of the show
@@ -107,6 +98,8 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @param totalCapacity Total capacity of the show
     /// @param _ticketTiers Array of ticket tiers, each with its own pricing and ticket count
     /// @param split Array representing the percentage split between organizer, artists, and venue
+    /// @param split Array representing the percentage split between organizer, artists, and venue
+    /// @param currencyAddress Zero address for ETH, token address for erc20
     /// @return showId Unique identifier for the proposed show
     function proposeShow(
         string memory name,
@@ -117,7 +110,8 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         uint8 sellOutThreshold,
         uint256 totalCapacity,
         TicketTier[] memory _ticketTiers,
-        uint256[] memory split // organizer, artists[], venue
+        uint256[] memory split, // organizer, artists[], venue
+        address currencyAddress
     ) external returns (bytes32 showId) {
         require(areContractsSet, "Contract addresses must be set");
         require(bytes(name).length > 0, "Name is required");
@@ -160,6 +154,8 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         show.expiry = block.timestamp + 30 days;
         show.showDate = 0;
 
+        showPaymentToken[showId] = currencyAddress;
+
         for (uint i = 0; i < _ticketTiers.length; i++) {
             show.ticketTiers.push(_ticketTiers[i]);
         }
@@ -176,10 +172,36 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     }
 
 
-    // @notice Consumes tickets from a specified tier for a given show.
-    // @param showId The identifier of the show.
-    // @param tierIndex The index of the ticket tier.
-    // @param amount The number of tickets to consume.
+    /// @notice Deposits Ether into the vault for a specific show
+    /// @param showId Unique identifier for the show
+    function depositToVault(bytes32 showId) external payable onlyTicketOrVenue {
+        showVault[showId] += msg.value;
+    }
+
+    /// @notice Deposits specified ERC20 tokens into the vault for a specific show.
+    /// @dev Requires approval for the contract to transfer tokens on behalf of the sender.
+    /// @param showId Unique identifier for the show.
+    /// @param amount Amount of ERC20 tokens to deposit.
+    /// @dev This function should be called to deposit ERC20 tokens for a show, ensuring the token is approved for transfer
+    function depositToVaultERC20(bytes32 showId, uint256 amount, address paymentToken) external {
+        require(paymentToken != address(0), "This show does not accept ETH payments");
+        require(showPaymentToken[showId] == paymentToken, "Mismatched payment token for the show");
+
+        ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
+        token.transferFrom(msg.sender, address(this), amount);
+
+        // Update the ERC20 token balance for the show
+        showTokenVault[showId][paymentToken] += amount;
+
+        emit ERC20Deposited(showId, paymentToken, msg.sender, amount);
+    }
+
+
+    /// @notice Consumes tickets from a specified tier for a given show.
+    /// @param showId The identifier of the show.
+    /// @param tierIndex The index of the ticket tier.
+    /// @param amount The number of tickets to consume.
+    /// @dev This modifies the state of ticket availability, should only be called by ticket or venue contracts
     function consumeTicketTier(bytes32 showId, uint256 tierIndex, uint256 amount) external onlyTicketOrVenue {
         Show storage show = shows[showId];
         require(tierIndex < show.ticketTiers.length, "Invalid ticket tier index");
@@ -192,29 +214,24 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         emit TicketTierConsumed(showId, tierIndex, amount);
     }
 
-
-    /// @notice Deposits Ether into the vault for a specific show
-    /// @param showId Unique identifier for the show
-    function depositToVault(bytes32 showId) external payable onlyTicketOrVenue {
-        showVault[showId] += msg.value;
+    /// @notice Updates the status of a show.
+    /// @param showId Unique identifier for the show.
+    /// @param _status New status for the show.
+    /// @dev Can only be called by ticket or venue contracts, impacts show flow and state significantly.
+    function updateStatus(bytes32 showId, Status _status) public onlyTicketOrVenue {
+        shows[showId].status = _status;
+        emit StatusUpdated(showId, _status);
     }
 
-    // @notice Checks if the total tickets sold for a show has reached or exceeded the sell-out threshold.
-    // @param showId The unique identifier for the show
+    /// @notice Checks if the total tickets sold for a show has reached or exceeded the sell-out threshold.
+    /// @param showId The unique identifier for the show.
+    /// @dev Used to automatically update a show's status to SoldOut if applicable, callable only by ticket or venue contracts.
     function updateStatusIfSoldOut(bytes32 showId) external onlyTicketOrVenue {
         Show storage show = shows[showId];
         uint256 soldTickets = getTotalTicketsSold(showId);
         if (soldTickets * 100 >= show.totalCapacity * show.sellOutThreshold) {
             updateStatus(showId, Status.SoldOut);
         }
-    }
-
-    /// @notice Updates the status of a show
-    /// @param showId Unique identifier for the show
-    /// @param _status New status for the show
-    function updateStatus(bytes32 showId, Status _status) public onlyTicketOrVenue  {
-        shows[showId].status = _status;
-        emit StatusUpdated(showId, _status);
     }
 
     /// @notice Cancels a sold-out show
@@ -280,7 +297,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         emit StatusUpdated(showId, Status.Completed);
     }
 
-
     /// @notice Allows the organizer or artist to withdraw funds after a show has been completed.
     /// @param showId The unique identifier of the show.
     function payout(bytes32 showId) public onlyOrganizerOrArtist(showId) {
@@ -288,16 +304,54 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         require(show.status == Status.Completed, "Show must be Completed");
         require(block.timestamp >= show.showDate + 5 minutes, "Show cool down has not ended"); //TODO: CHANGE BACK TO LONGER TIME
 
+        address paymentToken = showPaymentToken[showId];
         uint256 amount = pendingPayouts[showId][msg.sender];
         require(amount > 0, "No funds to withdraw");
 
         // Ensure the recipient can't re-entrantly call this function
         pendingPayouts[showId][msg.sender] = 0;
 
-        payable(msg.sender).transfer(amount);
-        emit Withdrawal(showId, msg.sender, amount);
+        if(paymentToken == address(0)) {
+            payable(msg.sender).transfer(amount);
+        } else {
+            ERC20Upgradeable(paymentToken).transfer(msg.sender, amount);
+        }
+
+        emit Withdrawal(showId, msg.sender, amount, paymentToken);
     }
 
+    // @notice Allows a user to withdraw their refund for a show.
+    // @param showId The unique identifier of the show.
+    function withdrawRefund(bytes32 showId) public nonReentrant {
+        Show storage show = shows[showId];
+
+        // Check if the show is in an appropriate status for refunds
+        require(
+            show.status == Status.Refunded ||
+            show.status == Status.Expired ||
+            show.status == Status.Cancelled ||
+            show.status == Status.Proposed,
+            "Refunds are not available for this show status"
+        );
+
+        address paymentToken = showPaymentToken[showId];
+        uint256 amount = pendingRefunds[showId][msg.sender];
+        require(amount > 0, "No funds to withdraw");
+
+        // Ensure the refund amount is set to 0 before transferring
+        pendingRefunds[showId][msg.sender] = 0;
+
+        if(paymentToken == address(0)) {
+            require(address(this).balance >= amount, "Insufficient ETH funds in the contract");
+            payable(msg.sender).transfer(amount);
+        } else {
+            ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
+            require(token.balanceOf(address(this)) >= amount, "Insufficient token funds in the contract");
+            token.transfer(msg.sender, amount);
+        }
+
+        emit RefundWithdrawn(msg.sender, showId, amount);
+    }
 
     /// @notice Allows a ticket owner to refund a specific ticket for a show.
     /// @dev This function also checks if the show's status should be updated from 'SoldOut' to 'Proposed'
@@ -316,9 +370,25 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         // Update total tickets sold and potentially the show status
         updateTicketsSoldAndShowStatusAfterRefund(showId, ticketId, refundAmount);
 
-        // Refund logic
+        // Process the refund
+        address paymentToken = showPaymentToken[showId];
+        if (paymentToken == address(0)) {
+            // ETH refund logic remains the same
+            require(address(this).balance >= refundAmount, "Insufficient ETH balance");
+            (bool sent, ) = payable(msg.sender).call{value: refundAmount}("");
+            require(sent, "Failed to send ETH");
+        } else {
+            // For ERC20 token refunds
+            ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
+            uint256 balance = token.balanceOf(address(this));
+            require(balance >= refundAmount, "Insufficient token balance");
+            token.transfer(msg.sender, refundAmount);
+        }
+
+        // Emit refund event
         emit TicketRefunded(msg.sender, showId, refundAmount);
     }
+
 
     /// @dev Updates total tickets sold and potentially the show status after a ticket refund.
     /// @param showId The unique identifier of the show.
@@ -358,6 +428,14 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         emit VenueUpdated(showId, newVenue);
     }
 
+    // @notice Adds a token ID to a user's wallet for a specific show.
+    // @param showId The unique identifier of the show.
+    // @param wallet The address of the user's wallet.
+    // @param tokenId The unique identifier of the token.
+    // @dev This function can only be called by the ticket contract (as indicated by the onlyTicketContract modifier).
+    function addTokenIdToWallet(bytes32 showId, address wallet, uint256 tokenId) external onlyTicketContract {
+        walletToShowToTokenIds[showId][wallet].push(tokenId);
+    }
 
     // @notice Removes a specific ticket ID for a given wallet and show.
     // @param showId The unique identifier of the show.
@@ -388,89 +466,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @return amountOwed The amount of refund owed to the user for the specified show.
     function getPendingPayout(bytes32 showId, address user) public view returns (uint256 amountOwed) {
         return pendingPayouts[showId][user];
-    }
-
-
-    /// @notice Check if an address owns a ticket for a specific show
-    /// @param owner The address to check
-    /// @param showId The ID of the show
-    /// @param ticketId The ID of the ticket
-    /// @return true if the address owns a ticket for the show, false otherwise
-    function isTicketOwner(address owner, bytes32 showId, uint256 ticketId) public view returns (bool) {
-        return ticketOwnership[showId][owner][ticketId];
-    }
-
-    /// @notice Sets ticket ownership status for a specific ticket of a show.
-    /// @param showId The ID of the show.
-    /// @param owner The address of the ticket owner.
-    /// @param ticketId The ID of the ticket.
-    /// @param isOwned The ownership status to set.
-    function setTicketOwnership(bytes32 showId, address owner, uint256 ticketId, bool isOwned) public onlyTicketContract {
-        ticketOwnership[showId][owner][ticketId] = isOwned;
-    }
-
-
-    /// @notice Checks if a wallet owns at least one ticket for a specific show
-    /// @param wallet The address to check for ticket ownership.
-    /// @param showId The unique identifier of the show.
-    /// @return ownsTicket A boolean indicating whether the wallet owns at least one ticket to the show.
-    function hasTicket(address wallet, bytes32 showId) public view returns (bool ownsTicket) {
-        return walletToShowToTokenIds[showId][wallet].length > 0;
-    }
-
-
-    // @notice Allows a user to withdraw their refund for a show.
-    // @param showId The unique identifier of the show.
-    function withdrawRefund(bytes32 showId) public nonReentrant {
-        Show storage show = shows[showId];
-
-        // Check if the show is in an appropriate status for refunds
-        require(
-            show.status == Status.Refunded ||
-            show.status == Status.Expired ||
-            show.status == Status.Cancelled ||
-            show.status == Status.Proposed,
-            "Refunds are not available for this show status"
-        );
-
-        uint256 amount = pendingRefunds[showId][msg.sender];
-        require(amount > 0, "No funds to withdraw");
-        require(address(this).balance >= amount, "Insufficient funds in the contract");
-
-        // Ensure the refund amount is set to 0 before transferring
-        pendingRefunds[showId][msg.sender] = 0;
-
-        payable(msg.sender).transfer(amount);
-        emit RefundWithdrawn(msg.sender, showId, amount);
-    }
-
-
-    // @notice Sets the price paid for a specific ticket of a show.
-    // @param showId The unique identifier of the show.
-    // @param ticketId The unique identifier of the ticket within the show.
-    // @param price The price paid for the ticket.
-    // @dev This function can only be called by the ticket contract (as indicated by the onlyTicketContract modifier).
-    function setTicketPricePaid(bytes32 showId, uint256 ticketId, uint256 price) external onlyTicketContract {
-        ticketPricePaid[showId][ticketId] = price;
-    }
-
-    // @notice Sets the price paid for a specific ticket of a show.
-    // @param showId The unique identifier of the show.
-    // @param ticketId The unique identifier of the ticket within the show.
-    // @param price The price paid for the ticket.
-    // @dev This function can only be called by the ticket contract (as indicated by the onlyTicketContract modifier).
-    function setTotalTicketsSold(bytes32 showId, uint256 amount) external onlyTicketContract {
-        totalTicketsSold[showId] = totalTicketsSold[showId] + amount;
-    }
-
-
-    // @notice Adds a token ID to a user's wallet for a specific show.
-    // @param showId The unique identifier of the show.
-    // @param wallet The address of the user's wallet.
-    // @param tokenId The unique identifier of the token.
-    // @dev This function can only be called by the ticket contract (as indicated by the onlyTicketContract modifier).
-    function addTokenIdToWallet(bytes32 showId, address wallet, uint256 tokenId) external onlyTicketContract {
-        walletToShowToTokenIds[showId][wallet].push(tokenId);
     }
 
 
@@ -518,6 +513,12 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         );
     }
 
+    /// @notice Retrieves the currency a show is priced in.
+    /// @param showId Unique identifier for the show
+    /// @return showPaymentToken address of the currency a show is priced in
+    function getShowPaymentToken(bytes32 showId) public view returns (address) {
+        return showPaymentToken[showId];
+    }
 
     /// @notice Retrieves the sell-out threshold of a show
     /// @param showId Unique identifier for the show
@@ -544,7 +545,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     function getTotalCapacity(bytes32 showId) public view returns (uint256) {
         return shows[showId].totalCapacity;
     }
-
 
     /// @notice Retrieves the status of a show
     /// @param showId Unique identifier for the show
@@ -592,6 +592,19 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         return (tier.name, tier.price, tier.ticketsAvailable);
     }
 
+
+    function getOrganizer(bytes32 showId) public view returns (address) {
+        return shows[showId].organizer;
+    }
+
+    /// @notice Checks if a wallet owns at least one ticket for a specific show
+    /// @param wallet The address to check for ticket ownership.
+    /// @param showId The unique identifier of the show.
+    /// @return ownsTicket A boolean indicating whether the wallet owns at least one ticket to the show.
+    function hasTicket(address wallet, bytes32 showId) public view returns (bool ownsTicket) {
+        return walletToShowToTokenIds[showId][wallet].length > 0;
+    }
+
     /// @notice Checks if the given user is an organizer of the specified show.
     /// @param user Address of the user to check
     /// @param showId Unique identifier for the show
@@ -606,6 +619,52 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @return true if the user is an artist, false otherwise
     function isArtist(address user, bytes32 showId) public view returns (bool) {
         return isArtistMapping[showId][user];
+    }
+
+    function isOrganizerRegistered(address organizer) internal view returns (bool) {
+        (, , address wallet) = organizerRegistryInstance.getOrganizer(organizer);
+        return wallet == organizer;
+    }
+
+    function isArtistRegistered(address artist) internal view returns (bool) {
+        (, , address wallet) = artistRegistryInstance.getArtist(artist);
+        return wallet == artist;
+    }
+
+    /// @notice Check if an address owns a ticket for a specific show
+    /// @param owner The address to check
+    /// @param showId The ID of the show
+    /// @param ticketId The ID of the ticket
+    /// @return true if the address owns a ticket for the show, false otherwise
+    function isTicketOwner(address owner, bytes32 showId, uint256 ticketId) public view returns (bool) {
+        return ticketOwnership[showId][owner][ticketId];
+    }
+
+    /// @notice Sets ticket ownership status for a specific ticket of a show.
+    /// @param showId The ID of the show.
+    /// @param owner The address of the ticket owner.
+    /// @param ticketId The ID of the ticket.
+    /// @param isOwned The ownership status to set.
+    function setTicketOwnership(bytes32 showId, address owner, uint256 ticketId, bool isOwned) public onlyTicketContract {
+        ticketOwnership[showId][owner][ticketId] = isOwned;
+    }
+
+    // @notice Sets the price paid for a specific ticket of a show.
+    // @param showId The unique identifier of the show.
+    // @param ticketId The unique identifier of the ticket within the show.
+    // @param price The price paid for the ticket.
+    // @dev This function can only be called by the ticket contract (as indicated by the onlyTicketContract modifier).
+    function setTicketPricePaid(bytes32 showId, uint256 ticketId, uint256 price) external onlyTicketContract {
+        ticketPricePaid[showId][ticketId] = price;
+    }
+
+    // @notice Sets the price paid for a specific ticket of a show.
+    // @param showId The unique identifier of the show.
+    // @param ticketId The unique identifier of the ticket within the show.
+    // @param price The price paid for the ticket.
+    // @dev This function can only be called by the ticket contract (as indicated by the onlyTicketContract modifier).
+    function setTotalTicketsSold(bytes32 showId, uint256 amount) external onlyTicketContract {
+        totalTicketsSold[showId] = totalTicketsSold[showId] + amount;
     }
 
     /// @notice Validates the split percentages between organizer, artists, and venue
@@ -630,10 +689,5 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
             totalTicketsAcrossTiers += ticketTiers[i].ticketsAvailable;
         }
         require(totalTicketsAcrossTiers == totalCapacity, "Total tickets across tiers must equal total capacity");
-    }
-
-
-    function getOrganizer(bytes32 showId) public view returns (address) {
-        return shows[showId].organizer;
     }
 }

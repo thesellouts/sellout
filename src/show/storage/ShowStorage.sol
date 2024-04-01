@@ -46,6 +46,9 @@ contract ShowStorage is ShowTypes {
     // Mapping to track the Ether balance for each show
     mapping(bytes32 => uint256) public showVault;
 
+    // Mapping from show ID to ERC20 token address to amount of tokens
+    mapping(bytes32 => mapping(address => uint256)) public showTokenVault;
+
     // Mapping to track pending refunds for each show and address
     mapping(bytes32 => mapping(address => uint256)) public pendingRefunds;
 
@@ -62,4 +65,7 @@ contract ShowStorage is ShowTypes {
 
     // Mapping to associate wallet addresses with show IDs and token IDs
     mapping(bytes32 => mapping(address => uint256[])) public walletToShowToTokenIds;
+
+    // Mapping to track the payment token for each show
+    mapping(bytes32 => address) public showPaymentToken;
 }

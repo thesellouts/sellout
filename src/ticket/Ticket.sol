@@ -5,11 +5,13 @@ import { ITicket } from "./ITicket.sol";
 import { TicketStorage } from "./storage/TicketStorage.sol";
 import { IShow } from "../show/IShow.sol";
 import { ShowTypes } from "../show/types/ShowTypes.sol";
+
 import { Strings } from "@openzeppelin-contracts/utils/Strings.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { ERC1155Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import { ERC20Upgradeable } from  "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 
@@ -55,50 +57,45 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
      * @param showId Identifier of the show.
      * @param tierIndex Index of the ticket tier.
      * @param amount Number of tickets to purchase.
+     * @param paymentToken Address of the erc20 token the show is priced in.
      */
-    function purchaseTickets(bytes32 showId, uint256 tierIndex, uint256 amount) public payable nonReentrant {
+    function purchaseTickets(bytes32 showId, uint256 tierIndex, uint256 amount, address paymentToken) public payable nonReentrant {
         require(amount > 0, "Amount must be greater than 0");
         ShowTypes.Status showStatus = showInstance.getShowStatus(showId);
         require(showStatus == ShowTypes.Status.Proposed, "Show is not available for ticket purchase");
-
         uint256[] memory ownedTokenIds = showInstance.getWalletTokenIds(showId, msg.sender);
         require(ownedTokenIds.length + amount <= MAX_TICKETS_PER_WALLET, "Exceeds maximum tickets per wallet");
-
         (, uint256 pricePerTicket, uint256 ticketsAvailable) = showInstance.getTicketTierInfo(showId, tierIndex);
         require(ticketsAvailable >= amount, "Not enough tickets available in this tier");
-        require(msg.value == pricePerTicket * amount, "Incorrect payment amount");
-
-        showInstance.depositToVault{value: msg.value}(showId);
-
-        uint256[] memory ids = new uint256[](amount);
-        uint256[] memory amounts = new uint256[](amount);
+        uint256 totalPayment = pricePerTicket * amount;
+        if (paymentToken == address(0)) {
+            require(msg.value == totalPayment, "Incorrect payment amount");
+            showInstance.depositToVault{value: msg.value}(showId);
+        } else {
+            require(msg.value == 0, "ERC20 purchases should not send ETH");
+            ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
+            token.transfer(address(this), totalPayment);
+            showInstance.depositToVaultERC20(showId, totalPayment, paymentToken);
+        }
         for (uint256 i = 0; i < amount; i++) {
-            uint256 tokenId = uint256(keccak256(abi.encode(
-                showId,
-                tierIndex,
-                lastTicketNumberForShow[showId] + 1
-            )));
-            ids[i] = tokenId;
-            amounts[i] = 1;
+            uint256 tokenId = uint256(keccak256(abi.encode(showId, tierIndex, lastTicketNumberForShow[showId] + 1 + i)));
+            _mint(msg.sender, tokenId, 1, "");
 
-            // Associate each ticket ID with its tier index
             ticketIdToTierIndex[tokenId] = tierIndex;
+            tokenIdToShowId[tokenId] = showId;
 
-            // Update other mappings and increment the last ticket number
+            showInstance.setTicketOwnership(showId, msg.sender, tokenId, true);
             showInstance.addTokenIdToWallet(showId, msg.sender, tokenId);
             showInstance.setTicketPricePaid(showId, tokenId, pricePerTicket);
-            showInstance.setTicketOwnership(showId, msg.sender, tokenId, true);
-
-            lastTicketNumberForShow[showId]++;
         }
-        _mintBatch(msg.sender, ids, amounts, "");
-
+        lastTicketNumberForShow[showId] += amount;
         showInstance.consumeTicketTier(showId, tierIndex, amount);
         showInstance.setTotalTicketsSold(showId, amount);
         showInstance.updateStatusIfSoldOut(showId);
 
-        emit TicketPurchased(msg.sender, showId, ids[amount-1], amount, tierIndex);
+        emit TicketPurchased(msg.sender, showId, tierIndex, amount, paymentToken);
     }
+
 
     /**
      * @notice Retrieves the price paid for a specific ticket and its tier index.
@@ -146,12 +143,53 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     }
 
     /**
-     * @notice Retrieves the URI for a specific token ID.
-     * @param tokenId Identifier of the token.
-     * @return The URI of the specified token.
-     */
+  * @notice Retrieves the URI for a specific token ID, incorporating showId into the URI path.
+ * This function overrides the default `uri` method from the ERC1155 standard to provide
+ * custom token URIs that include the show identifier (showId) as part of the URI path.
+ * If a custom token URI has been set, it returns that URI; otherwise, it constructs a URI
+ * that includes the showId and tokenId. The showId is encoded as a hexadecimal string.
+ *
+ * @param tokenId Identifier of the token for which to retrieve the URI.
+ * @return The URI of the specified token, either a custom set URI or a constructed one
+ *         that includes the showId and tokenId in the path.
+ */
     function uri(uint256 tokenId) public view override returns (string memory) {
-        string memory _tokenURI = tokenURIs[tokenId];
-        return bytes(_tokenURI).length > 0 ? _tokenURI : string(abi.encodePacked(defaultURI, Strings.toString(tokenId), ".json"));
+        // Check if a custom URI has been set for the token
+        string memory customTokenURI = tokenURIs[tokenId];
+        if (bytes(customTokenURI).length > 0) {
+            return customTokenURI;
+        }
+
+        // Retrieve the associated showId for the token
+        bytes32 showId = tokenIdToShowId[tokenId];
+        require(showId != bytes32(0), "Token does not exist.");
+
+        // Convert the showId from bytes32 to a hexadecimal string
+        string memory showIdHexString = bytes32ToHexString(showId);
+
+        // Construct the metadata URI using the showId and tokenId
+        string memory baseURI = "https://metadata.sellouts.app/show/";
+        return string(abi.encodePacked(baseURI, showIdHexString, "/", Strings.toString(tokenId), ".json"));
     }
+
+    /**
+     * @dev Converts a bytes32 value to a hexadecimal string.
+     * This function is used to convert binary data, like Ethereum addresses or hashes,
+     * into a human-readable hexadecimal string format.
+     *
+     * @param _bytes32 The bytes32 value to convert.
+     * @return The hexadecimal string representation of the input value.
+     */
+    function bytes32ToHexString(bytes32 _bytes32) public pure returns (string memory) {
+        bytes memory alphabet = "0123456789abcdef";
+        bytes memory str = new bytes(64); // Each byte is represented by 2 hex characters
+
+        for (uint256 i = 0; i < 32; i++) {
+            str[i*2] = alphabet[uint8(_bytes32[i] >> 4)];
+            str[1+i*2] = alphabet[uint8(_bytes32[i] & 0x0f)];
+        }
+
+        return string(str);
+    }
+
 }
