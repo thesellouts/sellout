@@ -153,6 +153,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         show.split = split;
         show.expiry = block.timestamp + 30 days;
         show.showDate = 0;
+        show.currencyAddress = currencyAddress;
 
         showPaymentToken[showId] = currencyAddress;
 
