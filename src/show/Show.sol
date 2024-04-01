@@ -491,7 +491,8 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         uint256 sellOutThreshold,
         uint256 totalCapacity,
         Status status,
-        bool isActive
+        bool isActive,
+        address currencyAddress
     ) {
         Show storage show = shows[showId];
         ticketTiers = new TicketTier[](show.ticketTiers.length);
@@ -509,7 +510,8 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
             show.sellOutThreshold,
             show.totalCapacity,
             show.status,
-            show.isActive
+            show.isActive,
+            show.currencyAddress
         );
     }
 

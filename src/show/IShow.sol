@@ -157,6 +157,7 @@ interface IShow is ShowTypes {
     /// @return totalCapacity The total capacity of tickets for the show.
     /// @return status The current status of the show.
     /// @return isActive A boolean indicating whether the show is active.
+    /// @return currencyAddress The address of the currency the show is Priced in
     function getShowById(bytes32 showId) external view returns (
         string memory name,
         string memory description,
@@ -167,7 +168,8 @@ interface IShow is ShowTypes {
         uint256 sellOutThreshold,
         uint256 totalCapacity,
         Status status,
-        bool isActive
+        bool isActive,
+        address currencyAddress
     );
 
     /// @notice Retrieves the current status of a show based on its unique identifier.

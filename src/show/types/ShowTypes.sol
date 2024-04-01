@@ -46,5 +46,6 @@ interface ShowTypes {
         uint256[] split;              // Split percentages for revenue distribution
         uint256 expiry;               // Expiry timestamp of the show
         uint256 showDate;             // Final show date
+        address currencyAddress;      // Show Currency Address
     }
 }
