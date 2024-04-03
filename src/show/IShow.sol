@@ -116,7 +116,8 @@ interface IShow is ShowTypes {
     /// @param showId Unique identifier for the show.
     /// @param amount Amount of ERC20 tokens to deposit.
     /// @param paymentToken Address of the ERC20 token to deposit.
-    function depositToVaultERC20(bytes32 showId, uint256 amount, address paymentToken) external;
+    /// @param ticketRecipient Address of the ticket recipient.
+    function depositToVaultERC20(bytes32 showId, uint256 amount, address paymentToken, address ticketRecipient) external;
 
     /// @notice Retrieves the number of voters for a specific show, including both artists and the organizer.
     /// @param showId The unique identifier of the show.

@@ -74,8 +74,7 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         } else {
             require(msg.value == 0, "ERC20 purchases should not send ETH");
             ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
-            token.transfer(address(this), totalPayment);
-            showInstance.depositToVaultERC20(showId, totalPayment, paymentToken);
+            showInstance.depositToVaultERC20(showId, totalPayment, paymentToken, msg.sender);
         }
         for (uint256 i = 0; i < amount; i++) {
             uint256 tokenId = uint256(keccak256(abi.encode(showId, tierIndex, lastTicketNumberForShow[showId] + 1 + i)));

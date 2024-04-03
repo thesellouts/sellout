@@ -183,13 +183,16 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @dev Requires approval for the contract to transfer tokens on behalf of the sender.
     /// @param showId Unique identifier for the show.
     /// @param amount Amount of ERC20 tokens to deposit.
+    /// @param tokenRecipient Address of the ticker recipient.
     /// @dev This function should be called to deposit ERC20 tokens for a show, ensuring the token is approved for transfer
-    function depositToVaultERC20(bytes32 showId, uint256 amount, address paymentToken) external {
+    function depositToVaultERC20(bytes32 showId, uint256 amount, address paymentToken, address tokenRecipient) external onlyTicketOrVenue {
         require(paymentToken != address(0), "This show does not accept ETH payments");
         require(showPaymentToken[showId] == paymentToken, "Mismatched payment token for the show");
 
         ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
-        token.transferFrom(msg.sender, address(this), amount);
+
+        require(token.allowance(tokenRecipient, address(this)) >= amount, "Contract not approved to transfer tokens");
+        token.transferFrom(tokenRecipient, address(this), amount);
 
         // Update the ERC20 token balance for the show
         showTokenVault[showId][paymentToken] += amount;
