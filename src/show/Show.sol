@@ -604,14 +604,21 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         return walletToShowToTokenIds[showId][wallet];
     }
 
-    /// @notice Returns the total number of voters for a specific show, including artists and the organizer.
+    /// @notice Returns the total number of unique voters for a specific show, including artists and the organizer.
     /// @param showId Unique identifier for the show.
-    /// @return Total number of voters (artists + organizer).
+    /// @return Total number of unique voters (artists + organizer).
     function getNumberOfVoters(bytes32 showId) public view returns (uint256) {
-        uint256 numberOfArtists = shows[showId].artists.length;
+        Show storage show = shows[showId];
+        uint256 numberOfUniqueVoters = 1; // Start with 1 for the organizer
 
-        // Adding 1 for the organizer
-        return numberOfArtists + 1;
+        // Iterate over artists to count unique voters
+        for (uint256 i = 0; i < show.artists.length; i++) {
+            if (show.artists[i] != show.organizer) {
+                numberOfUniqueVoters++;
+            }
+        }
+
+        return numberOfUniqueVoters;
     }
 
     // @notice Retrieves the price paid for a specific ticket of a show.

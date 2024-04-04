@@ -107,17 +107,27 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         emit ProposalSubmitted(showId, msg.sender, venueName, msg.value);
     }
 
-    /// @notice Allows a ticket holder to vote for a venue proposal during the proposal period.
+    /// @notice Allows a ticket holder to vote for a venue proposal during the proposal period, or switch their vote.
     /// @param showId Unique identifier for the show.
     /// @param proposalIndex Index of the proposal to vote for.
     function ticketHolderVenueVote(bytes32 showId, uint256 proposalIndex) public {
         require(showInstance.hasTicket(msg.sender, showId), "Not a ticket owner");
         require(block.timestamp <= proposalPeriod[showId].endTime, "Proposal period has ended");
-        require(!hasTicketOwnerVoted[showId][msg.sender], "Already voted");
         require(proposalIndex < showProposals[showId].length, "Invalid proposal index");
 
+        if (hasTicketOwnerVoted[showId][msg.sender]) {
+            // User has voted before; check if they're changing their vote
+            uint256 currentVoteIndex = ticketOwnerVoteIndex[showId][msg.sender];
+            require(currentVoteIndex != proposalIndex, "Already voted for this proposal");
+
+            // Decrement the vote for their previous choice, ensuring no underflow
+            showProposals[showId][currentVoteIndex].votes -= 1;
+        }
+
+        // Increment the vote for their new choice
         showProposals[showId][proposalIndex].votes++;
-        hasTicketOwnerVoted[showId][msg.sender] = true;
+        ticketOwnerVoteIndex[showId][msg.sender] = proposalIndex;
+        hasTicketOwnerVoted[showId][msg.sender] = true; // Mark the voter as having voted
 
         emit VenueVoted(showId, msg.sender, proposalIndex);
     }

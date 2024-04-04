@@ -24,6 +24,9 @@ contract VenueStorage is VenueTypes {
     // Mapping to check if a ticket owner has voted for a venue
     mapping(bytes32 => mapping(address => bool)) public hasTicketOwnerVoted;
 
+    // Mappying to track the proposal index each ticket owner has voted for
+    mapping(bytes32 => mapping(address => uint256)) public ticketOwnerVoteIndex;
+
     // Mapping to store the previous vote of an address for a venue
     mapping(bytes32 => mapping(address => uint256)) public previousVote;
 

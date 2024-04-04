@@ -22,6 +22,8 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
  * @dev Extends ERC1155 for ticket tokenization.
  */
 contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable, OwnableUpgradeable {
+    uint256 private globalTicketCounter;
+
 
     /**
      * @notice Initializes the contract with the Show contract address and metadata URI.
@@ -63,7 +65,12 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     function purchaseTickets(bytes32 showId, uint256 tierIndex, uint256 amount, address paymentToken) public payable nonReentrant {
         validatePurchase(showId, tierIndex, amount);
         PurchaseData memory data = preparePurchaseData(showId, tierIndex, amount);
-        executePurchase(showId, tierIndex, amount, data, paymentToken);
+
+        bool purchaseSuccessful = executePurchase(showId, tierIndex, amount, data, paymentToken);
+        require(purchaseSuccessful, "Purchase failed");
+
+        // Finalize the purchase only after confirming success
+        finalizePurchase(showId, tierIndex, amount);
     }
 
     /**
@@ -108,20 +115,29 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     }
 
     /**
-     * @dev Executes the ticket purchase process: processes payment, mints tickets, and finalizes the purchase.
+     * @dev Executes the ticket purchase process: processes payment, mints tickets, and returns success status.
      * @param showId The unique identifier for the show.
      * @param tierIndex The index of the ticket tier.
      * @param amount The number of tickets to purchase.
      * @param data Struct containing purchase data.
      * @param paymentToken The address of the ERC20 token used for payment (address(0) for ETH).
+     * @return success Indicates whether the purchase was successful.
      */
-    function executePurchase(bytes32 showId, uint256 tierIndex, uint256 amount, PurchaseData memory data, address paymentToken) private {
-        processPayment(showId, data.totalPayment, paymentToken);
-        for (uint256 i = 0; i < amount; i++) {
-            uint256 tokenId = generateTokenId(showId);
-            mintTicket(tokenId, tierIndex, showId, msg.sender, data.pricePerTicket);
+    function executePurchase(bytes32 showId, uint256 tierIndex, uint256 amount, PurchaseData memory data, address paymentToken) private returns (bool) {
+        if (!processPayment(showId, data.totalPayment, paymentToken)) {
+            return false; // Payment processing failed
         }
-        finalizePurchase(showId, tierIndex, amount);
+
+        bool mintingSuccess = true;
+        for (uint256 i = 0; i < amount; i++) {
+            uint256 tokenId = generateTokenId(showId, msg.sender, tierIndex);
+            if (!mintTicket(tokenId, tierIndex, showId, msg.sender, data.pricePerTicket)) {
+                mintingSuccess = false; // Minting failed
+                break;
+            }
+        }
+
+        return mintingSuccess;
     }
 
     /**
@@ -132,24 +148,30 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
      * @param totalPayment The total payment amount required.
      * @param paymentToken The address of the ERC20 token used for payment (address(0) for ETH).
      */
-    function processPayment(bytes32 showId, uint256 totalPayment, address paymentToken) private {
+    function processPayment(bytes32 showId, uint256 totalPayment, address paymentToken) private returns (bool) {
         if (paymentToken == address(0)) {
             require(msg.value == totalPayment, "Incorrect ETH amount");
             showInstance.depositToVault{value: msg.value}(showId);
+            return true;
         } else {
             require(msg.value == 0, "Do not send ETH with ERC20 payment");
+            ERC20Upgradeable paymentTokenInstance = ERC20Upgradeable(paymentToken);
             showInstance.depositToVaultERC20(showId, totalPayment, paymentToken, msg.sender);
+            return true;
         }
     }
 
     /**
-     * @dev Generates a new ticket ID for a given show, incrementally.
+     * @dev Generates a unique ticket ID using a hash of various parameters.
      * @param showId The unique identifier for the show.
-     * @return The next ticket ID for the specified show.
+     * @param buyer The address of the ticket buyer.
+     * @param tierIndex The index of the ticket tier.
+     * @return tokenId The unique ticket ID generated.
      */
-    function generateTokenId(bytes32 showId) private returns (uint256) {
-        nextTicketIdForShow[showId]++;
-        return nextTicketIdForShow[showId];
+    function generateTokenId(bytes32 showId, address buyer, uint256 tierIndex) private returns (uint256) {
+        globalTicketCounter++;
+        bytes32 hash = keccak256(abi.encodePacked(showId, buyer, tierIndex, globalTicketCounter));
+        return uint256(hash);
     }
 
     /**
@@ -160,13 +182,14 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
      * @param buyer The address of the ticket buyer.
      * @param pricePerTicket The price paid per ticket.
      */
-    function mintTicket(uint256 tokenId, uint256 tierIndex, bytes32 showId, address buyer, uint256 pricePerTicket) private {
+    function mintTicket(uint256 tokenId, uint256 tierIndex, bytes32 showId, address buyer, uint256 pricePerTicket) private returns (bool) {
         _mint(buyer, tokenId, 1, "");
         ticketIdToTierIndex[tokenId] = tierIndex;
         tokenIdToShowId[tokenId] = showId;
         showInstance.setTicketOwnership(showId, buyer, tokenId, true);
         showInstance.addTokenIdToWallet(showId, buyer, tokenId);
         showInstance.setTicketPricePaid(showId, tokenId, pricePerTicket);
+        return true;
     }
 
     /**
@@ -176,9 +199,7 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
      * @param amount The number of tickets purchased.
      */
     function finalizePurchase(bytes32 showId, uint256 tierIndex, uint256 amount) private {
-        uint256 currentTotalTicketsSold = showInstance.getTotalTicketsSold(showId);
-        showInstance.setTotalTicketsSold(showId, currentTotalTicketsSold + amount);
-
+        showInstance.setTotalTicketsSold(showId, amount);
         showInstance.consumeTicketTier(showId, tierIndex, amount);
         showInstance.updateStatusIfSoldOut(showId);
     }
