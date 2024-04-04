@@ -61,4 +61,11 @@ interface ShowTypes {
         uint256[] split;
         address currencyAddress;
     }
+
+    struct DistributionData {
+        bytes32 showId;
+        uint256 totalAmount;
+        address paymentToken;
+        uint256[] split;
+    }
 }

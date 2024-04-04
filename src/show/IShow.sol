@@ -106,7 +106,6 @@ interface IShow is ShowTypes {
     /// @param amount The number of tickets to consume from the specified tier.
     function consumeTicketTier(bytes32 showId, uint256 tierIndex, uint256 amount) external;
 
-
     /// @notice Allows the deposit of funds into a show's vault, contributing towards the show's financial pool.
     /// @param showId The unique identifier of the show for which the funds are being deposited.
     function depositToVault(bytes32 showId) external payable;
@@ -128,23 +127,6 @@ interface IShow is ShowTypes {
     /// @param showId The unique identifier of the show.
     /// @return The address of the show's organizer.
     function getOrganizer(bytes32 showId) external view returns (address);
-
-    /// @notice Retrieves the pending refund amount owed to a specific user for a given show.
-    /// @param showId The unique identifier of the show.
-    /// @param user The address of the user.
-    /// @return amountOwed The total refund amount owed to the specified user.
-    function getPendingRefund(bytes32 showId, address user) external view returns (uint256 amountOwed);
-
-    /// @notice Retrieves the pending refund amount owed to a specific user for a given show.
-    /// @param showId The unique identifier of the show.
-    /// @param user The address of the user.
-    /// @return amountOwed The total refund amount owed to the specified user.
-    function getPendingPayout(bytes32 showId, address user) external view returns (uint256 amountOwed);
-
-    /// @notice Retrieves the sell-out threshold for a specific show, expressed as a percentage.
-    /// @param showId The unique identifier of the show.
-    /// @return The sell-out threshold percentage for the show.
-    function getSellOutThreshold(bytes32 showId) external view returns (uint256);
 
     /// @notice Retrieves detailed information about a show by its unique identifier.
     /// @param showId The unique identifier of the show.
@@ -192,10 +174,6 @@ interface IShow is ShowTypes {
     /// @return ticketsAvailable The number of tickets available for sale in this tier.
     function getTicketTierInfo(bytes32 showId, uint256 tierIndex) external view returns (string memory name, uint256 price, uint256 ticketsAvailable);
 
-    /// @notice Retrieves the total capacity for a specific show.
-    /// @param showId The unique identifier of the show.
-    /// @return The total capacity of tickets available for the show.
-    function getTotalCapacity(bytes32 showId) external view returns (uint256);
 
     /// @notice Retrieves the total number of tickets sold for a specific show.
     /// @param showId The unique identifier of the show.

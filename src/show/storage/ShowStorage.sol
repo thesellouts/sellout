@@ -30,7 +30,6 @@ contract ShowStorage is ShowTypes {
 
     address public SELLOUT_PROTOCOL_WALLET;
 
-
     // Base URI for tokens
     string internal _baseTokenURI;
 
@@ -67,11 +66,11 @@ contract ShowStorage is ShowTypes {
     // Mapping to store the ticket price paid for each ticket ID
     mapping(bytes32 => mapping(uint256 => uint256)) public ticketPricePaid;
 
-    mapping(bytes32 => mapping(address => mapping(uint256 => bool))) internal ticketOwnership;
-
     // Mapping to associate wallet addresses with show IDs and token IDs
     mapping(bytes32 => mapping(address => uint256[])) public walletToShowToTokenIds;
 
     // Mapping to track the payment token for each show
     mapping(bytes32 => address) public showPaymentToken;
+
+    mapping(bytes32 => mapping(address => mapping(uint256 => bool))) internal ticketOwnership;
 }

@@ -83,6 +83,7 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
      * @param amount The number of tickets the user wishes to purchase.
      */
     function validatePurchase(bytes32 showId, uint256 tierIndex, uint256 amount) private view {
+        //TODO: adjust so can be bought after threshold met if tickets still left
         require(showInstance.getShowStatus(showId) == ShowTypes.Status.Proposed, "Show not available for purchase");
         require(amount > 0, "Amount must be greater than 0");
 
@@ -155,7 +156,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
             return true;
         } else {
             require(msg.value == 0, "Do not send ETH with ERC20 payment");
-            ERC20Upgradeable paymentTokenInstance = ERC20Upgradeable(paymentToken);
             showInstance.depositToVaultERC20(showId, totalPayment, paymentToken, msg.sender);
             return true;
         }
