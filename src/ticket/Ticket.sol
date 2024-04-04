@@ -53,47 +53,135 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
-     * @notice Purchases tickets for a specified show and tier.
+     * @notice Purchases tickets, processing payment, minting tickets, and finalizing the purchase.
+     * @dev Breaks down the purchase process into smaller internal functions to manage stack depth.
      * @param showId Identifier of the show.
      * @param tierIndex Index of the ticket tier.
      * @param amount Number of tickets to purchase.
-     * @param paymentToken Address of the erc20 token the show is priced in.
+     * @param paymentToken Address of the ERC20 token the show is priced in.
      */
     function purchaseTickets(bytes32 showId, uint256 tierIndex, uint256 amount, address paymentToken) public payable nonReentrant {
-        require(amount > 0, "Amount must be greater than 0");
-        ShowTypes.Status showStatus = showInstance.getShowStatus(showId);
-        require(showStatus == ShowTypes.Status.Proposed, "Show is not available for ticket purchase");
-        uint256[] memory ownedTokenIds = showInstance.getWalletTokenIds(showId, msg.sender);
-        require(ownedTokenIds.length + amount <= MAX_TICKETS_PER_WALLET, "Exceeds maximum tickets per wallet");
-        (, uint256 pricePerTicket, uint256 ticketsAvailable) = showInstance.getTicketTierInfo(showId, tierIndex);
-        require(ticketsAvailable >= amount, "Not enough tickets available in this tier");
-        uint256 totalPayment = pricePerTicket * amount;
-        if (paymentToken == address(0)) {
-            require(msg.value == totalPayment, "Incorrect payment amount");
-            showInstance.depositToVault{value: msg.value}(showId);
-        } else {
-            require(msg.value == 0, "ERC20 purchases should not send ETH");
-            showInstance.depositToVaultERC20(showId, totalPayment, paymentToken, msg.sender);
-        }
-        for (uint256 i = 0; i < amount; i++) {
-            uint256 tokenId = uint256(keccak256(abi.encode(showId, tierIndex, lastTicketNumberForShow[showId] + 1 + i)));
-            _mint(msg.sender, tokenId, 1, "");
-
-            ticketIdToTierIndex[tokenId] = tierIndex;
-            tokenIdToShowId[tokenId] = showId;
-
-            showInstance.setTicketOwnership(showId, msg.sender, tokenId, true);
-            showInstance.addTokenIdToWallet(showId, msg.sender, tokenId);
-            showInstance.setTicketPricePaid(showId, tokenId, pricePerTicket);
-        }
-        lastTicketNumberForShow[showId] += amount;
-        showInstance.consumeTicketTier(showId, tierIndex, amount);
-        showInstance.setTotalTicketsSold(showId, amount);
-        showInstance.updateStatusIfSoldOut(showId);
-
-        emit TicketPurchased(msg.sender, showId, tierIndex, amount, paymentToken);
+        validatePurchase(showId, tierIndex, amount);
+        PurchaseData memory data = preparePurchaseData(showId, tierIndex, amount);
+        executePurchase(showId, tierIndex, amount, data, paymentToken);
     }
 
+    /**
+     * @dev Validates the parameters for a ticket purchase request.
+     * This function checks if the requested show is in the 'Proposed' status,
+     * verifies that the requested amount is positive and available within the specified tier,
+     * and ensures that purchasing the additional tickets does not exceed the maximum tickets allowed per wallet.
+     * @param showId Unique identifier for the show for which tickets are being purchased.
+     * @param tierIndex Index of the ticket tier within the show from which tickets are being purchased.
+     * @param amount The number of tickets the user wishes to purchase.
+     */
+    function validatePurchase(bytes32 showId, uint256 tierIndex, uint256 amount) private view {
+        require(showInstance.getShowStatus(showId) == ShowTypes.Status.Proposed, "Show not available for purchase");
+        require(amount > 0, "Amount must be greater than 0");
+
+        (, , uint256 ticketsAvailable) = showInstance.getTicketTierInfo(showId, tierIndex);
+        require(ticketsAvailable >= amount, "Not enough tickets available");
+
+        uint256[] memory ownedTokenIds = showInstance.getWalletTokenIds(showId, msg.sender);
+        require(ownedTokenIds.length + amount <= MAX_TICKETS_PER_WALLET, "Max tickets exceeded");
+    }
+
+    /**
+     * @dev Prepares the purchase data for a ticket purchase request.
+     * @param showId Unique identifier for the show for which tickets are being purchased.
+     * @param tierIndex Index of the ticket tier within the show from which tickets are being purchased.
+     * @param amount The number of tickets the user wishes to purchase.
+     * @return data A `PurchaseData` struct containing the calculated purchase data, including price per ticket, tickets available, and total payment required.
+     */
+    function preparePurchaseData(bytes32 showId, uint256 tierIndex, uint256 amount) private view returns (PurchaseData memory data) {
+        uint256 pricePerTicket;
+        uint256 ticketsAvailable;
+        (, pricePerTicket, ticketsAvailable) = showInstance.getTicketTierInfo(showId, tierIndex);
+
+        uint256 totalPayment = pricePerTicket * amount;
+        return PurchaseData({
+            pricePerTicket: pricePerTicket,
+            ticketsAvailable: ticketsAvailable,
+            totalPayment: totalPayment,
+            tokenId: 0 // This will be set later
+        });
+    }
+
+    /**
+     * @dev Executes the ticket purchase process: processes payment, mints tickets, and finalizes the purchase.
+     * @param showId The unique identifier for the show.
+     * @param tierIndex The index of the ticket tier.
+     * @param amount The number of tickets to purchase.
+     * @param data Struct containing purchase data.
+     * @param paymentToken The address of the ERC20 token used for payment (address(0) for ETH).
+     */
+    function executePurchase(bytes32 showId, uint256 tierIndex, uint256 amount, PurchaseData memory data, address paymentToken) private {
+        processPayment(showId, data.totalPayment, paymentToken);
+        for (uint256 i = 0; i < amount; i++) {
+            uint256 tokenId = generateTokenId(showId);
+            mintTicket(tokenId, tierIndex, showId, msg.sender, data.pricePerTicket);
+        }
+        finalizePurchase(showId, tierIndex, amount);
+    }
+
+    /**
+     * @dev Processes the payment for the ticket purchase. Supports both ETH and ERC20 payments.
+     * ETH payments require the sent value to match the total payment amount.
+     * ERC20 payments require an allowance and do not require sending ETH with the transaction.
+     * @param showId The unique identifier for the show.
+     * @param totalPayment The total payment amount required.
+     * @param paymentToken The address of the ERC20 token used for payment (address(0) for ETH).
+     */
+    function processPayment(bytes32 showId, uint256 totalPayment, address paymentToken) private {
+        if (paymentToken == address(0)) {
+            require(msg.value == totalPayment, "Incorrect ETH amount");
+            showInstance.depositToVault{value: msg.value}(showId);
+        } else {
+            require(msg.value == 0, "Do not send ETH with ERC20 payment");
+            showInstance.depositToVaultERC20(showId, totalPayment, paymentToken, msg.sender);
+        }
+    }
+
+    /**
+     * @dev Generates a new ticket ID for a given show, incrementally.
+     * @param showId The unique identifier for the show.
+     * @return The next ticket ID for the specified show.
+     */
+    function generateTokenId(bytes32 showId) private returns (uint256) {
+        nextTicketIdForShow[showId]++;
+        return nextTicketIdForShow[showId];
+    }
+
+    /**
+    * @dev Mints a ticket for a buyer. Associates the ticket with a show, tier, and sets the price paid.
+     * @param tokenId The unique identifier for the ticket.
+     * @param tierIndex The index of the ticket tier.
+     * @param showId The unique identifier for the show.
+     * @param buyer The address of the ticket buyer.
+     * @param pricePerTicket The price paid per ticket.
+     */
+    function mintTicket(uint256 tokenId, uint256 tierIndex, bytes32 showId, address buyer, uint256 pricePerTicket) private {
+        _mint(buyer, tokenId, 1, "");
+        ticketIdToTierIndex[tokenId] = tierIndex;
+        tokenIdToShowId[tokenId] = showId;
+        showInstance.setTicketOwnership(showId, buyer, tokenId, true);
+        showInstance.addTokenIdToWallet(showId, buyer, tokenId);
+        showInstance.setTicketPricePaid(showId, tokenId, pricePerTicket);
+    }
+
+    /**
+     * @dev Finalizes the ticket purchase process after payment and minting. Updates total tickets sold and checks if the show is sold out.
+     * @param showId The unique identifier for the show.
+     * @param tierIndex The index of the ticket tier for which tickets were purchased.
+     * @param amount The number of tickets purchased.
+     */
+    function finalizePurchase(bytes32 showId, uint256 tierIndex, uint256 amount) private {
+        uint256 currentTotalTicketsSold = showInstance.getTotalTicketsSold(showId);
+        showInstance.setTotalTicketsSold(showId, currentTotalTicketsSold + amount);
+
+        showInstance.consumeTicketTier(showId, tierIndex, amount);
+        showInstance.updateStatusIfSoldOut(showId);
+    }
 
     /**
      * @notice Retrieves the price paid for a specific ticket and its tier index.
@@ -141,16 +229,16 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     }
 
     /**
-  * @notice Retrieves the URI for a specific token ID, incorporating showId into the URI path.
- * This function overrides the default `uri` method from the ERC1155 standard to provide
- * custom token URIs that include the show identifier (showId) as part of the URI path.
- * If a custom token URI has been set, it returns that URI; otherwise, it constructs a URI
- * that includes the showId and tokenId. The showId is encoded as a hexadecimal string.
- *
- * @param tokenId Identifier of the token for which to retrieve the URI.
- * @return The URI of the specified token, either a custom set URI or a constructed one
- *         that includes the showId and tokenId in the path.
- */
+      * @notice Retrieves the URI for a specific token ID, incorporating showId into the URI path.
+     * This function overrides the default `uri` method from the ERC1155 standard to provide
+     * custom token URIs that include the show identifier (showId) as part of the URI path.
+     * If a custom token URI has been set, it returns that URI; otherwise, it constructs a URI
+     * that includes the showId and tokenId. The showId is encoded as a hexadecimal string.
+     *
+     * @param tokenId Identifier of the token for which to retrieve the URI.
+     * @return The URI of the specified token, either a custom set URI or a constructed one
+     *         that includes the showId and tokenId in the path.
+     */
     function uri(uint256 tokenId) public view override returns (string memory) {
         // Check if a custom URI has been set for the token
         string memory customTokenURI = tokenURIs[tokenId];

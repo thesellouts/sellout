@@ -29,6 +29,10 @@ contract TicketStorage is TicketTypes {
     /// This helps in generating new ticket IDs for new ticket purchases.
     mapping(bytes32 => uint256) internal lastTicketNumberForShow;
 
+
+    mapping(bytes32 => uint256) internal nextTicketIdForShow;
+
+
     /// @dev The default URI prefix used for ticket metadata.
     /// This is used if a specific ticket does not have a unique URI set.
     string internal defaultURI;

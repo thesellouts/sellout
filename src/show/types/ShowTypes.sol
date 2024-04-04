@@ -48,4 +48,17 @@ interface ShowTypes {
         uint256 showDate;             // Final show date
         address currencyAddress;      // Show Currency Address
     }
+
+    struct ShowProposal {
+        string name;
+        string description;
+        address[] artists;
+        VenueTypes.Coordinates coordinates;
+        uint256 radius;
+        uint8 sellOutThreshold;
+        uint256 totalCapacity;
+        TicketTier[] ticketTiers;
+        uint256[] split;
+        address currencyAddress;
+    }
 }

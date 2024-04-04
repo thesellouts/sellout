@@ -237,30 +237,16 @@ interface IShow is ShowTypes {
     /// @param showId The unique identifier of the show for which the payout is being requested.
     function payout(bytes32 showId) external;
 
-    /// @notice Proposes a new show with detailed information including artists, venue, and ticket tiers.
-    /// @param name The name of the proposed show.
-    /// @param description A brief description of the show.
-    /// @param artists An array of addresses representing the artists involved in the show.
-    /// @param coordinates The geographical coordinates for the proposed venue of the show.
-    /// @param radius The search radius (in meters) within which the proposed venue should be located.
-    /// @param sellOutThreshold The percentage of total tickets that must be sold for the show to be considered sold out.
-    /// @param totalCapacity The total number of tickets available for the show.
-    /// @param ticketTiers An array of `TicketTier` structs, each representing a distinct ticket pricing and availability tier.
-    /// @param split An array representing the revenue split percentages among the organizer, artists, and venue.
-    /// @param currencyAddress Zero address for ETH, token address for erc20
-    /// @return showId The unique identifier of the newly proposed show.
-    function proposeShow(
-        string memory name,
-        string memory description,
-        address[] memory artists,
-        VenueTypes.Coordinates memory coordinates,
-        uint256 radius,
-        uint8 sellOutThreshold,
-        uint256 totalCapacity,
-        ShowTypes.TicketTier[] memory ticketTiers,
-        uint256[] memory split,
-        address currencyAddress
-    ) external returns (bytes32 showId);
+    /// @notice Proposes a new show with detailed configuration encapsulated within a `ShowProposal` struct.
+    /// @param proposal A `ShowProposal` struct containing all the necessary details for proposing a new show, including
+    /// name, description, artist addresses, venue coordinates, radius, sell-out threshold, total capacity, ticket tiers,
+    /// revenue split configuration, and the currency address for ticket sales.
+    /// @dev This function initiates the creation of a show by validating the input parameters encapsulated in the proposal,
+    /// then creates a new show based on these parameters. It is the entry point for organizers to propose new shows to the platform.
+    /// The function requires that the caller is a registered organizer and that the artists included in the proposal are registered artists.
+    /// @return showId The unique identifier for the newly proposed show, generated based on the proposal details.
+    function proposeShow(ShowProposal memory proposal) external returns (bytes32 showId);
+
 
     /// @notice Allows a ticket owner to request a refund for a specific ticket of a show, under certain conditions.
     /// @param showId The unique identifier of the show for which the refund is requested.

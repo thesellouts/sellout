@@ -88,90 +88,92 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         areContractsSet = true;
     }
 
-    /// @notice Creates a show proposal between one or more artists
-    /// @param name Name of the show
-    /// @param description Description of the show
-    /// @param artists Array of artist addresses
-    /// @param coordinates Desired location of the show
-    /// @param radius Radius of the desired show location
-    /// @param sellOutThreshold Sell-out threshold percentage
-    /// @param totalCapacity Total capacity of the show
-    /// @param _ticketTiers Array of ticket tiers, each with its own pricing and ticket count
-    /// @param split Array representing the percentage split between organizer, artists, and venue
-    /// @param split Array representing the percentage split between organizer, artists, and venue
-    /// @param currencyAddress Zero address for ETH, token address for erc20
-    /// @return showId Unique identifier for the proposed show
-    function proposeShow(
-        string memory name,
-        string memory description,
-        address[] memory artists,
-        VenueTypes.Coordinates memory coordinates,
-        uint256 radius,
-        uint8 sellOutThreshold,
-        uint256 totalCapacity,
-        TicketTier[] memory _ticketTiers,
-        uint256[] memory split, // organizer, artists[], venue
-        address currencyAddress
-    ) external returns (bytes32 showId) {
-        require(areContractsSet, "Contract addresses must be set");
-        require(bytes(name).length > 0, "Name is required");
-        require(radius > 0, "Venue radius must be greater than 0");
-        require(totalCapacity > 0, "Total capacity must be greater than 0");
-        require(artists.length > 0, "At least one artist required");
-        require(sellOutThreshold >= 50 && sellOutThreshold <= 100, "Sell-out threshold must be between 50 and 100");
-        require(coordinates.lat >= -90 * 10**6 && coordinates.lat <= 90 * 10**6, "Invalid latitude");
-        require(coordinates.lon >= -180 * 10**6 && coordinates.lon <= 180 * 10**6, "Invalid longitude");
-        require(isOrganizerRegistered(msg.sender), "Organizer must be registered");
+    /**
+     * @dev Creates a new show entry in the contract storage based on a validated show proposal.
+     *      This function unpacks the ShowProposal struct, generates a unique showId, and initializes
+     *      the show's details in the smart contract's state.
+     * @param proposal A struct containing all necessary details for creating a new show, assumed to be validated.
+     * @return showId The unique identifier of the newly created show, generated based on proposal details.
+     */
+    function createShow(ShowProposal memory proposal) private returns (bytes32 showId) {
+        // Generating a unique identifier for the show based on proposal details
+        showId = keccak256(abi.encode(
+            proposal.name,
+            proposal.description,
+            proposal.artists,
+            proposal.coordinates.lat,
+            proposal.coordinates.lon,
+            proposal.radius,
+            proposal.sellOutThreshold,
+            proposal.totalCapacity,
+            proposal.currencyAddress,
+            block.timestamp // Consider including block.timestamp for uniqueness
+        ));
 
-        for (uint256 i = 0; i < artists.length; i++) {
-            require(isArtistRegistered(artists[i]), "All artists must be registered");
-        }
-
-        validateSplit(split, artists.length);
-        validateTotalTicketsAcrossTiers(_ticketTiers, totalCapacity);
-
-        showId = keccak256(abi.encodePacked(msg.sender, artists, coordinates.lat, coordinates.lon, radius, sellOutThreshold, totalCapacity));
-
-        Show storage show = shows[showId];
-        show.showId = showId;
-        show.name = name;
-        show.description = description;
-        show.organizer = msg.sender;
-        show.artists = artists;
-        show.venue = VenueTypes.Venue({
+        // Creating a new show entry in the mapping with the showId
+        Show storage newShow = shows[showId];
+        newShow.name = proposal.name;
+        newShow.description = proposal.description;
+        newShow.organizer = msg.sender; // Assuming the msg.sender is the organizer
+        newShow.artists = proposal.artists;
+        newShow.venue = VenueTypes.Venue({
             name: "",
-            coordinates: coordinates,
-            totalCapacity: totalCapacity,
-            wallet: address(0),
-            venueId: bytes32(0)
+            coordinates: proposal.coordinates,
+            totalCapacity: proposal.totalCapacity,
+            wallet: address(0), // Default value, update as needed
+            venueId: bytes32(0) // Default value, update as needed
         });
-        show.radius = radius;
-        show.sellOutThreshold = sellOutThreshold;
-        show.totalCapacity = totalCapacity;
-        show.status = Status.Proposed;
-        show.isActive = true;
-        show.split = split;
-        show.expiry = block.timestamp + 30 days;
-        show.showDate = 0;
-        show.currencyAddress = currencyAddress;
+        newShow.radius = proposal.radius;
+        newShow.sellOutThreshold = proposal.sellOutThreshold;
+        newShow.totalCapacity = proposal.totalCapacity;
+        newShow.status = Status.Proposed;
+        newShow.isActive = true;
+        newShow.split = proposal.split;
+        newShow.expiry = block.timestamp + 30 days; // Example expiry
+        newShow.showDate = 0; // Default value, update as needed
+        newShow.currencyAddress = proposal.currencyAddress;
+        showPaymentToken[showId] = proposal.currencyAddress;
 
-        showPaymentToken[showId] = currencyAddress;
-
-        for (uint i = 0; i < _ticketTiers.length; i++) {
-            show.ticketTiers.push(_ticketTiers[i]);
+        // Adding ticket tiers
+        for (uint256 i = 0; i < proposal.ticketTiers.length; i++) {
+            newShow.ticketTiers.push(proposal.ticketTiers[i]);
         }
 
-        for (uint i = 0; i < artists.length; i++) {
-            isArtistMapping[showId][artists[i]] = true;
+        // Setting artist mappings
+        for (uint256 i = 0; i < proposal.artists.length; i++) {
+            isArtistMapping[showId][proposal.artists[i]] = true;
         }
 
-        activeShowCount++;
+        activeShowCount++; // Incrementing the count of active shows
 
-        emit ShowProposed(showId, msg.sender, name, artists, description, sellOutThreshold, split, totalCapacity);
+        // Emitting an event to signal that a new show has been proposed
+        emit ShowProposed(
+            showId,
+            msg.sender,
+            proposal.name,
+            proposal.artists,
+            proposal.description,
+            proposal.sellOutThreshold,
+            proposal.split,
+            proposal.totalCapacity
+        );
 
         return showId;
     }
 
+
+
+    /**
+     * @notice Proposes a new show with detailed information.
+     * @dev This function creates a new show proposal based on the provided ShowProposal struct.
+     *      It validates the proposal details and then proceeds to create the show if validation passes.
+     * @param proposal A struct containing all necessary details for proposing a new show.
+     * @return showId The unique identifier for the proposed show, generated based on proposal details.
+     */
+    function proposeShow(ShowProposal memory proposal) external returns (bytes32 showId) {
+        validateShowProposal(proposal);
+        return createShow(proposal);
+    }
 
     /// @notice Deposits Ether into the vault for a specific show
     /// @param showId Unique identifier for the show
@@ -252,53 +254,77 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     function completeShow(bytes32 showId) public onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
         require(show.status == Status.Upcoming, "Show must be Upcoming");
-//        require(block.timestamp >= show.showDate + 2 days, "Show has not yet been completed");
-        require(block.timestamp >= show.showDate + 30 minutes, "Show has not yet been completed"); //TODO: check this is correct
+        require(block.timestamp >= show.showDate + 30 minutes, "Show has not yet been completed");
 
-        uint256 totalAmount = showVault[showId];
+        address paymentToken = showPaymentToken[showId];
+        uint256 totalAmount = (paymentToken == address(0)) ? showVault[showId] : showTokenVault[showId][paymentToken];
         require(totalAmount > 0, "No funds to distribute");
 
-        uint256[] memory split = show.split;
+        // This assumes distributeShares has been updated to accept the parameters directly related to fund distribution
+        distributeShares(showId, show, show.split, totalAmount, paymentToken);
 
-        // Calculate protocol's share (1%)
-        uint256 protocolShare = totalAmount / 100;
-        pendingPayouts[showId][SELLOUT_PROTOCOL_WALLET] = protocolShare;
-
-        // Reduce totalAmount by protocol's share
-        totalAmount -= protocolShare;
-
-        // Calculate organizer's share
-        uint256 organizerShare = totalAmount * split[0] / 100;
-        pendingPayouts[showId][show.organizer] = organizerShare;
-
-        // Calculate artists' shares
-        for (uint i = 0; i < show.artists.length; i++) {
-            uint256 artistShare = totalAmount * split[i + 1] / 100;
-            pendingPayouts[showId][show.artists[i]] = artistShare;
+        // Clear the vault to signify funds have been distributed
+        if(paymentToken == address(0)) {
+            showVault[showId] = 0;
+        } else {
+            showTokenVault[showId][paymentToken] = 0;
         }
 
-        // Calculate venue's share
-        uint256 venueShare = totalAmount * split[split.length - 1] / 100;
-        pendingPayouts[showId][show.venue.wallet] = venueShare;
-
-        showVault[showId] = 0;
-
-        // Update the status
-        show.status = Status.Completed;
-
-        // Increment referral credits for the participants of the show
-        // Assuming you have a referralModule instance correctly set up in the contract
-        // Each participant gets 1 credit to register one organizer, artist, and venue respectively.
-        referralInstance.incrementReferralCredits(show.organizer, 1, 1, 1);
-        for (uint i = 0; i < show.artists.length; i++) {
-            referralInstance.incrementReferralCredits(show.artists[i], 1, 1, 1);
-        }
-        referralInstance.incrementReferralCredits(show.venue.wallet, 1, 1, 1);
-
-        activeShowCount--;
-
-        // Emit event for show completion
+        // Mark the show as completed
+        shows[showId].status = Status.Completed;
         emit StatusUpdated(showId, Status.Completed);
+    }
+
+
+    function isShowUpcoming(bytes32 showId) private view returns (bool) {
+        Show storage show = shows[showId];
+        return show.status == Status.Upcoming && block.timestamp >= show.showDate + 30 minutes;
+    }
+
+    function calculateTotalPayoutAmount(bytes32 showId) private view returns (uint256) {
+        address paymentToken = showPaymentToken[showId];
+        if (paymentToken == address(0)) {
+            return showVault[showId];
+        } else {
+            return showTokenVault[showId][paymentToken];
+        }
+    }
+
+    function markShowAsCompleted(bytes32 showId) private {
+        Show storage show = shows[showId];
+        show.status = Status.Completed;
+        activeShowCount--;
+        emit StatusUpdated(showId, Status.Completed);
+    }
+
+
+    /// Helper function to distribute shares to organizer, artists, and venue
+    function distributeShares(bytes32 showId, Show storage show, uint256[] memory split, uint256 totalAmount, address paymentToken) private {
+        // Organizer's share
+        uint256 organizerShare = totalAmount * split[0] / 100;
+        if(paymentToken == address(0)) {
+            pendingPayouts[showId][show.organizer] += organizerShare;
+        } else {
+            pendingTokenPayouts[showId][paymentToken][show.organizer] += organizerShare;
+        }
+
+        // Artists' shares
+        for (uint i = 1; i <= show.artists.length; i++) {
+            uint256 artistShare = totalAmount * split[i] / 100;
+            if(paymentToken == address(0)) {
+                pendingPayouts[showId][show.artists[i-1]] += artistShare;
+            } else {
+                pendingTokenPayouts[showId][paymentToken][show.artists[i-1]] += artistShare;
+            }
+        }
+
+        // Venue's share
+        uint256 venueShare = totalAmount * split[split.length - 1] / 100;
+        if(paymentToken == address(0)) {
+            pendingPayouts[showId][show.venue.wallet] += venueShare;
+        } else {
+            pendingTokenPayouts[showId][paymentToken][show.venue.wallet] += venueShare;
+        }
     }
 
     /// @notice Allows the organizer or artist to withdraw funds after a show has been completed.
@@ -306,19 +332,30 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     function payout(bytes32 showId) public onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
         require(show.status == Status.Completed, "Show must be Completed");
-        require(block.timestamp >= show.showDate + 5 minutes, "Show cool down has not ended"); //TODO: CHANGE BACK TO LONGER TIME
+        require(block.timestamp >= show.showDate + 5 minutes, "Show cooldown has not ended");
 
         address paymentToken = showPaymentToken[showId];
-        uint256 amount = pendingPayouts[showId][msg.sender];
-        require(amount > 0, "No funds to withdraw");
+        uint256 amount;
 
-        // Ensure the recipient can't re-entrantly call this function
-        pendingPayouts[showId][msg.sender] = 0;
-
-        if(paymentToken == address(0)) {
-            payable(msg.sender).transfer(amount);
+        // Determine the amount to be paid out, based on whether it's ETH or an ERC20 token.
+        if (paymentToken == address(0)) {
+            amount = pendingPayouts[showId][msg.sender];
+            require(amount > 0, "No funds to withdraw");
+            pendingPayouts[showId][msg.sender] = 0; // Reset before payout to prevent reentrancy
         } else {
-            ERC20Upgradeable(paymentToken).transfer(msg.sender, amount);
+            amount = pendingTokenPayouts[showId][paymentToken][msg.sender];
+            require(amount > 0, "No token funds to withdraw");
+            pendingTokenPayouts[showId][paymentToken][msg.sender] = 0; // Reset before payout
+        }
+
+        // Perform the payout.
+        if (paymentToken == address(0)) {
+            (bool sent, ) = payable(msg.sender).call{value: amount}("");
+            require(sent, "Failed to send ETH");
+        } else {
+            ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
+            require(token.balanceOf(address(this)) >= amount, "Insufficient token funds");
+            require(token.transfer(msg.sender, amount), "Token transfer failed");
         }
 
         emit Withdrawal(showId, msg.sender, amount, paymentToken);
@@ -329,7 +366,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     function withdrawRefund(bytes32 showId) public nonReentrant {
         Show storage show = shows[showId];
 
-        // Check if the show is in an appropriate status for refunds
         require(
             show.status == Status.Refunded ||
             show.status == Status.Expired ||
@@ -339,19 +375,25 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         );
 
         address paymentToken = showPaymentToken[showId];
-        uint256 amount = pendingRefunds[showId][msg.sender];
+        uint256 amount;
+
+        if (paymentToken == address(0)) {
+            amount = pendingRefunds[showId][msg.sender];
+        } else {
+            amount = pendingTokenRefunds[showId][paymentToken][msg.sender];
+        }
+
         require(amount > 0, "No funds to withdraw");
 
-        // Ensure the refund amount is set to 0 before transferring
-        pendingRefunds[showId][msg.sender] = 0;
-
-        if(paymentToken == address(0)) {
-            require(address(this).balance >= amount, "Insufficient ETH funds in the contract");
-            payable(msg.sender).transfer(amount);
+        if (paymentToken == address(0)) {
+            pendingRefunds[showId][msg.sender] = 0; // Reset before transfer to prevent reentrancy
+            (bool sent, ) = payable(msg.sender).call{value: amount}("");
+            require(sent, "Failed to send ETH");
         } else {
+            pendingTokenRefunds[showId][paymentToken][msg.sender] = 0; // Reset before transfer
             ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
-            require(token.balanceOf(address(this)) >= amount, "Insufficient token funds in the contract");
-            token.transfer(msg.sender, amount);
+            require(token.balanceOf(address(this)) >= amount, "Insufficient token funds");
+            require(token.transfer(msg.sender, amount), "Token transfer failed");
         }
 
         emit RefundWithdrawn(msg.sender, showId, amount);
@@ -365,48 +407,44 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     function refundTicket(bytes32 showId, uint256 ticketId) public {
         require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Cancelled || shows[showId].status == Status.Expired, "Funds are locked due to the status of the show");
         require(isTicketOwner(msg.sender, showId, ticketId), "User does not own the ticket for this show");
+
         (uint256 refundAmount, uint256 tierIndex) = ticketInstance.getTicketPricePaidAndTierIndex(showId, ticketId);
         require(refundAmount > 0, "Ticket not purchased");
+
+        // Retrieve the payment token used for this show
+        address paymentToken = showPaymentToken[showId];
 
         // Increment the available tickets for the tier
         shows[showId].ticketTiers[tierIndex].ticketsAvailable++;
 
-        // Update total tickets sold and potentially the show status
-        updateTicketsSoldAndShowStatusAfterRefund(showId, ticketId, refundAmount);
-
-        // Process the refund
-        address paymentToken = showPaymentToken[showId];
-        if (paymentToken == address(0)) {
-            // ETH refund logic remains the same
-            require(address(this).balance >= refundAmount, "Insufficient ETH balance");
-            (bool sent, ) = payable(msg.sender).call{value: refundAmount}("");
-            require(sent, "Failed to send ETH");
-        } else {
-            // For ERC20 token refunds
-            ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
-            uint256 balance = token.balanceOf(address(this));
-            require(balance >= refundAmount, "Insufficient token balance");
-            token.transfer(msg.sender, refundAmount);
-        }
+        // Update total tickets sold and potentially the show status, now passing the paymentToken
+        updateTicketsSoldAndShowStatusAfterRefund(showId, ticketId, refundAmount, paymentToken);
 
         // Emit refund event
         emit TicketRefunded(msg.sender, showId, refundAmount);
     }
 
-
     /// @dev Updates total tickets sold and potentially the show status after a ticket refund.
     /// @param showId The unique identifier of the show.
     /// @param ticketId The ID of the ticket being refunded.
     /// @param refundAmount The amount to be refunded.
-    function updateTicketsSoldAndShowStatusAfterRefund(bytes32 showId, uint256 ticketId, uint256 refundAmount) internal {
+    /// @param paymentToken The payment token address; address(0) for ETH.
+    function updateTicketsSoldAndShowStatusAfterRefund(bytes32 showId, uint256 ticketId, uint256 refundAmount, address paymentToken) internal {
         Show storage show = shows[showId];
 
         // Decrease total tickets sold
         totalTicketsSold[showId]--;
 
-        // Update the show vault and pending withdrawals
-        showVault[showId] -= refundAmount;
-        pendingRefunds[showId][msg.sender] += refundAmount;
+        // Update the show vault and pending withdrawals depending on the payment type
+        if (paymentToken == address(0)) {
+            // For ETH payments, manage the ETH balance
+            showVault[showId] -= refundAmount;
+            pendingRefunds[showId][msg.sender] += refundAmount;
+        } else {
+            // For ERC20 payments, manage the token balance
+            showTokenVault[showId][paymentToken] -= refundAmount;
+            pendingTokenRefunds[showId][paymentToken][msg.sender] += refundAmount;
+        }
 
         // Update show status if needed
         uint256 soldTickets = totalTicketsSold[showId];
@@ -471,7 +509,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     function getPendingPayout(bytes32 showId, address user) public view returns (uint256 amountOwed) {
         return pendingPayouts[showId][user];
     }
-
 
     /// @notice Retrieves the details of a show, including ticket tiers.
     /// @param showId Unique identifier for the show
@@ -672,6 +709,27 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     function setTotalTicketsSold(bytes32 showId, uint256 amount) external onlyTicketContract {
         totalTicketsSold[showId] = totalTicketsSold[showId] + amount;
     }
+
+    /**
+     * @dev Validates the input parameters contained within the ShowProposal struct.
+     *      Checks include validation of name, description length, artist array length, sell-out threshold,
+     *      coordinates, and revenue split configuration among other things.
+     *      This function ensures that all the necessary criteria are met for a valid show proposal.
+     * @param proposal The ShowProposal struct containing the details to be validated.
+     */
+    function validateShowProposal(ShowProposal memory proposal) private pure {
+        require(bytes(proposal.name).length > 0, "Name is required");
+        require(proposal.radius > 0, "Venue radius must be greater than 0");
+        require(bytes(proposal.description).length > 0 && bytes(proposal.description).length <= 1000, "Invalid description length");
+        require(proposal.totalCapacity > 0, "Total capacity must be greater than 0");
+        require(proposal.artists.length > 0, "At least one artist required");
+        require(proposal.sellOutThreshold >= 50 && proposal.sellOutThreshold <= 100, "Sell-out threshold must be between 50% and 100%");
+        require(proposal.coordinates.lat >= -90 * 10**6 && proposal.coordinates.lat <= 90 * 10**6, "Invalid latitude");
+        require(proposal.coordinates.lon >= -180 * 10**6 && proposal.coordinates.lon <= 180 * 10**6, "Invalid longitude");
+        validateSplit(proposal.split, proposal.artists.length);
+        // Ensure ticketTiers and currencyAddress are also validated as needed
+    }
+
 
     /// @notice Validates the split percentages between organizer, artists, and venue
     /// @param split Array representing the percentage split

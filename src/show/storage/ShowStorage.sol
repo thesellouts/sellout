@@ -52,8 +52,14 @@ contract ShowStorage is ShowTypes {
     // Mapping to track pending refunds for each show and address
     mapping(bytes32 => mapping(address => uint256)) public pendingRefunds;
 
+    // Mapping to track pending refunds for each show and address
+    mapping(bytes32 => mapping(address => mapping(address => uint256))) public pendingTokenRefunds;
+
     // Mapping to track pending payouts for each show and address
     mapping(bytes32 => mapping(address => uint256)) public pendingPayouts;
+
+    // Mapping to track pending payouts for each show and address
+    mapping(bytes32 => mapping(address => mapping(address => uint256))) public pendingTokenPayouts;
 
     // Mapping to track the total number of tickets sold for each show ID
     mapping(bytes32 => uint256) public totalTicketsSold;
