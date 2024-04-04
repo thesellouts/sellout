@@ -8,9 +8,17 @@ interface ITicket {
     /// @param buyer Address of the buyer
     /// @param showId ID of the show for which tickets were purchased
     /// @param tierIndex Index of the ticket tier from which the tickets were purchased
+    /// @param tokenId Unique ID of the purchased ticket
     /// @param amount Amount of tickets purchased
     /// @param paymentToken Address of the currency the ticket is priced in
-    event TicketPurchased(address indexed buyer, bytes32 indexed showId, uint256 tierIndex, uint256 amount, address paymentToken);
+    event TicketPurchased(
+        address indexed buyer,
+        bytes32 indexed showId,
+        uint256 tierIndex,
+        uint256 tokenId,
+        uint256 amount,
+        address paymentToken
+    );
 
     /// @notice Purchase multiple tickets for a specific show from a specific tier
     /// @param showId ID of the show

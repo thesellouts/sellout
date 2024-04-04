@@ -136,6 +136,8 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
                 mintingSuccess = false; // Minting failed
                 break;
             }
+
+            emit TicketPurchased(msg.sender, showId, tierIndex, tokenId, 1, paymentToken);
         }
 
         return mintingSuccess;
