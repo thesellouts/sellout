@@ -37,11 +37,10 @@ contract TicketFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /// @notice Creates a new ticket proxy for a given owner and adds it to the deployed tickets list.
     /// @param initialOwner Address of the initial owner of the ticket proxy.
-    /// @param newVersion Version of the ticket contract.
     /// @return The address of the newly created ticket proxy.
-    function createTicketProxy(address initialOwner, string memory newVersion) public onlyOwner returns (address) {
+    function createTicketProxy(address initialOwner) public onlyOwner returns (address) {
         address clone = Clones.clone(ticketImplementation);
-        ITicket(clone).initialize(initialOwner, newVersion);
+        ITicket(clone).initialize(initialOwner, version);
         deployedTickets.push(clone);
         emit TicketProxyCreated(clone);
         return clone;
