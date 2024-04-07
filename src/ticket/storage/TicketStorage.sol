@@ -9,13 +9,16 @@ import "../../show/IShow.sol";
  * @dev Storage contract for Sellout Tickets.
  */
 contract TicketStorage is TicketTypes {
-    /// @dev Reference to the Show contract interface to interact with show-related functionalities.
+    /// @notice Reference to the Show contract interface to interact with show-related functionalities.
     IShow public showInstance;
 
-    /// @dev Maximum number of tickets that a single wallet can purchase for a given show.
+    /// @notice Version of the ticket factory.
+    string public version;
+
+    /// @notice Maximum number of tickets that a single wallet can purchase for a given show.
     uint256 public constant MAX_TICKETS_PER_WALLET = 5;
 
-    /// @dev Mapping from token ID to its associated metadata URI.
+    /// @notice Mapping from token ID to its associated metadata URI.
     /// Token ID is unique for each ticket, and the URI points to a metadata file that describes the ticket.
     mapping(uint256 => string) internal tokenURIs;
 
@@ -25,7 +28,7 @@ contract TicketStorage is TicketTypes {
     // Mapping from ticket ID to show ID
     mapping(uint256 => bytes32) internal tokenIdToShowId;
 
-    /// @dev Mapping from show ID to the last ticket number issued for that show.
+    /// @notice Mapping from show ID to the last ticket number issued for that show.
     /// This helps in generating new ticket IDs for new ticket purchases.
     mapping(bytes32 => uint256) internal lastTicketNumberForShow;
 
@@ -33,7 +36,7 @@ contract TicketStorage is TicketTypes {
     mapping(bytes32 => uint256) internal nextTicketIdForShow;
 
 
-    /// @dev The default URI prefix used for ticket metadata.
+    /// @notice The default URI prefix used for ticket metadata.
     /// This is used if a specific ticket does not have a unique URI set.
     string internal defaultURI;
 }

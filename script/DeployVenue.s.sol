@@ -11,12 +11,11 @@ contract DeployVenue is Script {
 
         address selloutProtocolWallet = vm.envAddress("SELLOUT_PROTOCOL_WALLET");
         address showAddress = vm.envAddress("SHOW_ADDRESS");
-        address ticketAddress = vm.envAddress("TICKET_ADDRESS");
 
         // Deploy Venue Implementation
         Venue venueImpl = new Venue();
         // Prepare initializer function call
-        bytes memory initData = abi.encodeWithSignature("initialize(address,address,address)", selloutProtocolWallet, showAddress, ticketAddress);
+        bytes memory initData = abi.encodeWithSignature("initialize(address,address)", selloutProtocolWallet, showAddress);
         // Deploy Proxy
         ERC1967Proxy proxy = new ERC1967Proxy(address(venueImpl), initData);
 

@@ -4,8 +4,6 @@ pragma solidity 0.8.20;
 import { VenueStorage, VenueTypes } from "./storage/VenueStorage.sol";
 import { IVenue } from "./IVenue.sol";
 
-import { ITicket } from "../ticket/ITicket.sol";
-
 import { IShow } from "../show/IShow.sol";
 import { ShowTypes } from "../show/storage/ShowStorage.sol";
 
@@ -18,29 +16,20 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 /// @notice This contract manages the venue proposals, voting, and acceptance for shows.
 contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableUpgradeable {
     IShow public showInstance;
-    ITicket public ticketInstance;
-
-    // Constants for durations
-//    uint256 constant PROPOSAL_PERIOD_DURATION = 7 days;
-//    uint256 constant PROPOSAL_DATE_EXTENSION = 1 days;
-//    uint256 constant PROPOSAL_DATE_MINIMUM_FUTURE = 30 days;
-//    uint256 constant PROPOSAL_PERIOD_EXTENSION_THRESHOLD = 6 hours;
 
     // Constants for durations adjusted for quick testing
-    uint256 constant PROPOSAL_PERIOD_DURATION = 2 hours; // From 7 days
+    uint256 constant PROPOSAL_PERIOD_DURATION = 30 minutes; // From 7 days
     uint256 constant PROPOSAL_DATE_EXTENSION = 5 minutes; // From 1 day
     uint256 constant PROPOSAL_DATE_MINIMUM_FUTURE = 45 minutes; // From 30 days
     uint256 constant PROPOSAL_PERIOD_EXTENSION_THRESHOLD = 2 minutes; // From 6 hours
 
     /// @notice Initializes the Venue contract with Show and Ticket contract addresses.
     /// @param _showBaseContractAddress Address of the Show contract.
-    /// @param _ticketBaseContractAddress Address of the Ticket contract.
-    function initialize(address initialOwner,address _showBaseContractAddress, address _ticketBaseContractAddress) public initializer {
+    function initialize(address initialOwner,address _showBaseContractAddress) public initializer {
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
 
         showInstance = IShow(_showBaseContractAddress);
-        ticketInstance = ITicket(_ticketBaseContractAddress);
     }
 
     modifier onlyOrganizer(bytes32 showId) {
@@ -225,7 +214,9 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         // Assuming dateIndex is valid and within the range of proposedDates
         // for the selected proposal
         uint256 acceptedDate = showProposals[showId][selectedProposalIndex[showId]].proposedDates[dateIndex];
-        selectedDate[showId] = acceptedDate; // Update the selected date for the show
+        selectedDate[showId] = acceptedDate;
+        showInstance.updateShowDate(showId, acceptedDate);
+
         emit DateAccepted(showId, acceptedDate);
 
         // Update the show's status to Upcoming

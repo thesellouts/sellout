@@ -30,13 +30,11 @@ interface IShow is ShowTypes {
     /// @param amount Number of tickets consumed
     event TicketTierConsumed(bytes32 indexed showId, uint256 indexed tierIndex, uint256 amount);
 
-    /**
-    * @notice Event emitted when ERC20 tokens are deposited into a show's vault.
-     * @param showId The unique identifier of the show receiving the deposit.
-     * @param tokenAddress The address of the ERC20 token being deposited.
-     * @param depositor The address of the account making the deposit.
-     * @param amount The amount of ERC20 tokens deposited.
-     */
+     // @notice Event emitted when ERC20 tokens are deposited into a show's vault.
+     // @param showId The unique identifier of the show receiving the deposit.
+     // @param tokenAddress The address of the ERC20 token being deposited.
+     // @param depositor The address of the account making the deposit.
+     // @param amount The amount of ERC20 tokens deposited.
     event ERC20Deposited(bytes32 indexed showId, address indexed tokenAddress, address indexed depositor, uint256 amount);
 
 
@@ -48,7 +46,7 @@ interface IShow is ShowTypes {
     /// @param description A description of the proposed show.
     /// @param sellOutThreshold The percentage threshold for considering the show sold out.
     /// @param split An array representing the revenue split between the organizer, artists, and venue.
-    /// @param totalCapacity The total ticket capacity for the show.
+    /// @param currencyAddress The total ticket capacity for the show.
     event ShowProposed(
         bytes32 indexed showId,
         address indexed organizer,
@@ -57,7 +55,7 @@ interface IShow is ShowTypes {
         string description,
         uint256 sellOutThreshold,
         uint256[] split,
-        uint256 totalCapacity
+        address currencyAddress
     );
 
     /// @notice Emitted when the status of a show is updated.
@@ -174,7 +172,6 @@ interface IShow is ShowTypes {
     /// @return ticketsAvailable The number of tickets available for sale in this tier.
     function getTicketTierInfo(bytes32 showId, uint256 tierIndex) external view returns (string memory name, uint256 price, uint256 ticketsAvailable);
 
-
     /// @notice Retrieves the total number of tickets sold for a specific show.
     /// @param showId The unique identifier of the show.
     /// @return The total number of tickets sold.
@@ -225,7 +222,6 @@ interface IShow is ShowTypes {
     /// @return showId The unique identifier for the newly proposed show, generated based on the proposal details.
     function proposeShow(ShowProposal memory proposal) external returns (bytes32 showId);
 
-
     /// @notice Allows a ticket owner to request a refund for a specific ticket of a show, under certain conditions.
     /// @param showId The unique identifier of the show for which the refund is requested.
     /// @param ticketId The unique identifier of the ticket being refunded.
@@ -253,7 +249,6 @@ interface IShow is ShowTypes {
     /// @param price The price paid for the ticket.
     function setTicketPricePaid(bytes32 showId, uint256 ticketId, uint256 price) external;
 
-
     /// @notice Sets the ownership status of a ticket for a specific show.
     /// @dev This function should only be callable by the Ticket contract or other authorized contracts.
     /// @param showId The unique identifier of the show.
@@ -280,6 +275,12 @@ interface IShow is ShowTypes {
     /// @param showId The unique identifier of the show.
     /// @param newVenue The new venue details to be applied to the show.
     function updateShowVenue(bytes32 showId, VenueTypes.Venue memory newVenue) external;
+
+    /// @notice Updates the date for an accepted show.
+    /// @dev Only callable by the Venue contract for shows in the Accepted status.
+    /// @param showId The unique identifier of the show whose date is to be updated.
+    /// @param newDate The new date (timestamp) for the show.
+    function updateShowDate(bytes32 showId, uint256 newDate) external;
 
     /// @notice Allows a user to withdraw their refund for a previously refunded ticket.
     /// @param showId The unique identifier of the show for which the refund is being withdrawn.

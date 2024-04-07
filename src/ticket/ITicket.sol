@@ -20,6 +20,15 @@ interface ITicket {
         address paymentToken
     );
 
+
+    /**
+     * @dev Initializes the ticket instance or proxy with necessary parameters.
+     * @param sender The address initiating the ticket creation. Typically the show organizer or a factory contract.
+     * @param version The version of the Ticket contract
+     */
+    function initialize(address sender, string memory version) external;
+
+
     /// @notice Purchase multiple tickets for a specific show from a specific tier
     /// @param showId ID of the show
     /// @param tierIndex Index of the ticket tier from which to purchase tickets
@@ -40,10 +49,20 @@ interface ITicket {
     /// @param newURI New URI to set for the token
     function setTokenURI(bytes32 showId, uint256 tokenId, string calldata newURI) external;
 
+    /**
+    * @dev Sets the address of the Show contract that this Ticket contract is associated with.
+     * This is used to establish a link back to the Show contract, allowing for interactions and validations.
+     * @param showContractAddress The address of the Show contract.
+     */
+    function setShowContractAddress(address showContractAddress) external;
+
+
     /// @notice Sets the default URI for all tokens
     /// @param newDefaultURI New default URI to be set
     /// @param showId ID of the show for which the default URI is set
     function setDefaultURI(string calldata newDefaultURI, bytes32 showId) external;
+
+
 
     /// @notice Retrieves the price paid for a specific ticket and its tier index.
     /// @param showId The unique identifier of the show.

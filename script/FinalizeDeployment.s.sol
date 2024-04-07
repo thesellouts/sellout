@@ -11,7 +11,7 @@ contract FinalizeDeployment is Script {
 
         // Fetch addresses from environment variables
         address showAddress = vm.envAddress("SHOW_ADDRESS");
-        address ticketAddress = vm.envAddress("TICKET_ADDRESS");
+        address ticketFactoryAddress = vm.envAddress("TICKET_FACTORY_ADDRESS"); // proxy
         address venueAddress = vm.envAddress("VENUE_ADDRESS");
         address referralModuleAddress = vm.envAddress("REFERRAL_MODULE_ADDRESS");
         address artistRegistryAddress = vm.envAddress("ARTIST_REGISTRY_ADDRESS");
@@ -20,7 +20,7 @@ contract FinalizeDeployment is Script {
 
         // Set protocol addresses in Show contract
         IShow(showAddress).setProtocolAddresses(
-            ticketAddress,
+            ticketFactoryAddress,
             venueAddress,
             referralModuleAddress,
             artistRegistryAddress,

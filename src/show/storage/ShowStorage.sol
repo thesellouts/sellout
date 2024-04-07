@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 import { ShowTypes } from "../types/ShowTypes.sol";
 import { ReferralModule } from "../../registry/referral/ReferralModule.sol";
-import { Ticket } from "../../ticket/Ticket.sol";
+import { ITicketFactory } from "../../ticket/ITicketFactory.sol";
 import { IArtistRegistry } from "../../registry/artist/IArtistRegistry.sol";
 import { IOrganizerRegistry } from "../../registry/organizer/IOrganizerRegistry.sol";
 import { IVenueRegistry } from "../../registry/venue/IVenueRegistry.sol";
@@ -13,19 +13,14 @@ import { IVenueRegistry } from "../../registry/venue/IVenueRegistry.sol";
 /// @notice This contract provides storage for show-related data, including ticket mapping, total tickets sold, show details, and more.
 
 contract ShowStorage is ShowTypes {
-    address public ticketContract;
     address public venueContract;
-    address public referralContract;
 
-    address public artistRegistryContract;
-    address public organizerRegistryContract;
-    address public venueRegistryContract;
-
-    Ticket public ticketInstance;
+    ITicketFactory public ticketFactoryInstance;
     ReferralModule public referralInstance;
     IArtistRegistry public artistRegistryInstance;
     IOrganizerRegistry public organizerRegistryInstance;
     IVenueRegistry public venueRegistryInstance;
+
     bool internal areContractsSet = false;
 
     address public SELLOUT_PROTOCOL_WALLET;
@@ -38,6 +33,9 @@ contract ShowStorage is ShowTypes {
 
     // Mapping to store show details by show ID
     mapping(bytes32 => Show) public shows;
+
+    // Mapping of show to its ticket proxy address
+    mapping(bytes32 => address) public showToTicketProxy;
 
     // Mapping to track whether a given address is an artist for a specific show
     mapping(bytes32 => mapping(address => bool)) public isArtistMapping;

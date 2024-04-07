@@ -28,15 +28,13 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     /**
      * @notice Initializes the contract with the Show contract address and metadata URI.
      * @param initialOwner The address of the initial contract owner.
-     * @param _showContractAddress The address of the Show contract.
      */
-    function initialize(address initialOwner, address _showContractAddress) public initializer {
+    function initialize(address initialOwner, string memory _version) public initializer {
         __ERC1155_init("https://metadata.sellouts.app/ticket/{id}.json");
         __ReentrancyGuard_init();
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
-
-        showInstance = IShow(_showContractAddress);
+        version = _version;
         defaultURI = "https://metadata.sellouts.app/ticket/";
     }
 
@@ -249,6 +247,16 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         require(msg.sender == showInstance.getOrganizer(showId), "Caller is not the organizer of this show");
         tokenURIs[tokenId] = newURI;
         emit URI(newURI, tokenId);
+    }
+
+
+    /**
+     * @dev Sets the address of the Show contract. This function allows the Ticket contract
+     * @param _showContractAddress The address of the Show contract to be linked with this Ticket contract.
+     */
+    function setShowContractAddress(address _showContractAddress) external onlyOwner {
+        require(address(showInstance) == address(0), "Show contract address is already set");
+        showInstance = IShow(_showContractAddress);
     }
 
     /**
