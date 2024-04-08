@@ -22,7 +22,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
  * @dev Extends ERC1155 for ticket tokenization.
  */
 contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable, OwnableUpgradeable {
-    uint256 private globalTicketCounter;
+    uint256 private ticketIdCounter = 1;
 
 
     /**
@@ -129,7 +129,7 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
 
         bool mintingSuccess = true;
         for (uint256 i = 0; i < amount; i++) {
-            uint256 tokenId = generateTokenId(showId, msg.sender, tierIndex);
+            uint256 tokenId = ticketIdCounter++;
             if (!mintTicket(tokenId, tierIndex, showId, msg.sender, data.pricePerTicket)) {
                 mintingSuccess = false; // Minting failed
                 break;
@@ -159,19 +159,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
             showInstance.depositToVaultERC20(showId, totalPayment, paymentToken, msg.sender);
             return true;
         }
-    }
-
-    /**
-     * @dev Generates a unique ticket ID using a hash of various parameters.
-     * @param showId The unique identifier for the show.
-     * @param buyer The address of the ticket buyer.
-     * @param tierIndex The index of the ticket tier.
-     * @return tokenId The unique ticket ID generated.
-     */
-    function generateTokenId(bytes32 showId, address buyer, uint256 tierIndex) private returns (uint256) {
-        globalTicketCounter++;
-        bytes32 hash = keccak256(abi.encodePacked(showId, buyer, tierIndex, globalTicketCounter));
-        return uint256(hash);
     }
 
     /**
@@ -254,8 +241,10 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
      * @dev Sets the address of the Show contract. This function allows the Ticket contract
      * @param _showContractAddress The address of the Show contract to be linked with this Ticket contract.
      */
-    function setShowContractAddress(address _showContractAddress) external onlyShowContract {
+    function setShowContractAddress(address _showContractAddress) external {
+        // Ensure that the Show contract address is not already set.
         require(address(showInstance) == address(0), "Show contract address is already set");
+
         showInstance = IShow(_showContractAddress);
     }
 
