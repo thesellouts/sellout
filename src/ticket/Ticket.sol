@@ -254,7 +254,7 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
      * @dev Sets the address of the Show contract. This function allows the Ticket contract
      * @param _showContractAddress The address of the Show contract to be linked with this Ticket contract.
      */
-    function setShowContractAddress(address _showContractAddress) external onlyOwner {
+    function setShowContractAddress(address _showContractAddress) external onlyShowContract {
         require(address(showInstance) == address(0), "Show contract address is already set");
         showInstance = IShow(_showContractAddress);
     }
