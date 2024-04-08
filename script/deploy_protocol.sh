@@ -31,7 +31,7 @@ venueAddress=$(forge script DeployVenue.s.sol:DeployVenue --rpc-url $ETH_RPC_URL
 export VENUE_ADDRESS=$venueAddress
 
 ## Deploy the Ticket implementation (template) contract first and capture its address
-ticketFactoryAddress=$(forge script DeployTicketFactory.s.sol:DeployTicketFactory --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY | grep "TicketFactory deployed at" | awk '{print $NF}')
+ticketFactoryAddress=$(forge script DeployTicketFactory.s.sol:DeployTicketFactory --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY -- --show-address $showAddress | grep "TicketFactory deployed at" | awk '{print $NF}')
 export TICKET_FACTORY_ADDRESS=$ticketFactoryAddress
 
 # Assuming all deployment addresses have been exported as environment variables
@@ -43,4 +43,4 @@ echo "Deployed OrganizerRegistry at $organizerRegistryAddress"
 echo "Deployed VenueRegistry at $venueRegistryAddress"
 echo "Deployed Show at $showAddress"
 echo "Deployed Venue at $venueAddress"
-echo "Deployed Ticket at $ticketFactoryAddress"
+echo "Deployed TicketFactory at $ticketFactoryAddress"

@@ -19,26 +19,36 @@ contract TicketFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /// @notice Version of the ticket factory.
     string public version;
 
+    // Address of the Show contract
+    address public showAddress;
+
     /// @notice Emitted when a new ticket proxy is created.
     event TicketProxyCreated(address indexed ticketProxy);
 
     /// @notice Initializes the ticket factory with a ticket implementation address and a version.
     /// @param _ticketImplementation Address of the ticket implementation.
     /// @param _version Version of the ticket factory.
-    function initialize(address _ticketImplementation, string memory _version) public initializer {
+    /// @param _showAddress Address of show contract
+    function initialize(address _ticketImplementation, string memory _version, address _showAddress) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         ticketImplementation = _ticketImplementation;
         version = _version;
+        showAddress = _showAddress;
     }
 
     /// @dev Authorizes contract upgrades to the owner only.
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
+    modifier onlyShowContract() {
+        require(msg.sender == showAddress, "Caller is not the Show contract");
+        _;
+    }
+
     /// @notice Creates a new ticket proxy for a given owner and adds it to the deployed tickets list.
     /// @param initialOwner Address of the initial owner of the ticket proxy.
     /// @return The address of the newly created ticket proxy.
-    function createTicketProxy(address initialOwner) public onlyOwner returns (address) {
+    function createTicketProxy(address initialOwner) public onlyShowContract returns (address) {
         address clone = Clones.clone(ticketImplementation);
         ITicket(clone).initialize(initialOwner, version);
         deployedTickets.push(clone);
