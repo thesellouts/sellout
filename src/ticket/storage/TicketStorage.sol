@@ -28,13 +28,7 @@ contract TicketStorage is TicketTypes {
     // Mapping from ticket ID to show ID
     mapping(uint256 => bytes32) internal tokenIdToShowId;
 
-    /// @notice Mapping from show ID to the last ticket number issued for that show.
-    /// This helps in generating new ticket IDs for new ticket purchases.
-    mapping(bytes32 => uint256) internal lastTicketNumberForShow;
-
-
-    mapping(bytes32 => uint256) internal nextTicketIdForShow;
-
+    mapping(bytes32 => string) internal showDefaultURIs;
 
     /// @notice The default URI prefix used for ticket metadata.
     /// This is used if a specific ticket does not have a unique URI set.

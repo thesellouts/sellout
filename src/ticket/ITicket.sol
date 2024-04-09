@@ -20,14 +20,12 @@ interface ITicket {
         address paymentToken
     );
 
-
     /**
      * @dev Initializes the ticket instance or proxy with necessary parameters.
      * @param sender The address initiating the ticket creation. Typically the show organizer or a factory contract.
      * @param version The version of the Ticket contract
      */
     function initialize(address sender, string memory version) external;
-
 
     /// @notice Purchase multiple tickets for a specific show from a specific tier
     /// @param showId ID of the show
@@ -42,27 +40,21 @@ interface ITicket {
     /// @param owner Owner of the tokens being burned
     function burnTokens(uint256 tokenId, uint256 amount, address owner) external;
 
-
     /// @notice Sets the URI for a given token ID
     /// @param showId ID of the show for which to set the URI
     /// @param tokenId Token ID for which to set the URI
     /// @param newURI New URI to set for the token
     function setTokenURI(bytes32 showId, uint256 tokenId, string calldata newURI) external;
 
-    /**
-    * @dev Sets the address of the Show contract that this Ticket contract is associated with.
-     * This is used to establish a link back to the Show contract, allowing for interactions and validations.
-     * @param showContractAddress The address of the Show contract.
-     */
+     // @dev Sets the address of the Show contract that this Ticket contract is associated with.
+     // This is used to establish a link back to the Show contract, allowing for interactions and validations.
+     // @param showContractAddress The address of the Show contract.
     function setShowContractAddress(address showContractAddress) external;
 
-
-    /// @notice Sets the default URI for all tokens
-    /// @param newDefaultURI New default URI to be set
-    /// @param showId ID of the show for which the default URI is set
-    function setDefaultURI(string calldata newDefaultURI, bytes32 showId) external;
-
-
+     /// @notice Sets the default URI for tickets related to a specific show.
+     /// @param showId Identifier of the show.
+     /// @param newDefaultURI The new default URI for tickets.
+    function setDefaultURIForShow(bytes32 showId, string memory newDefaultURI) external;
 
     /// @notice Retrieves the price paid for a specific ticket and its tier index.
     /// @param showId The unique identifier of the show.
@@ -70,5 +62,4 @@ interface ITicket {
     /// @return price The price paid for the ticket.
     /// @return tierIndex The index of the ticket tier.
     function getTicketPricePaidAndTierIndex(bytes32 showId, uint256 ticketId) external view returns (uint256 price, uint256 tierIndex);
-
 }

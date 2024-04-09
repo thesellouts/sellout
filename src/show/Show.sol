@@ -41,6 +41,10 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         require(msg.sender == showToTicketProxy[showId], "Caller is not the ticket proxy for this show");
         _;
     }
+    modifier onlyTicketOrShowContract(bytes32 showId) {
+        require(msg.sender == showToTicketProxy[showId] ||  msg.sender == address(this), "Caller is not the ticket proxy for this show");
+        _;
+    }
     modifier onlyVenueContract() {
         require(msg.sender == venueContract, "Only the Ticket contract can call this function");
         _;
@@ -373,7 +377,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
     /// @notice Allows a ticket owner to refund a specific ticket for a show.
     /// @dev This function also checks if the show's status should be updated from 'SoldOut' to 'Proposed'
-    /// if the total tickets sold falls below the sellout threshold after the refund. It now considers ticket tiers.
     /// @param showId The unique identifier of the show.
     /// @param ticketId The ID of the ticket to be refunded.
     function refundTicket(bytes32 showId, uint256 ticketId) public {
@@ -438,7 +441,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
         // Cleanup internal tracking of the ticket ownership.
         delete ticketPricePaid[showId][ticketId];
-        removeTicketId(showId, msg.sender, ticketId);
+        removeTokenIdFromWallet(showId, msg.sender, ticketId);
     }
 
 
@@ -546,10 +549,10 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     // @param showId The unique identifier of the show.
     // @param wallet The address of the wallet owning the ticket.
     // @param ticketId The ID of the ticket to be removed.
-    function removeTicketId(bytes32 showId, address wallet, uint256 ticketId) internal {
+    function removeTokenIdFromWallet(bytes32 showId, address wallet, uint256 tokenId) public onlyTicketOrShowContract(showId) {
         uint256[] storage ticketIds = walletToShowToTokenIds[showId][wallet];
         for (uint256 i = 0; i < ticketIds.length; i++) {
-            if (ticketIds[i] == ticketId) {
+            if (ticketIds[i] == tokenId) {
                 ticketIds[i] = ticketIds[ticketIds.length - 1];
                 ticketIds.pop();
                 break;

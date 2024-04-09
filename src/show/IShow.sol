@@ -89,6 +89,12 @@ interface IShow is ShowTypes {
     /// @param tokenId The unique identifier of the ticket being added to the wallet.
     function addTokenIdToWallet(bytes32 showId, address wallet, uint256 tokenId) external;
 
+    /// @notice Removes a token ID to a user's wallet for a specific show, signifying ticket ownership.
+    /// @param showId The unique identifier of the show.
+    /// @param wallet The wallet address to which the ticket ID will be added.
+    /// @param tokenId The unique identifier of the ticket being added to the wallet.
+    function removeTokenIdFromWallet(bytes32 showId, address wallet, uint256 tokenId) external;
+
     /// @notice Cancels a show based on its unique identifier.
     /// @param showId The unique identifier of the show to be cancelled.
     function cancelShow(bytes32 showId) external;
