@@ -5,6 +5,12 @@ pragma solidity 0.8.20;
 /// @author taayyohh
 /// @notice This contract defines the data structures related to venues and their proposals.
 interface VenueTypes {
+    struct VenueProposal {
+        uint32 proposalPeriodDuration;
+        uint32 proposalDateExtension;
+        uint32 proposalDateMinimumFuture;
+        uint32 proposalPeriodExtensionThreshold;
+    }
 
     /// @notice Represents geographical coordinates with latitude and longitude scaled by 10**6.
     struct Coordinates {

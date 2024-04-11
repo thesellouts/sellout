@@ -7,6 +7,9 @@ import { ShowStorage, ShowTypes } from "./storage/ShowStorage.sol";
 import { ITicket } from "../ticket/ITicket.sol";
 import { ITicketFactory } from "../ticket/ITicketFactory.sol";
 
+import { IVenue } from "../venue/IVenue.sol";
+import { IVenueFactory } from "../venue/IVenueFactory.sol";
+
 import { ReferralModule } from "../registry/referral/ReferralModule.sol";
 import { VenueTypes } from "../venue/storage/VenueStorage.sol";
 import { IArtistRegistry } from "../registry/artist/IArtistRegistry.sol";
@@ -20,9 +23,48 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { ERC20Upgradeable } from  "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 
-/// @title Sellout Show
-/// @author taayyohh
-/// @notice Manages show proposals, statuses, and fund distribution
+/*
+
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@, ,@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@                         @@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@               .@@@                @@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@          @@@@@@@@@@@@@@@@@@@@@@@          @@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@       @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       @@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@       @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      (@@@@@@@@@@@@@
+    @@@@@@@@@@@@@      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@@@@@
+    @@@@@@@@@@@      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@@@
+    @@@@@@@@@@      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@@
+    @@@@@@@@@     ,@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@
+    @@@@@@@@@     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@     @@@@@@@@
+    @@@@@@@@     @@@@@@@@@@@@@@@/ @@@@@@@@@@@@@@@@@@@@@ #@@@@@@@@@@@@@@@     @@@@@@@
+    @@@@@@@@     @@@@@@@@@@            @@@@@@@@@@@            @@@@@@@@@@     @@@@@@@
+    @@@@@@@@     @@@@@@@@        @       @@@@@@@       @        @@@@@@@@     @@@@@@@
+    @@@@@@@@     @@@@@@@@     @@@@@@@     @@@@@     @@@@@@@     @@@@@@@@     @@@@@@@
+    @@@@@@@@@     @@@@@@@     @@@@@@@     @@@@@     @@@@@@@     @@@@@@@     @@@@@@@@
+    @@@@@@@@@     .@@@@@@                @@@@@@@                @@@@@@      @@@@@@@@
+    @@@@@@@@@@      @@@@@@@            @@@@@@@@@@@            @@@@@@@      @@@@@@@@@
+    @@@@@@@@@@@      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@@@
+    @@@@@@@@@@@@@      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@@@@@
+    @@@@@@@@@@@@@@(      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      &@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@       @@@@@@@@@@@ @@@@@@@@@ @@@@@@@@@@@       @@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@         @@@@@     @@@@@     @@@@@        .@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@     @@@@@     @@@@@     @@@@@     @@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@     @@@@@     @@@@@     @@@@@     @@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@                                   @@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@                                 @@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+    @title  SELLOUT SHOW
+    @author taayyohh
+    @notice Sellout your dream show.
+*/
+
+
 contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, UUPSUpgradeable, OwnableUpgradeable {
     function initialize(address _selloutProtocolWallet) public initializer {
         __ReentrancyGuard_init();
@@ -34,61 +76,52 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
     // Modifiers
     modifier onlyOrganizerOrArtist(bytes32 showId) {
-        require(isOrganizer(msg.sender, showId) || isArtist(msg.sender, showId), "Not authorized");
+        require(isOrganizer(msg.sender, showId) || isArtist(msg.sender, showId), "OA");
         _;
     }
     modifier onlyTicketContract(bytes32 showId) {
-        require(msg.sender == showToTicketProxy[showId], "Caller is not the ticket proxy for this show");
+        require(msg.sender == showToTicketProxy[showId], "T");
         _;
     }
-    modifier onlyTicketOrShowContract(bytes32 showId) {
-        require(msg.sender == showToTicketProxy[showId] ||  msg.sender == address(this), "Caller is not the ticket proxy for this show");
-        _;
-    }
-    modifier onlyVenueContract() {
-        require(msg.sender == venueContract, "Only the Ticket contract can call this function");
+    modifier onlyVenueContract(bytes32 showId) {
+        require(msg.sender == showToVenueProxy[showId], "V");
         _;
     }
     modifier onlyTicketOrVenue(bytes32 showId) {
         require(
-            msg.sender == venueContract ||
+            msg.sender == showToVenueProxy[showId] ||
             msg.sender == showToTicketProxy[showId] ||
             msg.sender == address(this),
-            "Only the Venue, Ticket contract, or this contract can call this function"
+            "TV"
         );
-        _;
-    }
-    modifier isExpired(bytes32 showId) {
-        require(shows[showId].status != Status.Expired, "Show has expired");
         _;
     }
 
     /// @notice Sets the Ticket, Venue, and Registry contract addresses
     /// @param _ticketFactory Address of the Ticket Factory contract
-    /// @param _venueContract Address of the Venue contract
+    /// @param _venueFactory Address of the Venue Factory contract
     /// @param _referralContract Address of the ReferralModule contract
     /// @param _artistRegistryContract Address of the ArtistRegistry contract
     /// @param _organizerRegistryContract Address of the OrganizerRegistry contract
     /// @param _venueRegistryContract Address of the VenueRegistry contract
     function setProtocolAddresses(
         address _ticketFactory,
-        address _venueContract,
+        address _venueFactory,
         address _referralContract,
         address _artistRegistryContract,
         address _organizerRegistryContract,
         address _venueRegistryContract
     ) public {
-        require(!areContractsSet, "cannot reset");
+        require(!setContracts, "!!");
 
-        venueContract = _venueContract;
-
+        venueFactoryInstance = IVenueFactory(_venueFactory);
         ticketFactoryInstance = ITicketFactory(_ticketFactory);
         referralInstance = ReferralModule(_referralContract);
         artistRegistryInstance = IArtistRegistry(_artistRegistryContract);
         organizerRegistryInstance = IOrganizerRegistry(_organizerRegistryContract);
         venueRegistryInstance = IVenueRegistry(_venueRegistryContract);
 
-        areContractsSet = true;
+        setContracts = true;
     }
 
     // @dev Creates a new show entry in the contract storage based on a validated show proposal.
@@ -169,6 +202,25 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         showToTicketProxy[showId] = ticketProxyAddress;
     }
 
+    // Function to create and initialize a venue proxy for a given show
+    function createAndInitializeVenueProxy(
+        bytes32 showId,
+        address organizer, // todo: check on this
+        uint256 proposalPeriodDuration,
+        uint256 proposalDateExtension,
+        uint256 proposalDateMinimumFuture,
+        uint256 proposalPeriodExtensionThreshold
+    ) private {
+        address venueProxyAddress = venueFactoryInstance.createVenueProxy(
+            organizer,
+            proposalPeriodDuration,
+            proposalDateExtension,
+            proposalDateMinimumFuture,
+            proposalPeriodExtensionThreshold
+        );
+        IVenue(venueProxyAddress).setShowContractAddress(address(this));
+        showToVenueProxy[showId] = venueProxyAddress;
+    }
 
     // @notice Proposes a new show with detailed information.
     // @dev This function creates a new show proposal based on the provided ShowProposal struct.
@@ -178,9 +230,16 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         validateShowProposal(proposal);
         showId = createShow(proposal);
         createAndInitializeTicketProxy(showId, msg.sender);
+        createAndInitializeVenueProxy(
+            showId,
+            msg.sender,
+            proposal.venueProposal.proposalPeriodDuration,
+            proposal.venueProposal.proposalDateExtension,
+            proposal.venueProposal.proposalDateMinimumFuture,
+            proposal.venueProposal.proposalPeriodExtensionThreshold
+        );
         return showId;
     }
-
 
     /// @notice Deposits Ether into the vault for a specific show
     /// @param showId Unique identifier for the show
@@ -195,12 +254,12 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @param tokenRecipient Address of the ticker recipient.
     /// @dev This function should be called to deposit ERC20 tokens for a show, ensuring the token is approved for transfer
     function depositToVaultERC20(bytes32 showId, uint256 amount, address paymentToken, address tokenRecipient) external onlyTicketOrVenue(showId) {
-        require(paymentToken != address(0), "requires ERC20");
-        require(showPaymentToken[showId] == paymentToken, "incorrect ERC20");
+        require(paymentToken != address(0), "20");
+        require(showPaymentToken[showId] == paymentToken, "!=");
 
         ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
 
-        require(token.allowance(tokenRecipient, address(this)) >= amount, "insufficient allowance");
+        require(token.allowance(tokenRecipient, address(this)) >= amount, "<");
         token.transferFrom(tokenRecipient, address(this), amount);
 
         // Update the ERC20 token balance for the show
@@ -209,7 +268,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         emit ERC20Deposited(showId, paymentToken, msg.sender, amount);
     }
 
-
     /// @notice Consumes tickets from a specified tier for a given show.
     /// @param showId The identifier of the show.
     /// @param tierIndex The index of the ticket tier.
@@ -217,10 +275,10 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @dev This modifies the state of ticket availability, should only be called by ticket or venue contracts
     function consumeTicketTier(bytes32 showId, uint256 tierIndex, uint256 amount) external onlyTicketOrVenue(showId) {
         Show storage show = shows[showId];
-        require(tierIndex < show.ticketTiers.length, "invalid tier");
+        require(tierIndex < show.ticketTiers.length, "!");
 
         ShowTypes.TicketTier storage tier = show.ticketTiers[tierIndex];
-        require(tier.ticketsAvailable >= amount, "tier sold out");
+        require(tier.ticketsAvailable >= amount, "0 tix");
 
         tier.ticketsAvailable -= amount;
 
@@ -295,24 +353,16 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     // @param showId The unique identifier of the show to mark as completed.
     function markShowAsCompleted(bytes32 showId) private {
         Show storage show = shows[showId];
-        require(show.status != Status.Completed, "already complete");
+        require(show.status != Status.Completed, "complete");
 
         // Update the show's status to Completed.
         show.status = Status.Completed;
 
-        require(activeShowCount > 0, "no active shows");
+        require(activeShowCount > 0, "0");
         activeShowCount--;
 
         // Emit an event to log the status update.
         emit StatusUpdated(showId, Status.Completed);
-    }
-
-    /// @dev Checks if a show is upcoming based on its status and the current timestamp.
-    /// @param showId The unique identifier of the show to check.
-    /// @return bool True if the show is marked as Upcoming and the current time is past the show date.
-    function isShowUpcoming(bytes32 showId) private view returns (bool) {
-        Show storage show = shows[showId];
-        return show.status == Status.Upcoming && block.timestamp >= show.showDate + 30 minutes;
     }
 
     /// @dev Calculates the total payout amount available for a show, distinguishing between ETH and ERC20 payments.
@@ -378,16 +428,16 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @notice Allows a ticket owner to refund a specific ticket for a show.
     /// @dev This function also checks if the show's status should be updated from 'SoldOut' to 'Proposed'
     /// @param showId The unique identifier of the show.
-    /// @param ticketId The ID of the ticket to be refunded.
-    function refundTicket(bytes32 showId, uint256 ticketId) public {
+    /// @param tokenId The ID of the ticket to be refunded.
+    function refundTicket(bytes32 showId, uint256 tokenId) public {
         address ticketProxyAddress = showToTicketProxy[showId];
         require(ticketProxyAddress != address(0), "no ticket proxy");
         require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Cancelled || shows[showId].status == Status.Expired, "locked funds due to the status of the show");
 
         ITicket ticketProxy = ITicket(ticketProxyAddress);
-        require(isTicketOwner(msg.sender, showId, ticketId), "not ticket owner");
+        require(isTokenOwner(showId, msg.sender, tokenId), "not ticket owner");
 
-        (uint256 refundAmount, uint256 tierIndex) = ticketProxy.getTicketPricePaidAndTierIndex(showId, ticketId);
+        (uint256 refundAmount, uint256 tierIndex) = ticketProxy.getTicketPricePaidAndTierIndex(showId, tokenId);
         require(refundAmount > 0, "no refunded tickets");
 
         // Retrieve the payment token used for this show
@@ -397,12 +447,26 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         shows[showId].ticketTiers[tierIndex].ticketsAvailable++;
 
         // Update total tickets sold and potentially the show status, now passing the paymentToken
-        updateTicketsSoldAndShowStatusAfterRefund(showId, ticketId, refundAmount, paymentToken);
+        updateTicketsSoldAndShowStatusAfterRefund(showId, tokenId, refundAmount, paymentToken);
 
         // Emit refund event
         emit TicketRefunded(msg.sender, showId, refundAmount);
     }
 
+    /// @dev Checks if a given tokenId exists in the wallet's list of tokenIds for a specific show.
+    /// @param showId The unique identifier of the show.
+    /// @param wallet The address of the wallet to check for token ownership.
+    /// @param tokenId The unique identifier of the token to check.
+    /// @return bool Returns true if the tokenId exists in the wallet's list of tokens for the specified show, false otherwise.
+    function isTokenOwner(bytes32 showId, address wallet, uint256 tokenId) private view returns (bool) {
+        uint256[] storage ticketIds = walletToShowToTokenIds[showId][wallet];
+        for (uint256 i = 0; i < ticketIds.length; i++) {
+            if (ticketIds[i] == tokenId) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /// @dev Updates total tickets sold and potentially the show status after a ticket refund.
     /// @param showId The unique identifier of the show.
@@ -426,31 +490,22 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
             pendingTokenRefunds[showId][paymentToken][msg.sender] += refundAmount;
         }
 
-        // Update show status if needed
-        uint256 soldTickets = totalTicketsSold[showId];
-        uint256 sellOutThresholdTickets = (show.totalCapacity * show.sellOutThreshold) / 100;
-        if (soldTickets < sellOutThresholdTickets && show.status == Status.SoldOut) {
-            show.status = Status.Proposed;
-            emit StatusUpdated(showId, Status.Proposed);
-        }
-
         // Perform cleanup for the refunded ticket
         address ticketProxyAddress = showToTicketProxy[showId];
-        require(ticketProxyAddress != address(0), "no ticket proxy");
+        require(ticketProxyAddress != address(0), "!pxy");
         ITicket(ticketProxyAddress).burnTokens(ticketId, 1, msg.sender);
 
         // Cleanup internal tracking of the ticket ownership.
         delete ticketPricePaid[showId][ticketId];
-        removeTokenIdFromWallet(showId, msg.sender, ticketId);
+        _removeTokenIdFromWallet(showId, msg.sender, ticketId);
     }
-
 
     /// @notice Allows the organizer or artist to withdraw funds after a show has been completed.
     /// @param showId The unique identifier of the show.
     function payout(bytes32 showId) public onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
-        require(show.status == Status.Completed, "invalid status");
-        require(block.timestamp >= show.showDate + 5 minutes, "cooldown");
+        require(show.status == Status.Completed, "!s");
+        require(block.timestamp >= show.showDate + 5 minutes, "!cl");
 
         address paymentToken = showPaymentToken[showId];
         uint256 amount;
@@ -458,22 +513,22 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         // Determine the amount to be paid out, based on whether it's ETH or an ERC20 token.
         if (paymentToken == address(0)) {
             amount = pendingPayouts[showId][msg.sender];
-            require(amount > 0, "No funds");
+            require(amount > 0, "!$");
             pendingPayouts[showId][msg.sender] = 0; // Reset before payout to prevent reentrancy
         } else {
             amount = pendingTokenPayouts[showId][paymentToken][msg.sender];
-            require(amount > 0, "No tokens");
+            require(amount > 0, "!$");
             pendingTokenPayouts[showId][paymentToken][msg.sender] = 0; // Reset before payout
         }
 
         // Perform the payout.
         if (paymentToken == address(0)) {
             (bool sent, ) = payable(msg.sender).call{value: amount}("");
-            require(sent, "Failed to send");
+            require(sent, "!->");
         } else {
             ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
-            require(token.balanceOf(address(this)) >= amount, "Insufficient balance");
-            require(token.transfer(msg.sender, amount), "transfer failed");
+            require(token.balanceOf(address(this)) >= amount, "!$");
+            require(token.transfer(msg.sender, amount), "!->");
         }
 
         emit Withdrawal(showId, msg.sender, amount, paymentToken);
@@ -489,7 +544,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
             show.status == Status.Expired ||
             show.status == Status.Cancelled ||
             show.status == Status.Proposed,
-            "Refunds are not available for this show status"
+            "s" // invalid status
         );
 
         address paymentToken = showPaymentToken[showId];
@@ -501,17 +556,17 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
             amount = pendingTokenRefunds[showId][paymentToken][msg.sender];
         }
 
-        require(amount > 0, "No funds to withdraw");
+        require(amount > 0, "0");
 
         if (paymentToken == address(0)) {
             pendingRefunds[showId][msg.sender] = 0; // Reset before transfer to prevent reentrancy
             (bool sent, ) = payable(msg.sender).call{value: amount}("");
-            require(sent, "Failed to send ETH");
+            require(sent, "x"); // failed send
         } else {
             pendingTokenRefunds[showId][paymentToken][msg.sender] = 0; // Reset before transfer
             ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
-            require(token.balanceOf(address(this)) >= amount, "Insufficient token");
-            require(token.transfer(msg.sender, amount), "Transfer failed");
+            require(token.balanceOf(address(this)) >= amount, "<"); // insufficient allowance
+            require(token.transfer(msg.sender, amount), "x"); // failed send
         }
 
         emit RefundWithdrawn(msg.sender, showId, amount);
@@ -521,8 +576,8 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @dev This function should only be callable by authorized contracts, such as the Venue contract.
     /// @param showId The unique identifier of the show to update.
     /// @param newVenue The new venue information to be set for the show.
-    function updateShowVenue(bytes32 showId, VenueTypes.Venue calldata newVenue) external onlyVenueContract {
-        require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Accepted, "Invalid status");
+    function updateShowVenue(bytes32 showId, VenueTypes.Venue calldata newVenue) external onlyVenueContract(showId) {
+        require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Accepted, "s"); // invalid status
         shows[showId].venue = newVenue;
         emit VenueUpdated(showId, newVenue);
     }
@@ -531,8 +586,8 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @dev This function can only be called by the Venue contract for shows in the Accepted status.
     /// @param showId The unique identifier of the show whose date is to be updated.
     /// @param newDate The new date (timestamp) for the show.
-    function updateShowDate(bytes32 showId, uint256 newDate) external onlyVenueContract {
-        require(shows[showId].status == Status.Accepted, "Show must be accepted");
+    function updateShowDate(bytes32 showId, uint256 newDate) external onlyVenueContract(showId) {
+        require(shows[showId].status == Status.Accepted, "s"); // show must be accepted
         shows[showId].showDate = newDate;
     }
 
@@ -541,7 +596,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     // @param wallet The address of the user's wallet.
     // @param tokenId The unique identifier of the token.
     // @dev This function can only be called by the ticket contract
-    function addTokenIdToWallet(bytes32 showId, address wallet, uint256 tokenId) external onlyTicketContract(showId) {
+    function _addTokenIdToWallet(bytes32 showId, address wallet, uint256 tokenId) internal {
         walletToShowToTokenIds[showId][wallet].push(tokenId);
     }
 
@@ -549,7 +604,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     // @param showId The unique identifier of the show.
     // @param wallet The address of the wallet owning the ticket.
     // @param ticketId The ID of the ticket to be removed.
-    function removeTokenIdFromWallet(bytes32 showId, address wallet, uint256 tokenId) public onlyTicketOrShowContract(showId) {
+    function _removeTokenIdFromWallet(bytes32 showId, address wallet, uint256 tokenId) internal {
         uint256[] storage ticketIds = walletToShowToTokenIds[showId][wallet];
         for (uint256 i = 0; i < ticketIds.length; i++) {
             if (ticketIds[i] == tokenId) {
@@ -558,6 +613,14 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
                 break;
             }
         }
+    }
+
+    function addTokenIdToWallet(bytes32 showId, address wallet, uint256 tokenId) external onlyTicketContract(showId) {
+        _addTokenIdToWallet(showId, wallet, tokenId);
+    }
+
+    function removeTokenIdFromWallet(bytes32 showId, address wallet, uint256 tokenId) external onlyTicketContract(showId) {
+        _removeTokenIdFromWallet(showId, wallet, tokenId);
     }
 
     /// @notice Retrieves the details of a show, including ticket tiers.
@@ -665,7 +728,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @return price The price of tickets within the tier.
     /// @return ticketsAvailable The number of tickets available for sale in this tier.
     function getTicketTierInfo(bytes32 showId, uint256 tierIndex) public view returns (string memory name, uint256 price, uint256 ticketsAvailable) {
-        require(tierIndex < shows[showId].ticketTiers.length, "Invalid tier");
+        require(tierIndex < shows[showId].ticketTiers.length, "t"); // invalid tier
 
         TicketTier storage tier = shows[showId].ticketTiers[tierIndex];
         return (tier.name, tier.price, tier.ticketsAvailable);
@@ -700,24 +763,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         return isArtistMapping[showId][user];
     }
 
-    /// @notice Check if an address owns a ticket for a specific show
-    /// @param owner The address to check
-    /// @param showId The ID of the show
-    /// @param ticketId The ID of the ticket
-    /// @return true if the address owns a ticket for the show, false otherwise
-    function isTicketOwner(address owner, bytes32 showId, uint256 ticketId) public view returns (bool) {
-        return ticketOwnership[showId][owner][ticketId];
-    }
-
-    /// @notice Sets ticket ownership status for a specific ticket of a show.
-    /// @param showId The ID of the show.
-    /// @param owner The address of the ticket owner.
-    /// @param ticketId The ID of the ticket.
-    /// @param isOwned The ownership status to set.
-    function setTicketOwnership(bytes32 showId, address owner, uint256 ticketId, bool isOwned) public onlyTicketContract(showId) {
-        ticketOwnership[showId][owner][ticketId] = isOwned;
-    }
-
     // @notice Sets the price paid for a specific ticket of a show.
     // @param showId The unique identifier of the show.
     // @param ticketId The unique identifier of the ticket within the show.
@@ -739,29 +784,33 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     // @dev Validates the input parameters contained within the ShowProposal struct.
     // @param proposal The ShowProposal struct containing the details to be validated.
     function validateShowProposal(ShowProposal memory proposal) private pure {
-        require(bytes(proposal.name).length > 0, "Name required");
-        require(proposal.radius > 0, "radius required");
-        require(bytes(proposal.description).length > 0 && bytes(proposal.description).length <= 1000, "description required < 1000");
-        require(proposal.totalCapacity > 0, "capacity > 0");
-        require(proposal.artists.length > 0, "At least one artist required");
-        require(proposal.sellOutThreshold >= 50 && proposal.sellOutThreshold <= 100, "sellout threshold > 50%");
-        require(proposal.coordinates.lat >= -90 * 10**6 && proposal.coordinates.lat <= 90 * 10**6, "invalid lat");
-        require(proposal.coordinates.lon >= -180 * 10**6 && proposal.coordinates.lon <= 180 * 10**6, "Invalid long");
+        require(bytes(proposal.name).length > 0, "n"); // name required
+        require(proposal.radius > 0, "r"); // radius required
+        require(bytes(proposal.description).length > 0 && bytes(proposal.description).length <= 1000, "!!d && d < 1000"); // description exists and is less than 1000 char
+        require(proposal.totalCapacity > 0, "c > 0");
+        require(proposal.artists.length > 0, "a > 0");
+        require(proposal.sellOutThreshold >= 50 && proposal.sellOutThreshold <= 100, "th > 50%");
+        require(proposal.coordinates.lat >= -90 * 10**6 && proposal.coordinates.lat <= 90 * 10**6, "!lat");
+        require(proposal.coordinates.lon >= -180 * 10**6 && proposal.coordinates.lon <= 180 * 10**6, "!ong");
         validateSplit(proposal.split, proposal.artists.length);
-        // Ensure ticketTiers and currencyAddress are also validated as needed
+
+        require(proposal.venueProposal.proposalPeriodDuration >= 30 minutes, "< 30m");
+        require(proposal.venueProposal.proposalDateExtension >= 5 minutes, "< 5m");
+        require(proposal.venueProposal.proposalDateMinimumFuture >= 45 minutes, "< 45m");
+        require(proposal.venueProposal.proposalPeriodExtensionThreshold >= 2 minutes, "< 2m");
     }
 
     /// @notice Validates the split percentages between organizer, artists, and venue
     /// @param split Array representing the percentage split
     /// @param numArtists Number of artists in the show
     function validateSplit(uint256[] memory split, uint256 numArtists) internal pure {
-        require(split.length == numArtists + 2, "split must equal artists plus 2 (organizer and venue)");
+        require(split.length == numArtists + 2, "split a[] + o +v");
 
         uint256 sum = 0;
         for (uint i = 0; i < split.length; i++) {
             sum += split[i];
         }
-        require(sum == 100, "split must sum 100");
+        require(sum == 100, "split === 100");
     }
 
     /// @notice Validates that the total tickets across all tiers match the total capacity of the show
@@ -772,6 +821,38 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         for (uint i = 0; i < ticketTiers.length; i++) {
             totalTicketsAcrossTiers += ticketTiers[i].ticketsAvailable;
         }
-        require(totalTicketsAcrossTiers == totalCapacity, "total tickets must equal total capacity");
+        require(totalTicketsAcrossTiers == totalCapacity, "tix === cap");
+    }
+
+    /// @notice Allows ticket holders to vote for an emergency refund
+    /// @param showId The unique identifier of the show
+    function voteForEmergencyRefund(bytes32 showId) external {
+        require(hasTicket(msg.sender, showId), "no tix");
+        require(shows[showId].status == Status.Completed, "!s");
+        require(!hasVotedForEmergencyRefund[showId][msg.sender], "!!v");
+
+        hasVotedForEmergencyRefund[showId][msg.sender] = true;
+        votesForEmergencyRefund[showId] += 1;
+
+        if (isEmergencyRefundThresholdReached(showId)) {
+            cancelShowForEmergencyRefund(showId);
+        }
+    }
+
+    /// @notice Checks if the vote threshold for an emergency refund has been reached
+    /// @param showId The unique identifier of the show
+    /// @return bool Whether the threshold has been reached
+    function isEmergencyRefundThresholdReached(bytes32 showId) internal view returns (bool) {
+        uint256 totalVotes = votesForEmergencyRefund[showId];
+        uint256 totalTicketsSoldForShow = getTotalTicketsSold(showId);
+
+        return totalVotes >= (totalTicketsSoldForShow * 66 / 100);
+    }
+
+    /// @notice Cancels the show and enables refunds due to reaching the emergency refund vote threshold
+    /// @param showId The unique identifier of the show
+    function cancelShowForEmergencyRefund(bytes32 showId) internal {
+        shows[showId].status = Status.Cancelled;
+        emit ShowCancelled(showId, "Emergency Refund");
     }
 }

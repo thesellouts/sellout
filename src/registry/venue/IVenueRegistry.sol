@@ -8,7 +8,16 @@ interface IVenueRegistry {
     event VenueRegistered(uint256 indexed venueId, string name);
 
     /// @dev Emitted when a venue's profile is updated.
-    event VenueUpdated(uint256 indexed venueId, string name, string bio, address wallet);
+    event VenueUpdated(
+        uint256 indexed venueId,
+        string name,
+        string bio,
+        address wallet,
+        int256 latitude,
+        int256 longitude,
+        uint256 totalCapacity,
+        string streetAddress
+    );
 
     /// @dev Emitted when a venue deregisters from the registry.
     event VenueDeregistered(uint256 indexed venueId);
@@ -22,8 +31,21 @@ interface IVenueRegistry {
 
     /**
      * @notice Accepts the nomination for venue registration by the nominated venue.
+     * @param _name Name of the nominated venue.
+     * @param _bio Biography or description of the nominated venue.
+     * @param _latitude Latitude part of the venue's coordinates.
+     * @param _longitude Longitude part of the venue's coordinates.
+     * @param _totalCapacity Total capacity of the venue.
+     * @param _streetAddress Street address of the venue.
      */
-    function acceptNomination(string memory _name, string memory _bio) external;
+    function acceptNomination(
+        string memory _name,
+        string memory _bio,
+        int256 _latitude,
+        int256 _longitude,
+        uint256 _totalCapacity,
+        string memory _streetAddress
+    ) external;
 
     /**
      * @notice Allows a venue to deregister itself from the registry.
@@ -37,8 +59,20 @@ interface IVenueRegistry {
      * @return name The name of the venue.
      * @return bio The biography or description of the venue.
      * @return wallet The wallet address of the venue.
+     * @return latitude Latitude part of the venue's coordinates.
+     * @return longitude Longitude part of the venue's coordinates.
+     * @return totalCapacity Total capacity of the venue.
+     * @return streetAddress Street address of the venue.
      */
-    function getVenue(address venueAddress) external view returns (string memory name, string memory bio, address wallet);
+    function getVenue(address venueAddress) external view returns (
+        string memory name,
+        string memory bio,
+        address wallet,
+        int latitude,
+        int longitude,
+        uint256 totalCapacity,
+        string memory streetAddress
+    );
 
     /**
      * @notice Nominates a venue for registration, utilizing a referral credit.
@@ -52,11 +86,24 @@ interface IVenueRegistry {
     function setTokenURI(uint256 tokenId, string calldata newURI) external;
 
     /**
-     * @notice Allows a venue to update their profile with new name and bio.
+     * @notice Allows a venue to update their profile information.
      * @param _venueId The unique identifier of the venue.
      * @param _name The new name of the venue.
      * @param _bio The new biography or description of the venue.
-     * @param _wallet The new biography or description of the venue.
+     * @param _wallet The new wallet address of the venue.
+     * @param _latitude New latitude for the venue's location.
+     * @param _longitude New longitude for the venue's location.
+     * @param _totalCapacity New total capacity of the venue.
+     * @param _streetAddress New street address of the venue.
      */
-    function updateVenue(uint256 _venueId, string memory _name, string memory _bio, address _wallet) external;
+    function updateVenue(
+        uint256 _venueId,
+        string memory _name,
+        string memory _bio,
+        address _wallet,
+        int256 _latitude,
+        int256 _longitude,
+        uint256 _totalCapacity,
+        string memory _streetAddress
+    ) external;
 }

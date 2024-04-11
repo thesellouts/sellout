@@ -60,6 +60,7 @@ interface ShowTypes {
         TicketTier[] ticketTiers;
         uint256[] split;
         address currencyAddress;
+        VenueTypes.VenueProposal venueProposal;
     }
 
     struct DistributionData {

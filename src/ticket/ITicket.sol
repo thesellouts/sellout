@@ -20,11 +20,9 @@ interface ITicket {
         address paymentToken
     );
 
-    /**
-     * @dev Initializes the ticket instance or proxy with necessary parameters.
-     * @param sender The address initiating the ticket creation. Typically the show organizer or a factory contract.
-     * @param version The version of the Ticket contract
-     */
+    // @dev Initializes the ticket instance or proxy with necessary parameters.
+    // @param sender The address initiating the ticket creation. Typically the show organizer or a factory contract.
+    // @param version The version of the Ticket contract
     function initialize(address sender, string memory version) external;
 
     /// @notice Purchase multiple tickets for a specific show from a specific tier

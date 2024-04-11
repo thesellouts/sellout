@@ -35,15 +35,32 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
 
-    // @notice Accepts the nomination to become a registered venue.
-    // @param _name Name of the nominated Venue.
-    // @param _bio Bio of the nominated Venue.
-    function acceptNomination(string memory _name, string memory _bio) public {
+    /**
+      * @notice Accepts the nomination to become a registered venue.
+     * @param _name Name of the nominated Venue.
+     * @param _bio Bio of the nominated Venue.
+     * @param _latitude Latitude part of the venue's coordinates.
+     * @param _longitude Longitude part of the venue's coordinates.
+     * @param _totalCapacity Total capacity of the venue.
+     * @param _streetAddress Street address of the venue.
+     */
+    function acceptNomination(
+        string memory _name,
+        string memory _bio,
+        int256 _latitude,
+        int256 _longitude,
+        uint256 _totalCapacity,
+        string memory _streetAddress
+    ) public {
         require(nominatedVenues[msg.sender], "No nomination found");
         nominatedVenues[msg.sender] = false;
-        registerVenue(_name, _bio);
+
+        // Updated to pass the new parameters
+        registerVenue(_name, _bio, _latitude, _longitude, _totalCapacity, _streetAddress);
+
         emit VenueAccepted(currentVenueId, msg.sender);
     }
+
 
 
     /**
@@ -64,14 +81,35 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
      * @return name Name of the venue.
      * @return bio Biography of the venue.
      * @return wallet Wallet address of the venue.
+     * @return latitude Latitude part of the venue's coordinates.
+     * @return longitude Longitude part of the venue's coordinates.
+     * @return totalCapacity Total capacity of the venue.
+     * @return streetAddress Street address of the venue.
      */
-    function getVenue(address venueAddress) external view returns (string memory name, string memory bio, address wallet) {
+    function getVenue(address venueAddress) external view returns (
+        string memory name,
+        string memory bio,
+        address wallet,
+        int256 latitude,
+        int256 longitude,
+        uint256 totalCapacity,
+        string memory streetAddress
+    ) {
         uint256 venueId = addressToVenueId[venueAddress];
         require(venueId != 0, "Venue does not exist");
 
         VenueRegistryTypes.VenueInfo memory venue = venues[venueId];
-        return (venue.name, venue.bio, venue.wallet);
+        return (
+            venue.name,
+            venue.bio,
+            venue.wallet,
+            venue.coordinates.latitude,
+            venue.coordinates.longitude,
+            venue.totalCapacity,
+            venue.streetAddress
+        );
     }
+
 
     /**
     * @notice Nominates another address as a venue, provided the caller has sufficient referral credits.
@@ -85,22 +123,48 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
         nominatedVenues[nominee] = true;
         emit VenueNominated(nominee);
     }
+
+
     /**
-    * @dev Registers a venue with the provided name and biography. Only callable internally.
+     * @dev Registers a venue with the provided details. Only callable internally.
      * @param _name Name of the venue.
      * @param _bio Biography of the venue.
+     * @param _latitude Latitude part of the venue's coordinates.
+     * @param _longitude Longitude part of the venue's coordinates.
+     * @param _streetAddress Street address of the venue.
      */
-    function registerVenue(string memory _name, string memory _bio) internal {
+    function registerVenue(
+        string memory _name,
+        string memory _bio,
+        int256 _latitude,
+        int256 _longitude,
+        uint256 _totalCapacity,
+        string memory _streetAddress
+    ) internal {
         currentVenueId++;
         uint256 venueId = currentVenueId;
         address walletAddress = msg.sender;
 
-        venues[venueId] = VenueRegistryTypes.VenueInfo(_name, _bio, walletAddress);
+        VenueRegistryTypes.Coordinates memory coords = VenueRegistryTypes.Coordinates({
+            latitude: _latitude,
+            longitude: _longitude
+        });
+
+        venues[venueId] = VenueRegistryTypes.VenueInfo({
+            name: _name,
+            bio: _bio,
+            wallet: walletAddress,
+            coordinates: coords,
+            totalCapacity: _totalCapacity,
+            streetAddress: _streetAddress
+        });
+
         addressToVenueId[walletAddress] = venueId;
 
         _mint(walletAddress, venueId, 1, "");
         emit VenueRegistered(venueId, _name);
     }
+
 
     /// @notice Sets the URI for a given token ID
     /// @param tokenId The token ID for which to set the URI
@@ -120,17 +184,47 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
      * @param _venueId Unique identifier of the venue.
      * @param _name New name of the venue.
      * @param _bio New biography of the venue.
-     * @param _wallet New wallet of the venue.
+     * @param _wallet New wallet address of the venue.
+     * @param _latitude New latitude for the venue's location.
+     * @param _longitude New longitude for the venue's location.
+     * @param _totalCapacity New total capacity of the venue.
+     * @param _streetAddress New street address of the venue.
      */
-    function updateVenue(uint256 _venueId, string memory _name, string memory _bio, address _wallet) public {
+    function updateVenue(
+        uint256 _venueId,
+        string memory _name,
+        string memory _bio,
+        address _wallet,
+        int256 _latitude,
+        int256 _longitude,
+        uint256 _totalCapacity,
+        string memory _streetAddress
+    ) public {
         require(_venueId <= currentVenueId && venues[_venueId].wallet == msg.sender, "Unauthorized or non-existent venue");
 
-        venues[_venueId].name = _name;
-        venues[_venueId].bio = _bio;
-        venues[_venueId].wallet = _wallet;
+        VenueRegistryTypes.VenueInfo storage venue = venues[_venueId];
+        venue.name = _name;
+        venue.bio = _bio;
+        venue.wallet = _wallet;
+        venue.coordinates.latitude = _latitude;
+        venue.coordinates.longitude = _longitude;
+        venue.totalCapacity = _totalCapacity;
+        venue.streetAddress = _streetAddress;
 
-        emit VenueUpdated(_venueId, _name, _bio, _wallet);
+        // Emit the updated event with all parameters
+        emit VenueUpdated(
+            _venueId,
+            _name,
+            _bio,
+            _wallet,
+            _latitude,
+            _longitude,
+            _totalCapacity,
+            _streetAddress
+        );
     }
+
+
 
     /// @notice Returns the URI for a specific token.
     /// @param tokenId The ID of the token.

@@ -81,6 +81,11 @@ interface IShow is ShowTypes {
     /// @param paymentToken erc20 the ticket was priced in.
     event Withdrawal(bytes32 indexed showId, address indexed recipient, uint256 amount, address paymentToken);
 
+    /// @notice Emitted when a show is cancelled for any reason, including emergency refund triggers by ticket holders.
+    /// @param showId The unique identifier of the cancelled show.
+    /// @param reason The reason for the show's cancellation.
+    event ShowCancelled(bytes32 indexed showId, string reason);
+
     // Functions
 
     /// @notice Adds a token ID to a user's wallet for a specific show, signifying ticket ownership.
@@ -207,13 +212,6 @@ interface IShow is ShowTypes {
     /// @return A boolean indicating whether the user is the organizer of the show.
     function isOrganizer(address user, bytes32 showId) external view returns (bool);
 
-    /// @notice Checks if the specified owner owns a ticket for the given show.
-    /// @param owner The address of the potential ticket owner.
-    /// @param showId The unique identifier of the show.
-    /// @param ticketId The unique identifier of the ticket.
-    /// @return A boolean indicating whether the owner has the ticket for the show.
-    function isTicketOwner(address owner, bytes32 showId, uint256 ticketId) external view returns (bool);
-
     /// @notice Initiates a payout of funds from a show's vault to the specified showId.
     /// @param showId The unique identifier of the show for which the payout is being requested.
     function payout(bytes32 showId) external;
@@ -255,13 +253,6 @@ interface IShow is ShowTypes {
     /// @param price The price paid for the ticket.
     function setTicketPricePaid(bytes32 showId, uint256 ticketId, uint256 price) external;
 
-    /// @notice Sets the ownership status of a ticket for a specific show.
-    /// @dev This function should only be callable by the Ticket contract or other authorized contracts.
-    /// @param showId The unique identifier of the show.
-    /// @param owner The address of the ticket owner.
-    /// @param ticketId The unique identifier of the ticket.
-    /// @param isOwned A boolean indicating the ownership status to be set.
-    function setTicketOwnership(bytes32 showId, address owner, uint256 ticketId, bool isOwned) external;
 
     /// @notice Sets the total number of tickets sold for a specific show.
     /// @param showId The unique identifier of the show.
@@ -291,4 +282,9 @@ interface IShow is ShowTypes {
     /// @notice Allows a user to withdraw their refund for a previously refunded ticket.
     /// @param showId The unique identifier of the show for which the refund is being withdrawn.
     function withdrawRefund(bytes32 showId) external;
+
+    /// @notice Allows ticket holders to vote for an emergency refund for a completed show
+    /// @param showId The unique identifier of the show
+    function voteForEmergencyRefund(bytes32 showId) external;
+
 }

@@ -45,9 +45,6 @@ interface IVenue {
     /// @param dateIndex Index of the date being voted for.
     event DateVoted(bytes32 indexed showId, address indexed voter, uint256 dateIndex);
 
-
-
-
     /// @notice Emitted when a proposal is accepted.
     /// @param showId Unique identifier for the show.
     /// @param proposalIndex Index of the accepted proposal.
@@ -57,6 +54,21 @@ interface IVenue {
     /// @param showId Unique identifier for the show.
     /// @param dateIndex Index of the accepted date.
     event DateAccepted(bytes32 indexed showId, uint256 dateIndex);
+
+     // @notice Initializes a new venue with the specified parameters.
+     // @dev Sets up a venue with a proposal period duration, date extensions, and thresholds for event proposals.
+     // @param initialOwner Address of the initial owner of the venue, typically the creator or the venue manager.
+     // @param proposalPeriodDuration Duration in seconds for how long the proposal period lasts.
+     // @param proposalDateExtension Duration in seconds by which the proposal date is extended upon certain conditions.
+     // @param proposalDateMinimumFuture Duration in seconds to set the minimum future date for a proposal from the current time.
+     // @param proposalPeriodExtensionThreshold Duration in seconds to set the threshold for extending the proposal period.
+    function initialize(
+        address initialOwner,
+        uint256 proposalPeriodDuration,
+        uint256 proposalDateExtension,
+        uint256 proposalDateMinimumFuture,
+        uint256 proposalPeriodExtensionThreshold
+    ) external;
 
     /// @notice Submit a proposal for a venue for a specific show.
     /// @param showId Unique identifier for the show.
@@ -152,4 +164,10 @@ interface IVenue {
     /// @param user Address of the proposer
     /// @return The amount of refund owed
     function getRefunds(address user) external view returns (uint256);
+
+    // @dev Sets the address of the Show contract that this Ticket contract is associated with.
+    // This is used to establish a link back to the Show contract, allowing for interactions and validations.
+    // @param showContractAddress The address of the Show contract.
+    function setShowContractAddress(address showContractAddress) external;
+
 }

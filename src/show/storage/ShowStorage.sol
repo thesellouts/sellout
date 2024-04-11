@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 import { ShowTypes } from "../types/ShowTypes.sol";
 import { ReferralModule } from "../../registry/referral/ReferralModule.sol";
 import { ITicketFactory } from "../../ticket/ITicketFactory.sol";
+import { IVenueFactory } from "../../venue/IVenueFactory.sol";
 import { IArtistRegistry } from "../../registry/artist/IArtistRegistry.sol";
 import { IOrganizerRegistry } from "../../registry/organizer/IOrganizerRegistry.sol";
 import { IVenueRegistry } from "../../registry/venue/IVenueRegistry.sol";
@@ -15,13 +16,14 @@ import { IVenueRegistry } from "../../registry/venue/IVenueRegistry.sol";
 contract ShowStorage is ShowTypes {
     address public venueContract;
 
+    IVenueFactory public venueFactoryInstance;
     ITicketFactory public ticketFactoryInstance;
     ReferralModule public referralInstance;
     IArtistRegistry public artistRegistryInstance;
     IOrganizerRegistry public organizerRegistryInstance;
     IVenueRegistry public venueRegistryInstance;
 
-    bool internal areContractsSet = false;
+    bool internal setContracts = false;
 
     address public SELLOUT_PROTOCOL_WALLET;
 
@@ -36,6 +38,9 @@ contract ShowStorage is ShowTypes {
 
     // Mapping of show to its ticket proxy address
     mapping(bytes32 => address) public showToTicketProxy;
+
+    // Mapping of show to its ticket proxy address
+    mapping(bytes32 => address) public showToVenueProxy;
 
     // Mapping to track whether a given address is an artist for a specific show
     mapping(bytes32 => mapping(address => bool)) public isArtistMapping;
@@ -70,5 +75,9 @@ contract ShowStorage is ShowTypes {
     // Mapping to track the payment token for each show
     mapping(bytes32 => address) public showPaymentToken;
 
-    mapping(bytes32 => mapping(address => mapping(uint256 => bool))) internal ticketOwnership;
+    // Maps showId to votes for cancellation
+    mapping(bytes32 => uint256) public votesForEmergencyRefund;
+
+    // Maps showId to a mapping of voter addresses to bool
+    mapping(bytes32 => mapping(address => bool)) public hasVotedForEmergencyRefund;
 }
