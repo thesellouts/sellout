@@ -78,11 +78,9 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         _;
     }
 
-
      // @dev Allows contract upgrades by the contract owner only.
      // @param newImplementation The address of the new contract implementation.
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
-
 
     // @notice Purchases tickets, processing payment, minting tickets, and finalizing the purchase.
     // @dev Breaks down the purchase process into smaller internal functions to manage stack depth.
@@ -100,7 +98,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         // Finalize the purchase only after confirming success
         finalizePurchase(showId, tierIndex, amount);
     }
-
 
     // @dev Validates the parameters for a ticket purchase request.
     // @param showId Unique identifier for the show for which tickets are being purchased.
@@ -121,7 +118,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         require(ownedTokenIds.length + amount <= MAX_TICKETS_PER_WALLET, "Max tickets exceeded");
     }
 
-
     // @dev Prepares the purchase data for a ticket purchase request.
     // @param showId Unique identifier for the show for which tickets are being purchased.
     // @param tierIndex Index of the ticket tier within the show from which tickets are being purchased.
@@ -140,7 +136,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
             tokenId: 0 // This will be set later
         });
     }
-
 
      // @dev Executes the ticket purchase process: processes payment, mints tickets, and returns success status.
      // @param showId The unique identifier for the show.
@@ -168,7 +163,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         return mintingSuccess;
     }
 
-
     // @dev Processes the payment for the ticket purchase. Supports both ETH and ERC20 payments.
     // ETH payments require the sent value to match the total payment amount.
     // ERC20 payments require an allowance and do not require sending ETH with the transaction.
@@ -187,7 +181,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         }
     }
 
-
      // @dev Mints a ticket for a buyer. Associates the ticket with a show, tier, and sets the price paid.
      // @param tokenId The unique identifier for the ticket.
      // @param tierIndex The index of the ticket tier.
@@ -202,7 +195,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         showInstance.setTicketPricePaid(showId, tokenId, pricePerTicket);
         return true;
     }
-
 
     // @dev Finalizes the ticket purchase process after payment and minting. Updates total tickets sold and checks if the show is sold out.
     // @param showId The unique identifier for the show.
@@ -225,7 +217,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         return (_price, _tierIndex);
     }
 
-
     // @notice Burns a specified amount of tokens, removing them from circulation.
     // @param tokenId Identifier of the token to be burned.
     // @param amount Amount of tokens to be burned.
@@ -234,7 +225,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         _burn(owner, tokenId, amount);
     }
 
-
     // @notice Sets the default URI for tickets related to a specific show.
     // @param newDefaultURI The new default URI for tickets.
     // @param showId Identifier of the show.
@@ -242,7 +232,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         require(msg.sender == showInstance.getOrganizer(showId), "Caller is not the organizer");
         showDefaultURIs[showId] = newDefaultURI;
     }
-
 
     // @notice Sets the URI for a specific token ID.
     // @param showId Identifier of the show.
@@ -253,8 +242,6 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         tokenURIs[tokenId] = newURI;
         emit URI(newURI, tokenId);
     }
-
-
 
      // @dev Sets the address of the Show contract. This function allows the Ticket contract
      // @param _showContractAddress The address of the Show contract to be linked with this Ticket contract.

@@ -139,14 +139,14 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
             proposal.sellOutThreshold,
             proposal.totalCapacity,
             proposal.currencyAddress,
-            block.timestamp // Consider including block.timestamp for uniqueness
+            msg.sender
         ));
 
         // Creating a new show entry in the mapping with the showId
         Show storage newShow = shows[showId];
         newShow.name = proposal.name;
         newShow.description = proposal.description;
-        newShow.organizer = msg.sender; // Assuming the msg.sender is the organizer
+        newShow.organizer = msg.sender;
         newShow.artists = proposal.artists;
         newShow.venue = VenueTypes.Venue({
             name: "",
@@ -195,30 +195,38 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
     // @dev Creates and initializes a ticket proxy for a given show.
     // @param showId The unique identifier for the show.
-    // @param organizer The address of the organizer proposing the show.
-    function createAndInitializeTicketProxy(bytes32 showId, address organizer) private {
-        address ticketProxyAddress = ticketFactoryInstance.createTicketProxy(organizer);
+    // @param protocol The address of the protocol proposing the show.
+    function createAndInitializeTicketProxy(bytes32 showId, address protocol) private {
+        address ticketProxyAddress = ticketFactoryInstance.createTicketProxy(protocol);
         ITicket(ticketProxyAddress).setShowContractAddress(address(this));
         showToTicketProxy[showId] = ticketProxyAddress;
     }
 
-    // Function to create and initialize a venue proxy for a given show
+    /// @dev Creates and initializes a venue proxy for a given show with specific proposal parameters.
+    /// @param showId The unique identifier for the show for which the venue proxy is being created.
+    /// @param protocol The address of the protocol (or initial owner) to whom the new venue proxy will belong.
+    /// @param proposalPeriodDuration The duration (in seconds) for the proposal period for venue proposals.
+    /// @param proposalDateExtension The duration (in seconds) by which a proposal date can be extended.
+    /// @param proposalDateMinimumFuture The minimum future date (in seconds from now) for a proposal date.
+    /// @param proposalPeriodExtensionThreshold The threshold (in seconds before the proposal period ends)
+    /// for when the proposal period can be extended.
+    /// @notice This function creates a venue proxy tailored to the specific requirements of a show
     function createAndInitializeVenueProxy(
         bytes32 showId,
-        address organizer, // todo: check on this
+        address protocol,
         uint256 proposalPeriodDuration,
         uint256 proposalDateExtension,
         uint256 proposalDateMinimumFuture,
         uint256 proposalPeriodExtensionThreshold
     ) private {
         address venueProxyAddress = venueFactoryInstance.createVenueProxy(
-            organizer,
+            protocol,
             proposalPeriodDuration,
             proposalDateExtension,
             proposalDateMinimumFuture,
             proposalPeriodExtensionThreshold
         );
-        IVenue(venueProxyAddress).setShowContractAddress(address(this));
+        IVenue(venueProxyAddress).setShowAndVenueRegistryAddresses(address(this), address(venueRegistryInstance));
         showToVenueProxy[showId] = venueProxyAddress;
     }
 
@@ -229,10 +237,10 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     function proposeShow(ShowProposal memory proposal) external returns (bytes32 showId) {
         validateShowProposal(proposal);
         showId = createShow(proposal);
-        createAndInitializeTicketProxy(showId, msg.sender);
+        createAndInitializeTicketProxy(showId, SELLOUT_PROTOCOL_WALLET);
         createAndInitializeVenueProxy(
             showId,
-            msg.sender,
+            SELLOUT_PROTOCOL_WALLET,
             proposal.venueProposal.proposalPeriodDuration,
             proposal.venueProposal.proposalDateExtension,
             proposal.venueProposal.proposalDateMinimumFuture,
@@ -307,7 +315,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
     /// @notice Cancels a sold-out show
     /// @param showId Unique identifier for the show
-    function cancelShow(bytes32 showId) public onlyOrganizerOrArtist(showId) {
+    function cancelShow(bytes32 showId) external onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
         require(show.status == Status.SoldOut || show.status == Status.Accepted || show.status == Status.Upcoming, "invalid status");
         show.status = Status.Cancelled;
@@ -316,7 +324,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
     // @notice Completes a show and distributes funds
     // @param showId Unique identifier for the show
-    function completeShow(bytes32 showId) public onlyOrganizerOrArtist(showId) {
+    function completeShow(bytes32 showId) external onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
         require(show.status == Status.Upcoming, "invalid status");
         require(block.timestamp >= show.showDate + 30 minutes, "cooldown period");
@@ -377,22 +385,6 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         }
     }
 
-    /// @dev Distributes shares of the show's total amount among the organizer, artists, and the venue.
-    /// @param show Reference to the show struct containing show details.
-    /// @param data Struct containing distribution data such as showId, totalAmount, paymentToken, and splits.
-    function distributeShares(Show storage show, DistributionData memory data) private {
-        // Combine organizer, artists, and venue into a single array for processing.
-        address[] memory recipients = new address[](show.artists.length + 2);
-        recipients[0] = show.organizer; // Organizer's share
-        for (uint256 i = 0; i < show.artists.length; i++) {
-            recipients[i + 1] = show.artists[i]; // Artists' shares
-        }
-        recipients[recipients.length - 1] = show.venue.wallet; // Venue's share
-
-        // Call the new function with combined recipients and splits
-        calculateAndDistributeShare(data.showId, recipients, data.split, data.totalAmount, data.paymentToken);
-    }
-
     // @dev Calculates and distributes the share of the total amount for each recipient.
     /// @param showId The unique identifier of the show.
     /// @param recipients An array of addresses for recipients.
@@ -412,6 +404,23 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         }
     }
 
+
+    /// @dev Distributes shares of the show's total amount among the organizer, artists, and the venue.
+    /// @param show Reference to the show struct containing show details.
+    /// @param data Struct containing distribution data such as showId, totalAmount, paymentToken, and splits.
+    function distributeShares(Show storage show, DistributionData memory data) private {
+        // Combine organizer, artists, and venue into a single array for processing.
+        address[] memory recipients = new address[](show.artists.length + 2);
+        recipients[0] = show.organizer; // Organizer's share
+        for (uint256 i = 0; i < show.artists.length; i++) {
+            recipients[i + 1] = show.artists[i]; // Artists' shares
+        }
+        recipients[recipients.length - 1] = show.venue.wallet; // Venue's share
+
+        // Call the new function with combined recipients and splits
+        calculateAndDistributeShare(data.showId, recipients, data.split, data.totalAmount, data.paymentToken);
+    }
+
     /// @dev Adds a payout amount to the pending payouts or token payouts based on the payment token.
     /// @param showId The unique identifier of the show.
     /// @param recipient The recipient of the payout.
@@ -429,16 +438,16 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     /// @dev This function also checks if the show's status should be updated from 'SoldOut' to 'Proposed'
     /// @param showId The unique identifier of the show.
     /// @param tokenId The ID of the ticket to be refunded.
-    function refundTicket(bytes32 showId, uint256 tokenId) public {
+    function refundTicket(bytes32 showId, uint256 tokenId) external {
         address ticketProxyAddress = showToTicketProxy[showId];
-        require(ticketProxyAddress != address(0), "no ticket proxy");
-        require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Cancelled || shows[showId].status == Status.Expired, "locked funds due to the status of the show");
+        require(ticketProxyAddress != address(0), "!pxy");
+        require(shows[showId].status == Status.Proposed || shows[showId].status == Status.Cancelled || shows[showId].status == Status.Expired, "!=s");
 
         ITicket ticketProxy = ITicket(ticketProxyAddress);
-        require(isTokenOwner(showId, msg.sender, tokenId), "not ticket owner");
+        require(isTokenOwner(showId, msg.sender, tokenId), "!t");
 
         (uint256 refundAmount, uint256 tierIndex) = ticketProxy.getTicketPricePaidAndTierIndex(showId, tokenId);
-        require(refundAmount > 0, "no refunded tickets");
+        require(refundAmount > 0, "!$");
 
         // Retrieve the payment token used for this show
         address paymentToken = showPaymentToken[showId];
@@ -615,10 +624,20 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         }
     }
 
+    // @notice Adds a token ID to a user's wallet for a specific show.
+    // @param showId The unique identifier of the show.
+    // @param wallet The address of the user's wallet.
+    // @param tokenId The unique identifier of the token.
+    // @dev This function can only be called by the external contracts
     function addTokenIdToWallet(bytes32 showId, address wallet, uint256 tokenId) external onlyTicketContract(showId) {
         _addTokenIdToWallet(showId, wallet, tokenId);
     }
 
+    // @notice Removes a specific ticket ID for a given wallet and show.
+    // @param showId The unique identifier of the show.
+    // @param wallet The address of the wallet owning the ticket.
+    // @param ticketId The ID of the ticket to be removed.
+    // @dev This function can only be called by the external contracts
     function removeTokenIdFromWallet(bytes32 showId, address wallet, uint256 tokenId) external onlyTicketContract(showId) {
         _removeTokenIdFromWallet(showId, wallet, tokenId);
     }
@@ -735,6 +754,9 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     }
 
 
+    /// @notice Retrieves wallet address of an organizer for a given show
+    /// @param showId The unique identifier for the show.
+    /// @return wallet The wallet address of the organizer.
     function getOrganizer(bytes32 showId) public view returns (address) {
         return shows[showId].organizer;
     }
@@ -783,28 +805,32 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
     // @dev Validates the input parameters contained within the ShowProposal struct.
     // @param proposal The ShowProposal struct containing the details to be validated.
-    function validateShowProposal(ShowProposal memory proposal) private pure {
+    function validateShowProposal(ShowProposal memory proposal) private {
+        require(organizerRegistryInstance.isOrganizerRegistered(msg.sender), "!rO");
+        require(proposal.artists.length > 0, "a > 0");
+//        for(uint i = 0; i < proposal.artists.length; i++) {
+//            require(artistRegistryInstance.isArtistRegistered(proposal.artists[i]), "!rA");
+//        }
         require(bytes(proposal.name).length > 0, "n"); // name required
         require(proposal.radius > 0, "r"); // radius required
-        require(bytes(proposal.description).length > 0 && bytes(proposal.description).length <= 1000, "!!d && d < 1000"); // description exists and is less than 1000 char
-        require(proposal.totalCapacity > 0, "c > 0");
-        require(proposal.artists.length > 0, "a > 0");
-        require(proposal.sellOutThreshold >= 50 && proposal.sellOutThreshold <= 100, "th > 50%");
-        require(proposal.coordinates.lat >= -90 * 10**6 && proposal.coordinates.lat <= 90 * 10**6, "!lat");
-        require(proposal.coordinates.lon >= -180 * 10**6 && proposal.coordinates.lon <= 180 * 10**6, "!ong");
+//        require(bytes(proposal.description).length > 0 && bytes(proposal.description).length <= 1000, "!!d && d < 1000"); // description exists and is less than 1000 char
+//        require(proposal.totalCapacity > 0, "c > 0"); // TODO change this
+//        require(proposal.sellOutThreshold >= 50 && proposal.sellOutThreshold <= 100, "th > 50%");
+//        require(proposal.coordinates.lat >= -90 * 10**6 && proposal.coordinates.lat <= 90 * 10**6, "!lat");
+//        require(proposal.coordinates.lon >= -180 * 10**6 && proposal.coordinates.lon <= 180 * 10**6, "!ong");
         validateSplit(proposal.split, proposal.artists.length);
 
-        require(proposal.venueProposal.proposalPeriodDuration >= 30 minutes, "< 30m");
-        require(proposal.venueProposal.proposalDateExtension >= 5 minutes, "< 5m");
-        require(proposal.venueProposal.proposalDateMinimumFuture >= 45 minutes, "< 45m");
-        require(proposal.venueProposal.proposalPeriodExtensionThreshold >= 2 minutes, "< 2m");
+//        require(proposal.venueProposal.proposalPeriodDuration >= 30 minutes, "< 30m");
+//        require(proposal.venueProposal.proposalDateExtension >= 5 minutes, "< 5m");
+//        require(proposal.venueProposal.proposalDateMinimumFuture >= 45 minutes, "< 45m");
+//        require(proposal.venueProposal.proposalPeriodExtensionThreshold >= 2 minutes, "< 2m");
     }
 
     /// @notice Validates the split percentages between organizer, artists, and venue
     /// @param split Array representing the percentage split
     /// @param numArtists Number of artists in the show
     function validateSplit(uint256[] memory split, uint256 numArtists) internal pure {
-        require(split.length == numArtists + 2, "split a[] + o +v");
+        require(split.length == numArtists + 2, "split a[] + o + v");
 
         uint256 sum = 0;
         for (uint i = 0; i < split.length; i++) {

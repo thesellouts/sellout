@@ -65,9 +65,15 @@ contract ArtistRegistry is Initializable, ERC1155Upgradeable, IArtistRegistry, A
         return (artist.name, artist.bio, artist.wallet);
     }
 
-     // @notice Nominate an artist for registration using a referral credit.
-     // @param nominee Address of the artist being nominated.
+    // @notice Nominate an artist for registration using a referral credit.
+    // @param nominee Address of the artist being nominated.
     function nominate(address nominee) public {
+        // Check that the nominee is not already nominated
+        require(!nominatedArtists[nominee], "Nominee already nominated");
+
+        // Check that the nominee is not already a registered artist
+        require(addressToArtistId[nominee] == 0, "Nominee already an artist");
+
         ReferralTypes.ReferralCredits memory credits = referralModule.getReferralCredits(msg.sender);
         require(credits.artist > 0, "Insufficient artist referral credits");
 
@@ -124,6 +130,17 @@ contract ArtistRegistry is Initializable, ERC1155Upgradeable, IArtistRegistry, A
 
         emit ArtistUpdated(_artistId, _name, _bio, _wallet);
     }
+
+    /// @notice Checks if an artist is registered in the registry.
+    /// @param artistAddress Address of the artist to check.
+    /// @return isRegistered True if the artist is registered, false otherwise.
+    function isArtistRegistered(address artistAddress) public view returns (bool isRegistered) {
+        uint256 artistId = addressToArtistId[artistAddress];
+        // Ensuring that the artist ID is valid and the stored wallet matches the queried address
+        isRegistered = artistId != 0 && artists[artistId].wallet == artistAddress;
+        return isRegistered;
+    }
+
 
     /// @notice Returns the URI for a specific token.
     /// @param tokenId The ID of the token.

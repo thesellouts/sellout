@@ -47,4 +47,9 @@ interface IArtistRegistry {
     /// @param _bio The new biography for the artist.
     /// @param _wallet The new wallet for the artist.
     function updateArtist(uint256 _artistId, string memory _name, string memory _bio, address _wallet) external;
+
+    /// @notice Checks if an artist is registered in the registry.
+    /// @param artistAddress Address of the artist to check.
+    /// @return isRegistered True if the artist is registered, false otherwise.
+    function isArtistRegistered(address artistAddress) external view returns (bool isRegistered);
 }

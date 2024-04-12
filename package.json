@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "@lucidlabs/sellout-protocol",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "sold out shows.",
   "main": "index.js",
   "keywords": [],

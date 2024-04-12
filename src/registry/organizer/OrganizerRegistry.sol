@@ -62,6 +62,10 @@ contract OrganizerRegistry is Initializable, ERC1155Upgradeable, IOrganizerRegis
 
     // Nominate another address for organizer status
     function nominate(address nominee) public {
+        // Check that the nominee is not already nominated or registered
+        require(!nominatedOrganizers[nominee], "Nominee already nominated");
+        require(addressToOrganizerId[nominee] == 0, "Nominee already an organizer");
+
         ReferralTypes.ReferralCredits memory credits = referralModule.getReferralCredits(msg.sender);
         require(credits.organizer > 0, "Insufficient organizer referral credits");
 
@@ -82,6 +86,17 @@ contract OrganizerRegistry is Initializable, ERC1155Upgradeable, IOrganizerRegis
         _mint(walletAddress, organizerId, 1, "");
         emit OrganizerRegistered(organizerId, name, walletAddress);
     }
+
+    /// @notice Checks if an address is a registered organizer.
+    /// @param organizer The address to check.
+    /// @return bool True if the address is a registered organizer, false otherwise.
+    function isOrganizerRegistered(address organizer) public view returns (bool) {
+        uint256 organizerId = addressToOrganizerId[organizer];
+        // Ensuring that the organizer ID is valid and the stored wallet matches the queried address
+        bool isRegistered = organizerId != 0 && organizers[organizerId].wallet == organizer;
+        return isRegistered;
+    }
+
 
     /// @notice Sets the URI for a given token ID
     /// @param tokenId The token ID for which to set the URI

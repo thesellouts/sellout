@@ -35,15 +35,13 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
 
-    /**
-      * @notice Accepts the nomination to become a registered venue.
-     * @param _name Name of the nominated Venue.
-     * @param _bio Bio of the nominated Venue.
-     * @param _latitude Latitude part of the venue's coordinates.
-     * @param _longitude Longitude part of the venue's coordinates.
-     * @param _totalCapacity Total capacity of the venue.
-     * @param _streetAddress Street address of the venue.
-     */
+    /// @notice Accepts the nomination to become a registered venue.
+    /// @param _name Name of the nominated Venue.
+    /// @param _bio Bio of the nominated Venue.
+    /// @param _latitude Latitude part of the venue's coordinates.
+    /// @param _longitude Longitude part of the venue's coordinates.
+    /// @param _totalCapacity Total capacity of the venue.
+    /// @param _streetAddress Street address of the venue.
     function acceptNomination(
         string memory _name,
         string memory _bio,
@@ -55,84 +53,17 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
         require(nominatedVenues[msg.sender], "No nomination found");
         nominatedVenues[msg.sender] = false;
 
-        // Updated to pass the new parameters
         registerVenue(_name, _bio, _latitude, _longitude, _totalCapacity, _streetAddress);
 
         emit VenueAccepted(currentVenueId, msg.sender);
     }
 
-
-
-    /**
-     * @notice Allows a venue to deregister themselves from the registry.
-     * @param _venueId Unique identifier of the venue wishing to deregister.
-     */
-    function deregisterVenue(uint256 _venueId) public {
-        require(_venueId <= currentVenueId && venues[_venueId].wallet == msg.sender, "Unauthorized or non-existent venue");
-
-        _burn(msg.sender, _venueId, 1);
-        delete venues[_venueId];
-        emit VenueDeregistered(_venueId);
-    }
-
-    /**
-     * @notice Retrieves information about a venue using their wallet address.
-     * @param venueAddress Wallet address of the venue.
-     * @return name Name of the venue.
-     * @return bio Biography of the venue.
-     * @return wallet Wallet address of the venue.
-     * @return latitude Latitude part of the venue's coordinates.
-     * @return longitude Longitude part of the venue's coordinates.
-     * @return totalCapacity Total capacity of the venue.
-     * @return streetAddress Street address of the venue.
-     */
-    function getVenue(address venueAddress) external view returns (
-        string memory name,
-        string memory bio,
-        address wallet,
-        int256 latitude,
-        int256 longitude,
-        uint256 totalCapacity,
-        string memory streetAddress
-    ) {
-        uint256 venueId = addressToVenueId[venueAddress];
-        require(venueId != 0, "Venue does not exist");
-
-        VenueRegistryTypes.VenueInfo memory venue = venues[venueId];
-        return (
-            venue.name,
-            venue.bio,
-            venue.wallet,
-            venue.coordinates.latitude,
-            venue.coordinates.longitude,
-            venue.totalCapacity,
-            venue.streetAddress
-        );
-    }
-
-
-    /**
-    * @notice Nominates another address as a venue, provided the caller has sufficient referral credits.
-     * @param nominee The address being nominated as a venue.
-     */
-    function nominate(address nominee) public {
-        ReferralTypes.ReferralCredits memory credits = referralModule.getReferralCredits(msg.sender);
-        require(credits.venue > 0, "Insufficient venue referral credits");
-
-        referralModule.decrementReferralCredits(msg.sender, 0, 0, 1);
-        nominatedVenues[nominee] = true;
-        emit VenueNominated(nominee);
-    }
-
-
-    /**
-     * @dev Registers a venue with the provided details. Only callable internally.
-     * @param _name Name of the venue.
-     * @param _bio Biography of the venue.
-     * @param _latitude Latitude part of the venue's coordinates.
-     * @param _longitude Longitude part of the venue's coordinates.
-     * @param _streetAddress Street address of the venue.
-     */
+    ///  @dev Registers a venue with the provided details. Only callable internally.
+    ///  @param _name Name of the venue.
+    ///  @param _bio Biography of the venue.
+    ///  @param _latitude Latitude part of the venue's coordinates.
+    ///  @param _longitude Longitude part of the venue's coordinates.
+    ///  @param _streetAddress Street address of the venue.
     function registerVenue(
         string memory _name,
         string memory _bio,
@@ -165,6 +96,59 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
         emit VenueRegistered(venueId, _name);
     }
 
+    /// @notice Allows a venue to deregister themselves from the registry.
+    /// @param _venueId Unique identifier of the venue wishing to deregister.
+    function deregisterVenue(uint256 _venueId) public {
+        require(_venueId <= currentVenueId && venues[_venueId].wallet == msg.sender, "Unauthorized or non-existent venue");
+
+        _burn(msg.sender, _venueId, 1);
+        delete venues[_venueId];
+        emit VenueDeregistered(_venueId);
+    }
+
+    /// @notice Retrieves information about a venue using their wallet address.
+    /// @param venueAddress Wallet address of the venue.
+    /// @return name Name of the venue.
+    /// @return bio Biography of the venue.
+    /// @return wallet Wallet address of the venue.
+    /// @return latitude Latitude part of the venue's coordinates.
+    /// @return longitude Longitude part of the venue's coordinates.
+    /// @return totalCapacity Total capacity of the venue.
+    /// @return streetAddress Street address of the venue.
+    function getVenue(address venueAddress) external view returns (
+        string memory name,
+        string memory bio,
+        address wallet,
+        int256 latitude,
+        int256 longitude,
+        uint256 totalCapacity,
+        string memory streetAddress
+    ) {
+        uint256 venueId = addressToVenueId[venueAddress];
+        require(venueId != 0, "Venue does not exist");
+
+        VenueRegistryTypes.VenueInfo memory venue = venues[venueId];
+        return (
+            venue.name,
+            venue.bio,
+            venue.wallet,
+            venue.coordinates.latitude,
+            venue.coordinates.longitude,
+            venue.totalCapacity,
+            venue.streetAddress
+        );
+    }
+
+    /// @notice Nominates another address as a venue, provided the caller has sufficient referral credits.
+    /// @param nominee The address being nominated as a venue.
+    function nominate(address nominee) public {
+        ReferralTypes.ReferralCredits memory credits = referralModule.getReferralCredits(msg.sender);
+        require(credits.venue > 0, "Insufficient venue referral credits");
+
+        referralModule.decrementReferralCredits(msg.sender, 0, 0, 1);
+        nominatedVenues[nominee] = true;
+        emit VenueNominated(nominee);
+    }
 
     /// @notice Sets the URI for a given token ID
     /// @param tokenId The token ID for which to set the URI
@@ -179,17 +163,15 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
     }
 
 
-    /**
-     * @notice Allows a registered venue to update their profile information.
-     * @param _venueId Unique identifier of the venue.
-     * @param _name New name of the venue.
-     * @param _bio New biography of the venue.
-     * @param _wallet New wallet address of the venue.
-     * @param _latitude New latitude for the venue's location.
-     * @param _longitude New longitude for the venue's location.
-     * @param _totalCapacity New total capacity of the venue.
-     * @param _streetAddress New street address of the venue.
-     */
+    /// @notice Allows a registered venue to update their profile information.
+    /// @param _venueId Unique identifier of the venue.
+    /// @param _name New name of the venue.
+    /// @param _bio New biography of the venue.
+    /// @param _wallet New wallet address of the venue.
+    /// @param _latitude New latitude for the venue's location.
+    /// @param _longitude New longitude for the venue's location.
+    /// @param _totalCapacity New total capacity of the venue.
+    /// @param _streetAddress New street address of the venue.
     function updateVenue(
         uint256 _venueId,
         string memory _name,
@@ -224,7 +206,14 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
         );
     }
 
-
+    /// @notice Checks if a venue is registered in the registry.
+    /// @param venueAddress Address of the venue to check.
+    /// @return isRegistered True if the venue is registered, false otherwise.
+    function isVenueRegistered(address venueAddress) public view returns (bool isRegistered) {
+        uint256 venueId = addressToVenueId[venueAddress];
+        isRegistered = venueId != 0 && venues[venueId].wallet == venueAddress;
+        return isRegistered;
+    }
 
     /// @notice Returns the URI for a specific token.
     /// @param tokenId The ID of the token.

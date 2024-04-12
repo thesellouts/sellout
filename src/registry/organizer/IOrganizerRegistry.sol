@@ -24,6 +24,11 @@ interface IOrganizerRegistry {
     /// @return wallet The wallet address of the organizer.
     function getOrganizer(address organizerAddress) external view returns (string memory name, string memory bio, address wallet);
 
+    /// @notice Determines if a given address is a registered organizer.
+    /// @param organizer Address to check for registration.
+    /// @return True if the address is registered as an organizer, otherwise false.
+    function isOrganizerRegistered(address organizer) external view returns (bool);
+
     /// @notice Nominates an address for organizer status, can only be called by an existing organizer.
     /// @param nominee The address being nominated for organizer status.
     function nominate(address nominee) external;

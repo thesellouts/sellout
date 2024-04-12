@@ -165,9 +165,13 @@ interface IVenue {
     /// @return The amount of refund owed
     function getRefunds(address user) external view returns (uint256);
 
-    // @dev Sets the address of the Show contract that this Ticket contract is associated with.
-    // This is used to establish a link back to the Show contract, allowing for interactions and validations.
-    // @param showContractAddress The address of the Show contract.
-    function setShowContractAddress(address showContractAddress) external;
-
+    // @dev Sets the addresses for the Show contract and the Venue Registry.
+    // This function should only be called once to initialize the contract with
+    // the addresses of the Show and Venue Registry contracts.
+    // @param _showContractAddress The address of the Show contract.
+    // @param _venueRegistryAddress The address of the Venue Registry contract.
+    function setShowAndVenueRegistryAddresses(
+        address _showContractAddress,
+        address _venueRegistryAddress
+    ) external;
 }

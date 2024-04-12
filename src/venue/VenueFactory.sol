@@ -72,6 +72,7 @@ contract VenueFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         version = _version;
     }
 
+
     /// @notice Returns the list of deployed venue proxies.
     /// @return An array of addresses of the deployed venue proxies.
     function getDeployedVenues() public view returns (address[] memory) {

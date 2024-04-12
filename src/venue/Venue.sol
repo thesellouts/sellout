@@ -3,6 +3,7 @@ pragma solidity 0.8.20;
 
 import { VenueStorage, VenueTypes } from "./storage/VenueStorage.sol";
 import { IVenue } from "./IVenue.sol";
+import { IVenueRegistry } from "../registry/venue/IVenueRegistry.sol";
 
 import { IShow } from "../show/IShow.sol";
 import { ShowTypes } from "../show/storage/ShowStorage.sol";
@@ -16,6 +17,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 /// @notice This contract manages the venue proposals, voting, and acceptance for shows.
 contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableUpgradeable {
     IShow public showInstance;
+    IVenueRegistry public venueRegistryInstance;
 
     // Add variables for storing the duration constants
     uint256 public proposalPeriodDuration;
@@ -70,6 +72,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         uint256 totalCapacity,
         uint256[] memory proposedDates
     ) public payable {
+        require(venueRegistryInstance.isVenueRegistered(msg.sender), "Venue not registered");
         require(showInstance.getShowStatus(showId) == ShowTypes.Status.SoldOut, "!so");
         require(proposalPeriod[showId].endTime == 0 || block.timestamp <= proposalPeriod[showId].endTime, "!p");
         require(coordinates.lat >= -90 * 10**6 && coordinates.lat <= 90 * 10**6, "Invalid latitude");
@@ -250,15 +253,14 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         emit ProposalPeriodStarted(showId, proposalPeriod[showId].endTime);
     }
 
-    // @dev Sets the address of the Show contract. This function allows the Ticket contract
-    // @param _showContractAddress The address of the Show contract to be linked with this Ticket contract.
-    function setShowContractAddress(address _showContractAddress) external {
-        // Ensure that the Show contract address is not already set.
-        require(address(showInstance) == address(0), "Show contract address is already set");
+    // Updated to set both Show and Venue Registry addresses
+    function setShowAndVenueRegistryAddresses(address _showContractAddress, address _venueRegistryAddress) external {
+        require(address(showInstance) == address(0), "Show contract already set");
+        require(address(venueRegistryInstance) == address(0), "Venue registry already set");
 
         showInstance = IShow(_showContractAddress);
+        venueRegistryInstance = IVenueRegistry(_venueRegistryAddress);
     }
-
 
     /// @notice Retrieves the proposal period for a specific venue.
     /// @param showId The unique identifier of the venue.

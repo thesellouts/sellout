@@ -106,4 +106,6 @@ interface IVenueRegistry {
         uint256 _totalCapacity,
         string memory _streetAddress
     ) external;
+
+    function isVenueRegistered(address venueAddress) external view returns (bool);
 }
