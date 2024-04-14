@@ -26,10 +26,6 @@ export VENUE_REGISTRY_ADDRESS=$venueRegistryAddress
 showAddress=$(forge script DeployShow.s.sol:DeployShow --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY -- --sellout-protocol-wallet $SELLOUT_PROTOCOL_WALLET | grep "Show deployed at" | awk '{print $NF}')
 export SHOW_ADDRESS=$showAddress
 
-# Deploy Venue with Show Address, Ticket Address, and Sellout Protocol Wallet as arguments
-#venueAddress=$(forge script DeployVenue.s.sol:DeployVenue --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY -- --sellout-protocol-wallet $SELLOUT_PROTOCOL_WALLET --show-address $showAddress | grep "Venue deployed at" | awk '{print $NF}')
-#export VENUE_ADDRESS=$venueAddress
-
 ## Deploy the Ticket implementation (template) contract first and capture its address
 ticketFactoryAddress=$(forge script DeployTicketFactory.s.sol:DeployTicketFactory --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY -- --show-address $showAddress | grep "TicketFactory deployed at" | awk '{print $NF}')
 export TICKET_FACTORY_ADDRESS=$ticketFactoryAddress
@@ -42,6 +38,9 @@ export VENUE_FACTORY_ADDRESS=$venueFactoryAddress
 showVaultAddress=$(forge script DeployShowVault.s.sol:DeployShowVault --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY -- --sellout-protocol-wallet $SELLOUT_PROTOCOL_WALLET --show-address $showAddress | grep "ShowVault deployed at" | awk '{print $NF}')
 export SHOW_VAULT_ADDRESS=$showVaultAddress
 
+# Deploy BoxOffice and capture its address
+boxOfficeAddress=$(forge script DeployBoxOffice.s.sol:DeployBoxOffice --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY -- --sellout-protocol-wallet $SELLOUT_PROTOCOL_WALLET --show-address $showAddress --ticket-factory-address $ticketFactoryAddress --show-vault-address $showVaultAddress | grep "BoxOffice deployed at" | awk '{print $NF}')
+export BOX_OFFICE_ADDRESS=$boxOfficeAddress
 
 # Assuming all deployment addresses have been exported as environment variables
 forge script FinalizeDeployment.s.sol:FinalizeDeployment --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast
@@ -51,5 +50,7 @@ echo "Deployed ArtistRegistry at $artistRegistryAddress"
 echo "Deployed OrganizerRegistry at $organizerRegistryAddress"
 echo "Deployed VenueRegistry at $venueRegistryAddress"
 echo "Deployed Show at $showAddress"
-echo "Deployed VenueFactory at venueFactoryAddress $venueFactoryAddress"
 echo "Deployed TicketFactory at $ticketFactoryAddress"
+echo "Deployed VenueFactory at $venueFactoryAddress"
+echo "Deployed ShowVault at $showVaultAddress"
+echo "Deployed BoxOffice at $boxOfficeAddress"

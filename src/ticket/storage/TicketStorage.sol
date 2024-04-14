@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "../types/TicketTypes.sol";
-import "../../show/IShow.sol";
+import { TicketTypes } from "../types/TicketTypes.sol";
+import { IShow } from  "../../show/IShow.sol";
+import { IBoxOffice } from  "../../show/IBoxOffice.sol";
+import { IShowVault } from  "../../show/IShowVault.sol";
 
 /**
  * @title TicketStorage
@@ -11,6 +13,12 @@ import "../../show/IShow.sol";
 contract TicketStorage is TicketTypes {
     /// @notice Reference to the Show contract interface to interact with show-related functionalities.
     IShow public showInstance;
+
+    /// @notice Reference to the Box Office contract interface to interact with ticket-related functionalities.
+    IBoxOffice public boxOfficeInstance;
+
+    /// @notice Reference to the ShowVault contract interface to interact with ticket-related functionalities.
+    IShowVault public showVaultInstance;
 
     /// @notice Version of the ticket factory.
     string public version;

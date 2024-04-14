@@ -184,9 +184,11 @@ interface IVenue {
     // This function should only be called once to initialize the contract with
     // the addresses of the Show and Venue Registry contracts.
     // @param _showContractAddress The address of the Show contract.
+    // @param _showVaultAddress The address of the ShowVault contract.
     // @param _venueRegistryAddress The address of the Venue Registry contract.
-    function setShowAndVenueRegistryAddresses(
+    function setContractAddresses(
         address _showContractAddress,
+        address _showVaultAddress,
         address _venueRegistryAddress
     ) external;
 }

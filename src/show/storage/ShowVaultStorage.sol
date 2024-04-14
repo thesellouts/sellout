@@ -23,4 +23,6 @@ contract ShowVaultStorage {
     // Mapping to track pending payouts for each show and address
     mapping(bytes32 => mapping(address => mapping(address => uint256))) public pendingTokenPayouts;
 
+    // Mapping to track the payment token for each show
+    mapping(bytes32 => address) public showPaymentTokens;
 }

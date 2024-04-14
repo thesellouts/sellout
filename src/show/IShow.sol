@@ -24,12 +24,6 @@ interface IShow is ShowTypes {
     /// @param showId The unique identifier of the show.
     event ShowExpired(bytes32 indexed showId);
 
-    /// @notice Emitted when tickets from a specific tier are consumed
-    /// @param showId ID of the show
-    /// @param tierIndex Index of the ticket tier
-    /// @param amount Number of tickets consumed
-    event TicketTierConsumed(bytes32 indexed showId, uint256 indexed tierIndex, uint256 amount);
-
      // @notice Event emitted when ERC20 tokens are deposited into a show's vault.
      // @param showId The unique identifier of the show receiving the deposit.
      // @param tokenAddress The address of the ERC20 token being deposited.
@@ -68,6 +62,13 @@ interface IShow is ShowTypes {
     /// @param refundAmount The amount refunded to the user.
     event TicketRefunded(address indexed user, bytes32 indexed showId, uint256 refundAmount);
 
+    /// @notice Emitted when tickets from a specific tier are consumed
+    /// @param showId ID of the show
+    /// @param tierIndex Index of the ticket tier
+    /// @param amount Number of tickets consumed
+    event TicketTierConsumed(bytes32 indexed showId, uint256 indexed tierIndex, uint256 amount);
+
+
 
     event BribeRefunded(
         bytes32 indexed showId,
@@ -88,27 +89,14 @@ interface IShow is ShowTypes {
     /// @param reason The reason for the show's cancellation.
     event ShowCancelled(bytes32 indexed showId, string reason);
 
-    // Functions
-
-    /// @notice Adds a token ID to a user's wallet for a specific show, signifying ticket ownership.
-    /// @param showId The unique identifier of the show.
-    /// @param wallet The wallet address to which the ticket ID will be added.
-    /// @param tokenId The unique identifier of the ticket being added to the wallet.
-    function addTokenIdToWallet(bytes32 showId, address wallet, uint256 tokenId) external;
-
-    /// @notice Removes a token ID to a user's wallet for a specific show, signifying ticket ownership.
-    /// @param showId The unique identifier of the show.
-    /// @param wallet The wallet address to which the ticket ID will be added.
-    /// @param tokenId The unique identifier of the ticket being added to the wallet.
-    function removeTokenIdFromWallet(bytes32 showId, address wallet, uint256 tokenId) external;
-
-    /// @notice Cancels a show based on its unique identifier.
-    /// @param showId The unique identifier of the show to be cancelled.
-    function cancelShow(bytes32 showId) external;
-
     /// @notice Marks a show as completed, which may trigger fund distributions and other end-of-show processes.
     /// @param showId The unique identifier of the show to be marked as completed.
     function completeShow(bytes32 showId) external;
+
+    // Functions
+    /// @notice Cancels a show based on its unique identifier.
+    /// @param showId The unique identifier of the show to be cancelled.
+    function cancelShow(bytes32 showId) external;
 
     /// @notice Consumes a specified number of tickets from a ticket tier for a given show.
     /// @dev This function should only be callable by authorized contracts, such as the Ticket contract.
@@ -116,18 +104,6 @@ interface IShow is ShowTypes {
     /// @param tierIndex The index of the ticket tier from which tickets are to be consumed.
     /// @param amount The number of tickets to consume from the specified tier.
     function consumeTicketTier(bytes32 showId, uint256 tierIndex, uint256 amount) external;
-
-    /// @notice Allows the deposit of funds into a show's vault, contributing towards the show's financial pool.
-    /// @param showId The unique identifier of the show for which the funds are being deposited.
-    function depositToVault(bytes32 showId) external payable;
-
-    /// @notice Deposits specified ERC20 tokens into the vault for a specific show.
-    /// @dev Requires approval for the contract to transfer tokens on behalf of the sender.
-    /// @param showId Unique identifier for the show.
-    /// @param amount Amount of ERC20 tokens to deposit.
-    /// @param paymentToken Address of the ERC20 token to deposit.
-    /// @param ticketRecipient Address of the ticket recipient.
-    function depositToVaultERC20(bytes32 showId, uint256 amount, address paymentToken, address ticketRecipient) external;
 
     /// @notice Retrieves the number of voters for a specific show, including both artists and the organizer.
     /// @param showId The unique identifier of the show.
@@ -169,12 +145,6 @@ interface IShow is ShowTypes {
     /// @return The current status of the show.
     function getShowStatus(bytes32 showId) external view returns (Status);
 
-    /// @notice Retrieves the price paid for a specific ticket of a show.
-    /// @param showId The unique identifier of the show.
-    /// @param ticketId The unique identifier of the ticket.
-    /// @return The price paid for the ticket.
-    function getTicketPricePaid(bytes32 showId, uint256 ticketId) external view returns (uint256);
-
     /// @notice Retrieves information about a specific ticket tier within a show.
     /// @param showId The unique identifier of the show.
     /// @param tierIndex The index of the ticket tier within the show.
@@ -183,16 +153,15 @@ interface IShow is ShowTypes {
     /// @return ticketsAvailable The number of tickets available for sale in this tier.
     function getTicketTierInfo(bytes32 showId, uint256 tierIndex) external view returns (string memory name, uint256 price, uint256 ticketsAvailable);
 
-    /// @notice Retrieves the total number of tickets sold for a specific show.
+    /// @notice Retrieves the address of the ticket proxy for a given show.
     /// @param showId The unique identifier of the show.
-    /// @return The total number of tickets sold.
-    function getTotalTicketsSold(bytes32 showId) external view returns (uint256);
+    /// @return The address of the ticket proxy associated with the specified show ID.
+    function getShowToTicketProxy(bytes32 showId) external view returns (address);
 
-    /// @notice Retrieves the token IDs associated with a specific show for a given wallet.
+    /// @notice Sets the address of the ticket proxy for a given show.
     /// @param showId The unique identifier of the show.
-    /// @param wallet The address of the wallet.
-    /// @return An array of token IDs associated with the show for the specified wallet.
-    function getWalletTokenIds(bytes32 showId, address wallet) external view returns (uint256[] memory);
+    /// @param ticketProxy The address to be set as the ticket proxy for the specified show ID.
+    function setShowToTicketProxy(bytes32 showId, address ticketProxy) external;
 
     /// @notice Checks if a wallet owns at least one ticket for a specific show.
     /// @param wallet The address of the wallet to check.
@@ -245,6 +214,7 @@ interface IShow is ShowTypes {
     /// @param _organizerRegistry The address of the OrganizerRegistry contract.
     /// @param _venueRegistry The address of the VenueRegistry contract.
     /// @param _showVault The address of the ShowVault contract.
+    /// @param _boxOffice The address of the BoxOffice contract.
     function setProtocolAddresses(
         address _ticketFactory,
         address _venueFactory,
@@ -252,20 +222,9 @@ interface IShow is ShowTypes {
         address _artistRegistry,
         address _organizerRegistry,
         address _venueRegistry,
-        address _showVault
+        address _showVault,
+        address _boxOffice
     ) external;
-
-    /// @notice Sets the price paid for a specific ticket of a show.
-    /// @param showId The unique identifier of the show.
-    /// @param ticketId The unique identifier of the ticket.
-    /// @param price The price paid for the ticket.
-    function setTicketPricePaid(bytes32 showId, uint256 ticketId, uint256 price) external;
-
-
-    /// @notice Sets the total number of tickets sold for a specific show.
-    /// @param showId The unique identifier of the show.
-    /// @param amount The amount to be added to the total tickets sold count.
-    function setTotalTicketsSold(bytes32 showId, uint256 amount) external;
 
     /// @notice Updates the status of a show, potentially triggered by ticket sales reaching the sell-out threshold or other criteria.
     /// @param showId The unique identifier of the show.

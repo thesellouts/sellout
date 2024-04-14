@@ -85,6 +85,8 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
     /// @param tokenRecipient The recipient of the tokens
     function depositToVaultERC20(bytes32 showId, uint256 amount, address paymentToken, address tokenRecipient) external onlyShowContract {
         require(paymentToken != address(0), "Invalid payment token address");
+        require(showPaymentTokens[showId] == paymentToken, "!t");
+
         ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
         require(token.allowance(tokenRecipient, address(this)) >= amount, "Insufficient allowance");
         token.transferFrom(tokenRecipient, address(this), amount);
@@ -216,5 +218,19 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         require(token.balanceOf(address(this)) >= amount, "!$");
         require(token.transfer(msg.sender, amount), "!->");
         emit Withdrawal(showId, msg.sender, amount, paymentToken);
+    }
+
+    /// @notice Sets the payment token for a specific show
+    /// @param showId The unique identifier of the show
+    /// @param token The payment token address
+    function setShowPaymentToken(bytes32 showId, address token) external onlyShowContract {
+        showPaymentTokens[showId] = token;
+    }
+
+    /// @notice Gets the payment token for a specific show
+    /// @param showId The unique identifier of the show
+    /// @return The payment token address
+    function getShowPaymentToken(bytes32 showId) public view returns (address) {
+        return showPaymentTokens[showId];
     }
 }

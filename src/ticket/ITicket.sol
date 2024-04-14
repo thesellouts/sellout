@@ -44,10 +44,12 @@ interface ITicket {
     /// @param newURI New URI to set for the token
     function setTokenURI(bytes32 showId, uint256 tokenId, string calldata newURI) external;
 
-     // @dev Sets the address of the Show contract that this Ticket contract is associated with.
-     // This is used to establish a link back to the Show contract, allowing for interactions and validations.
-     // @param showContractAddress The address of the Show contract.
-    function setShowContractAddress(address showContractAddress) external;
+    // @dev Sets the address of the Show contract that this Ticket contract is associated with.
+    // This is used to establish a link back to the Show contract, allowing for interactions and validations.
+    // @param showContractAddress The address of the Show contract.
+    // @param boxOfficeAddress The address of the Box Office contract.
+    // @param showVaultAddress The address of the ShowVault contract to be linked with this Ticket contract.
+    function setShowContractAddresses(address showContractAddress, address boxOfficeAddress, address showVaultAddress) external;
 
      /// @notice Sets the default URI for tickets related to a specific show.
      /// @param showId Identifier of the show.

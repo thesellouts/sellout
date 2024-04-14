@@ -19,7 +19,7 @@ library ShowValidations {
     /// @param proposal The ShowProposal struct containing the details to be validated.
     function validateShowProposal(
         ShowTypes.ShowProposal memory proposal
-    ) internal view {
+    ) internal pure {
         if (bytes(proposal.name).length == 0) revert InvalidName();
         if (proposal.radius <= 0) revert InvalidCapacity();
         if (bytes(proposal.description).length == 0 || bytes(proposal.description).length > 1000) revert InvalidDescription();

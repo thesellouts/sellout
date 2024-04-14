@@ -54,4 +54,14 @@ interface IShowVault {
     /// @param showId Unique identifier of the show.
     /// @param paymentToken Contract address of the ERC20 token, or address(0) for Ether.
     function payout(bytes32 showId, address paymentToken) external;
+
+    /// @notice Sets the payment token for a specific show
+    /// @param showId The unique identifier of the show
+    /// @param token The payment token address
+    function setShowPaymentToken(bytes32 showId, address token) external;
+
+    /// @notice Gets the payment token for a specific show
+    /// @param showId The unique identifier of the show
+    /// @return The payment token address
+    function getShowPaymentToken(bytes32 showId) external view returns (address);
 }

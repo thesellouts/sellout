@@ -8,6 +8,7 @@ import { IVenueRegistry } from "../registry/venue/IVenueRegistry.sol";
 import { VenueRegistryTypes } from "../registry/venue/types/VenueRegistryTypes.sol";
 import { IShow } from "../show/IShow.sol";
 import { ShowTypes } from "../show/storage/ShowStorage.sol";
+import { IShowVault } from "../show/IShowVault.sol";
 
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -20,6 +21,7 @@ import { ERC20Upgradeable } from  "@openzeppelin/contracts-upgradeable/token/ERC
 contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableUpgradeable {
     IShow public showInstance;
     IVenueRegistry public venueRegistryInstance;
+    IShowVault public showVaultInstance;
 
     // Add variables for storing the duration constants
     uint256 public proposalPeriodDuration;
@@ -148,7 +150,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         uint256 bribeAmount = msg.value;
         if (paymentToken == address(0)) {
             if (msg.value > 0) {
-                showInstance.depositToVault{value: msg.value}(showId);
+                showVaultInstance.depositToVault{value: msg.value}(showId);
             }
         } else {
             require(msg.value == 0, "Do not send ETH with ERC20 payment");
@@ -156,7 +158,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
             bribeAmount = token.allowance(msg.sender, address(this));
             if (bribeAmount > 0) {
                 token.transferFrom(msg.sender, address(this), bribeAmount);
-                showInstance.depositToVaultERC20(showId, bribeAmount, paymentToken, msg.sender);
+                showVaultInstance.depositToVaultERC20(showId, bribeAmount, paymentToken, msg.sender);
             }
         }
         return bribeAmount;
@@ -304,12 +306,15 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     }
 
     // Updated to set both Show and Venue Registry addresses
-    function setShowAndVenueRegistryAddresses(address _showContractAddress, address _venueRegistryAddress) external {
+    function setContractAddresses(address _showContractAddress,  address _showVaultAddress, address _venueRegistryAddress) external {
         require(address(showInstance) == address(0), "Show contract already set");
         require(address(venueRegistryInstance) == address(0), "Venue registry already set");
+        require(address(showVaultInstance) == address(0), "ShowVault registry already set");
+
 
         showInstance = IShow(_showContractAddress);
         venueRegistryInstance = IVenueRegistry(_venueRegistryAddress);
+        showVaultInstance = IShowVault(_showVaultAddress);
     }
 
     function resetBribe(bytes32 showId, uint256 proposalIndex) external onlyShowContract {

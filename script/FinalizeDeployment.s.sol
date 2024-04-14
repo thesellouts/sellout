@@ -18,6 +18,8 @@ contract FinalizeDeployment is Script {
         address organizerRegistryAddress = vm.envAddress("ORGANIZER_REGISTRY_ADDRESS");
         address venueRegistryAddress = vm.envAddress("VENUE_REGISTRY_ADDRESS");
         address showVaultAddress = vm.envAddress("SHOW_VAULT_ADDRESS");
+        address boxOfficeAddress = vm.envAddress("BOX_OFFICE_ADDRESS");
+
         // Set protocol addresses in Show contract
         IShow(showAddress).setProtocolAddresses(
             ticketFactoryAddress,
@@ -26,7 +28,8 @@ contract FinalizeDeployment is Script {
             artistRegistryAddress,
             organizerRegistryAddress,
             venueRegistryAddress,
-            showVaultAddress
+            showVaultAddress,
+            boxOfficeAddress
         );
 
         // Set permissions

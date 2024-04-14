@@ -3,8 +3,12 @@ pragma solidity 0.8.20;
 
 import { ITicket } from "./ITicket.sol";
 import { TicketStorage } from "./storage/TicketStorage.sol";
+
 import { IShow } from "../show/IShow.sol";
 import { ShowTypes } from "../show/types/ShowTypes.sol";
+import { IShowVault } from "../show/IShowVault.sol";
+
+import { IBoxOffice } from "../show/IBoxOffice.sol";
 
 import { Strings } from "@openzeppelin-contracts/utils/Strings.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -114,7 +118,7 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         (, , uint256 ticketsAvailable) = showInstance.getTicketTierInfo(showId, tierIndex);
         require(ticketsAvailable >= amount, "Not enough tickets available");
 
-        uint256[] memory ownedTokenIds = showInstance.getWalletTokenIds(showId, msg.sender);
+        uint256[] memory ownedTokenIds = boxOfficeInstance.getWalletTokenIds(showId, msg.sender);
         require(ownedTokenIds.length + amount <= MAX_TICKETS_PER_WALLET, "Max tickets exceeded");
     }
 
@@ -172,11 +176,11 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     function processPayment(bytes32 showId, uint256 totalPayment, address paymentToken) private returns (bool) {
         if (paymentToken == address(0)) {
             require(msg.value == totalPayment, "Incorrect ETH amount");
-            showInstance.depositToVault{value: msg.value}(showId);
+            showVaultInstance.depositToVault{value: msg.value}(showId);
             return true;
         } else {
             require(msg.value == 0, "Do not send ETH with ERC20 payment");
-            showInstance.depositToVaultERC20(showId, totalPayment, paymentToken, msg.sender);
+            showVaultInstance.depositToVaultERC20(showId, totalPayment, paymentToken, msg.sender);
             return true;
         }
     }
@@ -191,8 +195,8 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         _mint(buyer, tokenId, 1, "");
         ticketIdToTierIndex[tokenId] = tierIndex;
         tokenIdToShowId[tokenId] = showId;
-        showInstance.addTokenIdToWallet(showId, buyer, tokenId);
-        showInstance.setTicketPricePaid(showId, tokenId, pricePerTicket);
+        boxOfficeInstance.addTokenIdToWallet(showId, buyer, tokenId);
+        boxOfficeInstance.setTicketPricePaid(showId, tokenId, pricePerTicket);
         return true;
     }
 
@@ -201,7 +205,7 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     // @param tierIndex The index of the ticket tier for which tickets were purchased.
     // @param amount The number of tickets purchased.
     function finalizePurchase(bytes32 showId, uint256 tierIndex, uint256 amount) private {
-        showInstance.setTotalTicketsSold(showId, amount);
+        boxOfficeInstance.setTotalTicketsSold(showId, amount);
         showInstance.consumeTicketTier(showId, tierIndex, amount);
         showInstance.updateStatusIfSoldOut(showId);
     }
@@ -212,7 +216,7 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
      // @return price The price paid for the ticket.
      // @return tierIndex The index of the ticket tier.
     function getTicketPricePaidAndTierIndex(bytes32 showId, uint256 ticketId) public view returns (uint256 price, uint256 tierIndex) {
-        uint256 _price = showInstance.getTicketPricePaid(showId, ticketId);
+        uint256 _price = boxOfficeInstance.getTicketPricePaid(showId, ticketId);
         uint256 _tierIndex = ticketIdToTierIndex[ticketId];
         return (_price, _tierIndex);
     }
@@ -221,7 +225,8 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     // @param tokenId Identifier of the token to be burned.
     // @param amount Amount of tokens to be burned.
     // @param owner Owner of the tokens.
-    function burnTokens(uint256 tokenId, uint256 amount, address owner) public onlyShowContract {
+    function burnTokens(uint256 tokenId, uint256 amount, address owner) external {
+        require(msg.sender == address(boxOfficeInstance), "!bo");
         _burn(owner, tokenId, amount);
     }
 
@@ -243,13 +248,20 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         emit URI(newURI, tokenId);
     }
 
-     // @dev Sets the address of the Show contract. This function allows the Ticket contract
-     // @param _showContractAddress The address of the Show contract to be linked with this Ticket contract.
-    function setShowContractAddress(address _showContractAddress) external {
+    // @dev Sets the address of the Show contract. This function allows the Ticket contract
+    // @param _showContractAddress The address of the Show contract to be linked with this Ticket contract.
+    // @param _boxOfficeAddress The address of the BoxOffice contract to be linked with this Ticket contract.
+    // @param _showVaultAddress The address of the ShowVault contract to be linked with this Ticket contract.
+    function setShowContractAddresses(address _showContractAddress, address _boxOfficeAddress, address _showVaultAddress) external {
         // Ensure that the Show contract address is not already set.
         require(address(showInstance) == address(0), "Show contract address is already set");
+        require(address(boxOfficeInstance) == address(0), "Show contract address is already set");
+        require(address(showVaultInstance) == address(0), "ShowVault contract address is already set");
+
 
         showInstance = IShow(_showContractAddress);
+        boxOfficeInstance = IBoxOffice(_boxOfficeAddress);
+        showVaultInstance = IShowVault(_showVaultAddress);
     }
 
     // @notice Retrieves the URI for a specific token ID, incorporating showId into the URI path.
@@ -296,10 +308,10 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         // Custom logic before transfer
         bytes32 showId = tokenIdToShowId[id];
         if (from != address(0)) {
-            showInstance.removeTokenIdFromWallet(showId, from, id);
+            boxOfficeInstance.removeTokenIdFromWallet(showId, from, id);
         }
         if (to != address(0)) {
-            showInstance.addTokenIdToWallet(showId, to, id);
+            boxOfficeInstance.addTokenIdToWallet(showId, to, id);
         }
 
         // Call the base contract transfer method
@@ -330,10 +342,10 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         for (uint256 i = 0; i < ids.length; i++) {
             bytes32 showId = tokenIdToShowId[ids[i]];
             if (from != address(0)) {
-                showInstance.removeTokenIdFromWallet(showId, from, ids[i]);
+                boxOfficeInstance.removeTokenIdFromWallet(showId, from, ids[i]);
             }
             if (to != address(0)) {
-                showInstance.addTokenIdToWallet(showId, to, ids[i]);
+                boxOfficeInstance.addTokenIdToWallet(showId, to, ids[i]);
             }
         }
 

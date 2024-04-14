@@ -9,6 +9,7 @@ import { IArtistRegistry } from "../../registry/artist/IArtistRegistry.sol";
 import { IOrganizerRegistry } from "../../registry/organizer/IOrganizerRegistry.sol";
 import { IVenueRegistry } from "../../registry/venue/IVenueRegistry.sol";
 import { IShowVault } from "../IShowVault.sol";
+import { IBoxOffice } from "../IBoxOffice.sol";
 
 /// @title ShowStorageV1
 /// @author taayyohh
@@ -23,7 +24,8 @@ contract ShowStorage is ShowTypes {
     IArtistRegistry public artistRegistryInstance;
     IOrganizerRegistry public organizerRegistryInstance;
     IVenueRegistry public venueRegistryInstance;
-    IShowVault public showVaultInstance; // Interface type for ShowVault
+    IShowVault public showVaultInstance;
+    IBoxOffice public boxOfficeInstance;
 
     bool internal setContracts = false;
 
@@ -41,18 +43,6 @@ contract ShowStorage is ShowTypes {
 
     // Mapping to track whether a given address is an artist for a specific show
     mapping(bytes32 => mapping(address => bool)) public isArtistMapping;
-
-    // Mapping to track the total number of tickets sold for each show ID
-    mapping(bytes32 => uint256) public totalTicketsSold;
-
-    // Mapping to store the ticket price paid for each ticket ID
-    mapping(bytes32 => mapping(uint256 => uint256)) public ticketPricePaid;
-
-    // Mapping to associate wallet addresses with show IDs and token IDs
-    mapping(bytes32 => mapping(address => uint256[])) public walletToShowToTokenIds;
-
-    // Mapping to track the payment token for each show
-    mapping(bytes32 => address) public showPaymentToken;
 
     // Maps showId to votes for cancellation
     mapping(bytes32 => uint256) public votesForEmergencyRefund;
