@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 import { ShowTypes } from "./types/ShowTypes.sol";
-import { VenueTypes } from "../venue/storage/VenueStorage.sol";
+import { VenueRegistryTypes } from "../registry/venue/types/VenueRegistryTypes.sol";
 
 /// @title IShow Interface
 /// @notice Interface for the Show contract detailing functionalities with events and external functions for show management.
@@ -37,7 +37,6 @@ interface IShow is ShowTypes {
      // @param amount The amount of ERC20 tokens deposited.
     event ERC20Deposited(bytes32 indexed showId, address indexed tokenAddress, address indexed depositor, uint256 amount);
 
-
     /// @notice Emitted upon the proposal of a new show.
     /// @param showId The unique identifier of the proposed show.
     /// @param organizer The address of the organizer proposing the show.
@@ -69,17 +68,20 @@ interface IShow is ShowTypes {
     /// @param refundAmount The amount refunded to the user.
     event TicketRefunded(address indexed user, bytes32 indexed showId, uint256 refundAmount);
 
+
+    event BribeRefunded(
+        bytes32 indexed showId,
+        uint256 indexed venueId,
+        address indexed proposer,
+        uint256 bribeAmount,
+        address paymentToken
+    );
+
+
     /// @notice Emitted when the venue details of a show are updated.
     /// @param showId The unique identifier of the show.
     /// @param newVenue The new venue details of the show.
-    event VenueUpdated(bytes32 indexed showId, VenueTypes.Venue newVenue);
-
-    /// @notice Emitted upon a successful withdrawal from the show's funds.
-    /// @param showId The unique identifier of the show.
-    /// @param recipient The address of the recipient who received the funds.
-    /// @param amount The amount of funds withdrawn.
-    /// @param paymentToken erc20 the ticket was priced in.
-    event Withdrawal(bytes32 indexed showId, address indexed recipient, uint256 amount, address paymentToken);
+    event VenueUpdated(bytes32 indexed showId, VenueRegistryTypes.VenueInfo newVenue);
 
     /// @notice Emitted when a show is cancelled for any reason, including emergency refund triggers by ticket holders.
     /// @param showId The unique identifier of the cancelled show.
@@ -148,19 +150,17 @@ interface IShow is ShowTypes {
     /// @return sellOutThreshold The sell-out threshold for the show, expressed as a percentage.
     /// @return totalCapacity The total capacity of tickets for the show.
     /// @return status The current status of the show.
-    /// @return isActive A boolean indicating whether the show is active.
     /// @return currencyAddress The address of the currency the show is Priced in
     function getShowById(bytes32 showId) external view returns (
         string memory name,
         string memory description,
         address organizer,
         address[] memory artists,
-        VenueTypes.Venue memory venue,
+        VenueRegistryTypes.VenueInfo memory venue,
         ShowTypes.TicketTier[] memory ticketTiers,
         uint256 sellOutThreshold,
         uint256 totalCapacity,
         Status status,
-        bool isActive,
         address currencyAddress
     );
 
@@ -231,20 +231,28 @@ interface IShow is ShowTypes {
     /// @param ticketId The unique identifier of the ticket being refunded.
     function refundTicket(bytes32 showId, uint256 ticketId) external;
 
-    /// @notice Sets the protocol addresses for Ticket, Venue, Referral, Artist Registry, Organizer Registry, and Venue Registry contracts.
-    /// @param _ticketContract The address of the Ticket contract.
-    /// @param _venueContract The address of the Venue contract.
+    /// @notice Allows a venue to refund a bribe if their proposal was not accepted for a show.
+    /// @param showId The unique identifier of the show.
+    /// @param venueId The identifier of the venue.
+    /// @param proposalIndex The index of the proposal in question.
+    function refundBribe(bytes32 showId, uint256 venueId, uint256 proposalIndex) external;
+
+    /// @notice Sets the protocol addresses for Ticket Factory, Venue Factory, Referral, Artist Registry, Organizer Registry, and Venue Registry contracts.
+    /// @param _ticketFactory The address of the Ticket Factory contract.
+    /// @param _venueFactory The address of the Venue Factory contract.
     /// @param _referralContract The address of the ReferralModule contract.
     /// @param _artistRegistry The address of the ArtistRegistry contract.
     /// @param _organizerRegistry The address of the OrganizerRegistry contract.
     /// @param _venueRegistry The address of the VenueRegistry contract.
+    /// @param _showVault The address of the ShowVault contract.
     function setProtocolAddresses(
-        address _ticketContract,
-        address _venueContract,
+        address _ticketFactory,
+        address _venueFactory,
         address _referralContract,
         address _artistRegistry,
         address _organizerRegistry,
-        address _venueRegistry
+        address _venueRegistry,
+        address _showVault
     ) external;
 
     /// @notice Sets the price paid for a specific ticket of a show.
@@ -271,7 +279,7 @@ interface IShow is ShowTypes {
     /// @notice Updates the venue details for a specific show.
     /// @param showId The unique identifier of the show.
     /// @param newVenue The new venue details to be applied to the show.
-    function updateShowVenue(bytes32 showId, VenueTypes.Venue memory newVenue) external;
+    function updateShowVenue(bytes32 showId, VenueRegistryTypes.VenueInfo memory newVenue) external;
 
     /// @notice Updates the date for an accepted show.
     /// @dev Only callable by the Venue contract for shows in the Accepted status.

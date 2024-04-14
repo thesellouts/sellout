@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
+import { VenueRegistryTypes } from "./types/VenueRegistryTypes.sol";
+
 /// @title IVenueRegistry
 /// @notice Interface for the VenueRegistry contract that manages venue profiles with ERC1155 tokens.
 interface IVenueRegistry {
@@ -73,6 +75,10 @@ interface IVenueRegistry {
         uint256 totalCapacity,
         string memory streetAddress
     );
+
+
+    function getVenueById(uint256 venueId) external view returns (VenueRegistryTypes.VenueInfo memory);
+
 
     /**
      * @notice Nominates a venue for registration, utilizing a referral credit.

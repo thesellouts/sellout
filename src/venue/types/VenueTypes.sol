@@ -1,40 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
+import { VenueRegistryTypes } from "../../registry/venue/types/VenueRegistryTypes.sol";
+
 
 /// @title VenueTypes
 /// @author taayyohh
 /// @notice This contract defines the data structures related to venues and their proposals.
 interface VenueTypes {
-    struct VenueProposal {
+    struct VenueProposalParams {
         uint32 proposalPeriodDuration;
         uint32 proposalDateExtension;
         uint32 proposalDateMinimumFuture;
         uint32 proposalPeriodExtensionThreshold;
     }
 
-    /// @notice Represents geographical coordinates with latitude and longitude scaled by 10**6.
-    struct Coordinates {
-        int256 lat; // Latitude, scaled by 10**6
-        int256 lon; // Longitude, scaled by 10**6
-    }
-
-    /// @notice Represents details about a venue including its name, location, capacity, and associated wallet.
-    struct Venue {
-        string name; // Name of the venue
-        Coordinates coordinates; // Geographical coordinates of the venue
-        uint256 totalCapacity; // Total capacity of the venue
-        address wallet; // Wallet address associated with the venue
-        bytes32 venueId;
-    }
-
-    /// @notice Represents a proposal for a venue including details about the venue, proposed dates, and voting information.
+    /// @notice Represents a proposal for a venue including details about the venue, proposed dates, voting information, and bribe payment token.
     struct Proposal {
-        Venue venue; // Venue details
+        VenueRegistryTypes.VenueInfo venue; // Venue details
         uint256[] proposedDates; // Array of proposed dates for the show
         address proposer; // Address of the proposer
         uint256 bribe; // Amount of bribe offered for the proposal
         uint256 votes; // Number of votes for the proposal
         bool accepted; // Whether the proposal is accepted or not
+        address paymentToken; // ERC20 token address for the bribe (address(0) for ETH)
     }
 
     /// @notice Represents the time period during which venue proposals can be submitted.

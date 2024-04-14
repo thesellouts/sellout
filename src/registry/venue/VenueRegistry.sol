@@ -58,12 +58,12 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
         emit VenueAccepted(currentVenueId, msg.sender);
     }
 
-    ///  @dev Registers a venue with the provided details. Only callable internally.
-    ///  @param _name Name of the venue.
-    ///  @param _bio Biography of the venue.
-    ///  @param _latitude Latitude part of the venue's coordinates.
-    ///  @param _longitude Longitude part of the venue's coordinates.
-    ///  @param _streetAddress Street address of the venue.
+    // @dev Registers a venue with the provided details. Only callable internally.
+    // @param _name Name of the venue.
+    // @param _bio Biography of the venue.
+    // @param _latitude Latitude part of the venue's coordinates.
+    // @param _longitude Longitude part of the venue's coordinates.
+    // @param _streetAddress Street address of the venue.
     function registerVenue(
         string memory _name,
         string memory _bio,
@@ -72,27 +72,43 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
         uint256 _totalCapacity,
         string memory _streetAddress
     ) internal {
-        currentVenueId++;
-        uint256 venueId = currentVenueId;
-        address walletAddress = msg.sender;
-
+        // Create coordinates and venueInfo without venueId
         VenueRegistryTypes.Coordinates memory coords = VenueRegistryTypes.Coordinates({
             latitude: _latitude,
             longitude: _longitude
         });
 
-        venues[venueId] = VenueRegistryTypes.VenueInfo({
+        VenueRegistryTypes.VenueInfo memory venueInfo = VenueRegistryTypes.VenueInfo({
+            venueId: 0, // Initially set as 0
             name: _name,
             bio: _bio,
-            wallet: walletAddress,
+            wallet: msg.sender,
             coordinates: coords,
             totalCapacity: _totalCapacity,
             streetAddress: _streetAddress
         });
 
-        addressToVenueId[walletAddress] = venueId;
+        // Calculate hash excluding venueId
+        bytes32 venueHash = keccak256(abi.encode(
+            _name,
+            _bio,
+            msg.sender,
+            _latitude,
+            _longitude,
+            _totalCapacity,
+            _streetAddress
+        ));
+        uint256 venueId = uint256(venueHash);
 
-        _mint(walletAddress, venueId, 1, "");
+        require(venues[venueId].wallet == address(0), "Venue already registered");
+
+        // Now assign the venueId to the venueInfo
+        venueInfo.venueId = venueId;
+
+        venues[venueId] = venueInfo;
+        addressToVenueId[msg.sender] = venueId;
+
+        _mint(msg.sender, venueId, 1, "");
         emit VenueRegistered(venueId, _name);
     }
 
@@ -138,6 +154,12 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
             venue.streetAddress
         );
     }
+
+    function getVenueById(uint256 venueId) external view returns (VenueRegistryTypes.VenueInfo memory) {
+        require(venues[venueId].wallet != address(0), "Venue does not exist");
+        return venues[venueId];
+    }
+
 
     /// @notice Nominates another address as a venue, provided the caller has sufficient referral credits.
     /// @param nominee The address being nominated as a venue.

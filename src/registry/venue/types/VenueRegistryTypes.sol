@@ -10,6 +10,7 @@ library VenueRegistryTypes {
     }
 
     struct VenueInfo {
+        uint256 venueId;
         string name;
         string bio;
         address wallet;

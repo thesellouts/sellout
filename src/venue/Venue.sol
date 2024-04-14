@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import { VenueStorage, VenueTypes } from "./storage/VenueStorage.sol";
+import { VenueStorage } from "./storage/VenueStorage.sol";
 import { IVenue } from "./IVenue.sol";
+import { VenueTypes } from "./types/VenueTypes.sol";
 import { IVenueRegistry } from "../registry/venue/IVenueRegistry.sol";
-
+import { VenueRegistryTypes } from "../registry/venue/types/VenueRegistryTypes.sol";
 import { IShow } from "../show/IShow.sol";
 import { ShowTypes } from "../show/storage/ShowStorage.sol";
 
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { ERC20Upgradeable } from  "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 /// @title Venue Contract
 /// @author taayyohh
@@ -57,59 +59,107 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         _;
     }
 
+    modifier onlyShowContract() {
+        require(msg.sender == address(showInstance), "!s");
+        _;
+    }
+
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    /// @notice Submit a proposal for a venue for a specific show.
-    /// @param showId Unique identifier for the show.
-    /// @param venueName Name of the venue.
-    /// @param coordinates Coordinates of the venue location.
-    /// @param totalCapacity Total capacity of the venue.
-    /// @param proposedDates Array of proposed dates for the show.
+    /// @notice Submits a venue proposal for a specific show using the venue's token ID.
+    /// @param showId The unique identifier for the show.
+    /// @param venueId The token ID of the venue, which references the venue's details.
+    /// @param proposedDates List of potential dates for the show.
+    /// @param paymentToken ERC20 token address for bribe payment (address(0) for ETH).
     function submitProposal(
         bytes32 showId,
-        string memory venueName,
-        VenueTypes.Coordinates memory coordinates,
-        uint256 totalCapacity,
-        uint256[] memory proposedDates
+        uint256 venueId,
+        uint256[] memory proposedDates,
+        address paymentToken
     ) public payable {
         require(venueRegistryInstance.isVenueRegistered(msg.sender), "Venue not registered");
-        require(showInstance.getShowStatus(showId) == ShowTypes.Status.SoldOut, "!so");
-        require(proposalPeriod[showId].endTime == 0 || block.timestamp <= proposalPeriod[showId].endTime, "!p");
-        require(coordinates.lat >= -90 * 10**6 && coordinates.lat <= 90 * 10**6, "Invalid latitude");
-        require(coordinates.lon >= -180 * 10**6 && coordinates.lon <= 180 * 10**6, "Invalid longitude");
-        require(proposedDates.length > 0, "At least one proposed date required");
-        require(proposedDates.length <= 5, "Proposal must have 5 or less dates");
 
-        for (uint256 i = 0; i < proposedDates.length; i++) {
-            require(proposedDates[i] > proposalPeriod[showId].endTime + proposalDateMinimumFuture, "Proposed date must be 60 days in the future");
-        }
-
-        // start proposal period on first submission
+        validateProposalSubmission(showId, proposedDates);
         if (!proposalPeriod[showId].isPeriodActive) {
             startProposalPeriod(showId);
         }
+        adjustProposalPeriodIfNeeded(showId);
 
+        VenueRegistryTypes.VenueInfo memory venueInfo = venueRegistryInstance.getVenueById(venueId);
+
+        uint256 bribeAmount = processPayment(showId, paymentToken);
+        storeProposal(showId, venueInfo, proposedDates, bribeAmount, paymentToken);
+    }
+
+
+    /// @dev Validates the proposal submission parameters.
+    /// @param showId Unique identifier for the show.
+    /// @param proposedDates List of potential dates for the event.
+    function validateProposalSubmission(bytes32 showId, uint256[] memory proposedDates) private view {
+        require(showInstance.getShowStatus(showId) == ShowTypes.Status.SoldOut, "Show not in 'Sold Out' status");
+        require(proposalPeriod[showId].endTime == 0 || block.timestamp <= proposalPeriod[showId].endTime, "Proposal period ended");
+        require(proposedDates.length > 0 && proposedDates.length <= 5, "Invalid number of proposed dates");
+    }
+
+    // @dev Adjusts the proposal period if necessary based on current time.
+    // @param showId Unique identifier for the show.
+    function adjustProposalPeriodIfNeeded(bytes32 showId) private {
         if (block.timestamp >= proposalPeriod[showId].endTime - proposalPeriodExtensionThreshold) {
-            proposalPeriod[showId].endTime += proposalDateExtension; // Extend by 1 day if within the last 6 hours
+            proposalPeriod[showId].endTime += proposalDateExtension; // Extend if within the last hours
         }
+    }
 
-        bytes32 venueId = keccak256(abi.encodePacked(venueName, coordinates.lat, coordinates.lon, totalCapacity));
-        VenueTypes.Venue memory venue;
-        venue.name = venueName;
-        venue.coordinates = coordinates;
-        venue.totalCapacity = totalCapacity;
-        venue.wallet = msg.sender;
-        venue.venueId = venueId;
-
-        VenueTypes.Proposal memory proposal;
-        proposal.venue = venue;
-        proposal.proposedDates = proposedDates;
-        proposal.proposer = msg.sender;
-        proposal.bribe = msg.value; // TODO: handle logic around refunds and deposits to show vault, support erc20
-        proposal.votes = 0;
-        proposal.accepted = false;
+    /// @dev Stores the proposal in the contract state.
+    /// @param showId Unique identifier for the show.
+    /// @param venue Venue details for the proposal.
+    /// @param proposedDates List of potential dates for the show.
+    /// @param bribeAmount Amount of bribe paid to prioritize the proposal.
+    /// @dev Stores the proposal in the contract state.
+/// @param showId Unique identifier for the show.
+/// @param venue Venue details for the proposal.
+/// @param proposedDates List of potential dates for the show.
+/// @param bribeAmount Amount of bribe paid to prioritize the proposal.
+/// @param paymentToken Token used for the bribe payment.
+    function storeProposal(
+        bytes32 showId,
+        VenueRegistryTypes.VenueInfo memory venue,
+        uint256[] memory proposedDates,
+        uint256 bribeAmount,
+        address paymentToken
+    ) private {
+        VenueTypes.Proposal memory proposal = VenueTypes.Proposal({
+            venue: venue,
+            proposedDates: proposedDates,
+            proposer: msg.sender,
+            bribe: bribeAmount,
+            votes: 0,
+            accepted: false,
+            paymentToken: paymentToken
+        });
         showProposals[showId].push(proposal);
-        emit ProposalSubmitted(showId, msg.sender, venueName, msg.value);
+        emit ProposalSubmitted(showId, msg.sender, venue.name, bribeAmount);
+    }
+
+    // @dev Processes the payment for a proposal, either in ETH or ERC20, with the possibility of zero payment.
+    // @param showId The show identifier the proposal is for.
+    // @param paymentToken ERC20 token address, or address(0) for ETH.
+    // @return The amount of bribe paid.
+    function processPayment(bytes32 showId, address paymentToken) private returns (uint256) {
+        uint256 bribeAmount = msg.value;
+        if (paymentToken == address(0)) {
+            if (msg.value > 0) {
+                showInstance.depositToVault{value: msg.value}(showId);
+            }
+        } else {
+            require(msg.value == 0, "Do not send ETH with ERC20 payment");
+            ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
+            bribeAmount = token.allowance(msg.sender, address(this));
+            if (bribeAmount > 0) {
+                token.transferFrom(msg.sender, address(this), bribeAmount);
+                showInstance.depositToVaultERC20(showId, bribeAmount, paymentToken, msg.sender);
+            }
+        }
+        return bribeAmount;
     }
 
     /// @notice Allows a ticket holder to vote for a venue proposal during the proposal period, or switch their vote.
@@ -174,7 +224,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     /// @param proposalIndex Index of the proposal to accept.
     function acceptProposal(bytes32 showId, uint256 proposalIndex) internal {
         require(proposalIndex < showProposals[showId].length, "Invalid proposal index");
-        VenueTypes.Venue memory venue = showProposals[showId][proposalIndex].venue;
+        VenueRegistryTypes.VenueInfo memory venue = showProposals[showId][proposalIndex].venue;
         showProposals[showId][proposalIndex].accepted = true;
         selectedProposalIndex[showId] = proposalIndex;
 
@@ -262,6 +312,13 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         venueRegistryInstance = IVenueRegistry(_venueRegistryAddress);
     }
 
+    function resetBribe(bytes32 showId, uint256 proposalIndex) external onlyShowContract {
+        require(proposalIndex < showProposals[showId].length, "Invalid proposal index");
+
+        VenueTypes.Proposal memory proposal = showProposals[showId][proposalIndex];
+        proposal.bribe = 0;
+    }
+
     /// @notice Retrieves the proposal period for a specific venue.
     /// @param showId The unique identifier of the venue.
     /// @return The proposal period of the venue.
@@ -274,6 +331,14 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     /// @return An array of proposals for the venue.
     function getShowProposals(bytes32 showId) public view returns (Proposal[] memory) {
         return showProposals[showId];
+    }
+
+    function getProposal(bytes32 showId, uint256 proposalIndex) external view returns (Proposal memory) {
+        return showProposals[showId][proposalIndex];
+    }
+
+    function getProposalsCount(bytes32 showId) external view returns (uint256) {
+        return showProposals[showId].length;
     }
 
     /// @notice Checks if a specific address has voted for a venue proposal.

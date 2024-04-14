@@ -17,7 +17,7 @@ contract FinalizeDeployment is Script {
         address artistRegistryAddress = vm.envAddress("ARTIST_REGISTRY_ADDRESS");
         address organizerRegistryAddress = vm.envAddress("ORGANIZER_REGISTRY_ADDRESS");
         address venueRegistryAddress = vm.envAddress("VENUE_REGISTRY_ADDRESS");
-
+        address showVaultAddress = vm.envAddress("SHOW_VAULT_ADDRESS");
         // Set protocol addresses in Show contract
         IShow(showAddress).setProtocolAddresses(
             ticketFactoryAddress,
@@ -25,7 +25,8 @@ contract FinalizeDeployment is Script {
             referralModuleAddress,
             artistRegistryAddress,
             organizerRegistryAddress,
-            venueRegistryAddress
+            venueRegistryAddress,
+            showVaultAddress
         );
 
         // Set permissions

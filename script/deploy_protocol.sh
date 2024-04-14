@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Set the RPC URL and the private key for the deployment account
-export ETH_RPC_URL="https://sepolia.infura.io/v3/2WzgmaEOqz7wdfQaPYe2hnAFSKg"
-export PRIVATE_KEY="9ad8ea34cdd8e1f6f4272c7884a62da1c7db612377999eab3d8cf9a653e4c19a"
-export ETHERSCAN_API_KEY="IPUKZ3RRCUJ47Q95JKIBW58Z3EFCDVAMX6"
-export SELLOUT_PROTOCOL_WALLET="0x1dD37D479ac16113fF8f160210Ee209944d2b28d"
+export ETH_RPC_URL=""
+export PRIVATE_KEY=""
+export ETHERSCAN_API_KEY=""
+export SELLOUT_PROTOCOL_WALLET=""
 
 # Deploy ReferralModule and capture its address
 referralModuleAddress=$(forge script DeployReferralModule.s.sol:DeployReferralModule --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY -- --sellout-protocol-wallet $SELLOUT_PROTOCOL_WALLET | grep "ReferralModule deployed at" | awk '{print $NF}')
@@ -37,6 +37,11 @@ export TICKET_FACTORY_ADDRESS=$ticketFactoryAddress
 ## Deploy the Ticket implementation (template) contract first and capture its address
 venueFactoryAddress=$(forge script DeployVenueFactory.s.sol:DeployVenueFactory --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY -- --show-address $showAddress | grep "VenueFactory deployed at" | awk '{print $NF}')
 export VENUE_FACTORY_ADDRESS=$venueFactoryAddress
+
+# Deploy ShowVault and capture its address, then initialize with Show address and Sellout Protocol Wallet
+showVaultAddress=$(forge script DeployShowVault.s.sol:DeployShowVault --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY -- --sellout-protocol-wallet $SELLOUT_PROTOCOL_WALLET --show-address $showAddress | grep "ShowVault deployed at" | awk '{print $NF}')
+export SHOW_VAULT_ADDRESS=$showVaultAddress
+
 
 # Assuming all deployment addresses have been exported as environment variables
 forge script FinalizeDeployment.s.sol:FinalizeDeployment --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast

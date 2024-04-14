@@ -2,6 +2,7 @@
 pragma solidity 0.8.20;
 
 import { VenueTypes } from "./storage/VenueStorage.sol";
+import { VenueRegistryTypes } from "../registry/venue/types/VenueRegistryTypes.sol";
 
 /// @title IVenue Interface
 /// @author taayyohh
@@ -70,18 +71,16 @@ interface IVenue {
         uint256 proposalPeriodExtensionThreshold
     ) external;
 
-    /// @notice Submit a proposal for a venue for a specific show.
-    /// @param showId Unique identifier for the show.
-    /// @param venueName Name of the venue.
-    /// @param coordinates Coordinates of the venue location.
-    /// @param totalCapacity Total capacity of the venue.
-    /// @param proposedDates Array of proposed dates for the show.
+    /// @notice Submits a venue proposal for a specific show using the venue's token ID.
+    /// @param showId The unique identifier for the show.
+    /// @param venueId The token ID of the venue, which references the venue's details.
+    /// @param proposedDates List of potential dates for the show.
+    /// @param paymentToken ERC20 token address for bribe payment (address(0) for ETH).
     function submitProposal(
         bytes32 showId,
-        string memory venueName,
-        VenueTypes.Coordinates memory coordinates,
-        uint256 totalCapacity,
-        uint256[] memory proposedDates
+        uint256 venueId,
+        uint256[] memory proposedDates,
+        address paymentToken
     ) external payable;
 
     /// @notice Allows a ticket holder to vote for a venue proposal.
@@ -108,6 +107,18 @@ interface IVenue {
     /// @param showId Unique identifier of the show
     /// @return Array of proposals for the show
     function getShowProposals(bytes32 showId) external view returns (VenueTypes.Proposal[] memory);
+
+    /// @notice Retrieves a specific proposal for a show by its index.
+    /// @param showId The unique identifier for the show.
+    /// @param proposalIndex The index of the proposal within the list of proposals for the show.
+    /// @return proposal The proposal at the specified index for the given show.
+    function getProposal(bytes32 showId, uint256 proposalIndex) external view returns (VenueTypes.Proposal memory proposal);
+
+    /// @notice Retrieves the count of proposals for a specific show.
+    /// @param showId The unique identifier for the show.
+    /// @return count The count of proposals for the given show.
+    function getProposalsCount(bytes32 showId) external view returns (uint256 count);
+
 
     /// @notice Checks if a user has voted on a show proposal
     /// @param showId Unique identifier of the show
@@ -164,6 +175,10 @@ interface IVenue {
     /// @param user Address of the proposer
     /// @return The amount of refund owed
     function getRefunds(address user) external view returns (uint256);
+
+
+    function resetBribe(bytes32 showId, uint256 proposalIndex) external;
+
 
     // @dev Sets the addresses for the Show contract and the Venue Registry.
     // This function should only be called once to initialize the contract with
