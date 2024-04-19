@@ -481,6 +481,13 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         return showToTicketProxy[showId];
     }
 
+    /// @notice Retrieves the address of the ticket proxy for a given show.
+    /// @param showId The unique identifier of the show.
+    /// @return The address of the venue proxy associated with the specified show ID.
+    function getShowToVenueProxy(bytes32 showId) external view returns (address) {
+        return showToVenueProxy[showId];
+    }
+
      /// @notice Sets the address of the ticket proxy for a given show.
      /// @param showId The unique identifier of the show.
      /// @param ticketProxy The address to be set as the ticket proxy for the specified show ID.

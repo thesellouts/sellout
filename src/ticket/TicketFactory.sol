@@ -19,8 +19,8 @@ contract TicketFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /// @notice Version of the ticket factory.
     string public version;
 
-    // Address of the Show contract
-    address public showAddress;
+    // Address of the BoxOffice contract
+    address public boxOfficeAddress;
 
     /// @notice Emitted when a new ticket proxy is created.
     event TicketProxyCreated(address indexed ticketProxy);
@@ -28,34 +28,32 @@ contract TicketFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /// @notice Initializes the ticket factory with a ticket implementation address and a version.
     /// @param _ticketImplementation Address of the ticket implementation.
     /// @param _version Version of the ticket factory.
-    /// @param _showAddress Address of show contract
-    function initialize(address _ticketImplementation, string memory _version, address _showAddress) public initializer {
+    function initialize(address _ticketImplementation, string memory _version) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         ticketImplementation = _ticketImplementation;
         version = _version;
-        showAddress = _showAddress;
     }
 
     /// @dev Authorizes contract upgrades to the owner only.
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    modifier onlyShowContract() {
-        require(msg.sender == showAddress, "Caller is not the Show contract");
+    /// @dev Restricts function calls to the BoxOffice contract only.
+    modifier onlyBoxOffice() {
+        require(msg.sender == boxOfficeAddress, "Caller is not the BoxOffice contract");
         _;
     }
 
     /// @notice Creates a new ticket proxy for a given owner and adds it to the deployed tickets list.
     /// @param initialOwner Address of the initial owner of the ticket proxy.
     /// @return The address of the newly created ticket proxy.
-    function createTicketProxy(address initialOwner) public onlyShowContract returns (address) {
+    function createTicketProxy(address initialOwner) public onlyBoxOffice returns (address) {
         address clone = Clones.clone(ticketImplementation);
         ITicket(clone).initialize(initialOwner, version);
         deployedTickets.push(clone);
         emit TicketProxyCreated(clone);
         return clone;
     }
-
 
     /// @notice Sets a new version for the ticket factory.
     /// @param _version New version to set.
@@ -73,5 +71,12 @@ contract TicketFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /// @param newImplementation New ticket implementation address to set.
     function updateTicketImplementation(address newImplementation) public onlyOwner {
         ticketImplementation = newImplementation;
+    }
+
+    /// @notice Sets the BoxOffice address, can only be called once by the owner.
+    /// @param _boxOfficeAddress The address of the BoxOffice contract.
+    function setContractAddresses(address _boxOfficeAddress) public onlyOwner {
+        require(boxOfficeAddress == address(0), "BoxOffice address already set");
+        boxOfficeAddress = _boxOfficeAddress;
     }
 }

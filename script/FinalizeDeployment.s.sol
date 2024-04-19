@@ -3,6 +3,10 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
 import { IShow } from "../src/show/IShow.sol";
+import { IShowVault } from "../src/show/IShowVault.sol";
+
+import { ITicketFactory } from "../src/ticket/ITicketFactory.sol";
+
 import { IReferralModule } from "../src/registry/referral/IReferralModule.sol";
 
 contract FinalizeDeployment is Script {
@@ -31,6 +35,12 @@ contract FinalizeDeployment is Script {
             showVaultAddress,
             boxOfficeAddress
         );
+
+        // set box office address in show vault
+        IShowVault(showVaultAddress).setContractAddresses(boxOfficeAddress);
+
+        // Set the BoxOffice address in TicketFactory
+        ITicketFactory(ticketFactoryAddress).setContractAddresses(boxOfficeAddress);
 
         // Set permissions
         IReferralModule(referralModuleAddress).setCreditControlPermission(artistRegistryAddress, true);

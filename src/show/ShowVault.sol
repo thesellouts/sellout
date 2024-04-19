@@ -8,6 +8,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { ShowTypes } from "./types/ShowTypes.sol";
 import { IShowVault } from "./IShowVault.sol";
+import { IShow } from "./IShow.sol";
 import { ShowVaultStorage } from "./storage/ShowVaultStorage.sol";
 
 /*
@@ -59,6 +60,12 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         _;
     }
 
+    // Modifier to restrict function calls to the Show contract only
+    modifier onlyShowOrBoxOfficeContract() {
+        require(msg.sender == showContract || msg.sender == boxOfficeContract, "Unauthorized: caller is not the Show or Box contract");
+        _;
+    }
+
     /// @notice Initializes the contract with the Show contract and the Sellout Protocol Wallet
     /// @param _showContract The address of the Show contract
     /// @param _selloutProtocolWallet The address of the Sellout Protocol Wallet
@@ -66,6 +73,16 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         __Ownable_init(_selloutProtocolWallet);
         __ReentrancyGuard_init();
         showContract = _showContract;
+        showInstance = IShow(_showContract);
+    }
+
+    modifier onlyVenueOrTicketContract(bytes32 showId) {
+        require(
+            msg.sender == showInstance.getShowToTicketProxy(showId) ||
+            msg.sender == showInstance.getShowToVenueProxy(showId),
+            "Unauthorized: caller is not the Ticket or Venue contract"
+        );
+        _;
     }
 
     /// @notice Allows the contract owner to upgrade the contract to a new implementation
@@ -74,7 +91,7 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
 
     /// @notice Deposits ether into the vault for a specified show
     /// @param showId The identifier of the show
-    function depositToVault(bytes32 showId) external payable onlyShowContract {
+    function depositToVault(bytes32 showId) external payable onlyVenueOrTicketContract(showId) {
         showVault[showId] += msg.value;
     }
 
@@ -83,7 +100,7 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
     /// @param amount The amount of tokens to deposit
     /// @param paymentToken The ERC20 token address
     /// @param tokenRecipient The recipient of the tokens
-    function depositToVaultERC20(bytes32 showId, uint256 amount, address paymentToken, address tokenRecipient) external onlyShowContract {
+    function depositToVaultERC20(bytes32 showId, uint256 amount, address paymentToken, address tokenRecipient) external onlyVenueOrTicketContract(showId) {
         require(paymentToken != address(0), "Invalid payment token address");
         require(showPaymentTokens[showId] == paymentToken, "!t");
 
@@ -139,7 +156,7 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
     /// @param refundAmount The amount to refund
     /// @param paymentToken The payment token address (address(0) for ETH)
     /// @param recipient The recipient of the refund
-    function processRefund(bytes32 showId, uint256 refundAmount, address paymentToken, address recipient) external onlyShowContract {
+    function processRefund(bytes32 showId, uint256 refundAmount, address paymentToken, address recipient) external onlyShowOrBoxOfficeContract() { // todo only show or box office
         if (paymentToken == address(0)) {
             require(showVault[showId] >= refundAmount, "Insufficient funds");
             showVault[showId] -= refundAmount;
@@ -220,6 +237,13 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         emit Withdrawal(showId, msg.sender, amount, paymentToken);
     }
 
+    /// @notice Gets the payment token for a specific show
+    /// @param showId The unique identifier of the show
+    /// @return The payment token address
+    function getShowPaymentToken(bytes32 showId) public view returns (address) {
+        return showPaymentTokens[showId];
+    }
+
     /// @notice Sets the payment token for a specific show
     /// @param showId The unique identifier of the show
     /// @param token The payment token address
@@ -227,10 +251,10 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         showPaymentTokens[showId] = token;
     }
 
-    /// @notice Gets the payment token for a specific show
-    /// @param showId The unique identifier of the show
-    /// @return The payment token address
-    function getShowPaymentToken(bytes32 showId) public view returns (address) {
-        return showPaymentTokens[showId];
+    // Updated to set both Show and Venue Registry addresses
+    function setContractAddresses(address _boxOfficeContract) external {
+        require(address(boxOfficeContract) == address(0), "Box Office Contract already set");
+
+        boxOfficeContract = _boxOfficeContract;
     }
 }

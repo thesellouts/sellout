@@ -10,8 +10,6 @@ contract DeployTicketFactory is Script {
     function run() external {
         vm.startBroadcast();
 
-        address showAddress = vm.envAddress("SHOW_ADDRESS");
-
         // Deploy the Ticket implementation
         Ticket ticketImplementation = new Ticket();
         console.log("TicketImplementation deployed at", address(ticketImplementation));
@@ -23,7 +21,7 @@ contract DeployTicketFactory is Script {
         // Prepare the initializer function call for TicketFactory
         // Assuming `initialize` takes ticketImplementation address and a version string as arguments
         string memory initialVersion = "1.0.0";
-        bytes memory initData = abi.encodeWithSignature("initialize(address,string,address)", address(ticketImplementation), initialVersion, showAddress);
+        bytes memory initData = abi.encodeWithSignature("initialize(address,string)", address(ticketImplementation), initialVersion);
 
         // Deploy the ERC1967 Proxy for TicketFactory
         ERC1967Proxy proxy = new ERC1967Proxy(address(ticketFactoryImpl), initData);

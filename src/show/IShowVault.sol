@@ -64,4 +64,8 @@ interface IShowVault {
     /// @param showId The unique identifier of the show
     /// @return The payment token address
     function getShowPaymentToken(bytes32 showId) external view returns (address);
+
+    // @dev Sets the addresses for the Show contract and the Venue Registry.
+    // @param boxOfficeAddress The address of the BoxOffice contract.
+    function setContractAddresses(address boxOfficeAddress) external;
 }

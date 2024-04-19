@@ -4,6 +4,10 @@ pragma solidity ^0.8.0;
 /// @title ITicketFactory Interface
 /// @notice Interface for the TicketFactory contract.
 interface ITicketFactory {
+    /// @notice Sets the address of the BoxOffice contract that will interact with this TicketFactory.
+    /// @param boxOfficeAddress The address of the BoxOffice contract.
+    function setContractAddresses(address boxOfficeAddress) external;
+
     /**
      * @notice Creates a new ticket proxy instance for a specific owner and returns its address.
      * @param initialOwner The address that will own the newly created ticket proxy.

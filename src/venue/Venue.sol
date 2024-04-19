@@ -320,7 +320,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     function resetBribe(bytes32 showId, uint256 proposalIndex) external onlyShowContract {
         require(proposalIndex < showProposals[showId].length, "Invalid proposal index");
 
-        VenueTypes.Proposal memory proposal = showProposals[showId][proposalIndex];
+        VenueTypes.Proposal storage proposal = showProposals[showId][proposalIndex];
         proposal.bribe = 0;
     }
 

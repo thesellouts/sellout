@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
+import { IShow } from '../IShow.sol';
+
+
 contract ShowVaultStorage {
     // Address of the Show contract that can interact with the vault
     address public showContract;
+
+    // Address of the Box Office contract that can interact with the vault
+    address public boxOfficeContract;
+
+    IShow public showInstance;
 
     // Mapping from showId to its accumulated ether balance
     mapping(bytes32 => uint256) public showVault;
