@@ -6,39 +6,41 @@ import { IShow } from  "../../show/IShow.sol";
 import { IBoxOffice } from  "../../show/IBoxOffice.sol";
 import { IShowVault } from  "../../show/IShowVault.sol";
 
-/**
- * @title TicketStorage
- * @dev Storage contract for Sellout Tickets.
- */
+/// @title Ticket Storage for Sellout Tickets
+/// @dev Storage contract for ticket data associated with shows.
 contract TicketStorage is TicketTypes {
-    /// @notice Reference to the Show contract interface to interact with show-related functionalities.
+    /// @notice Reference to the Show contract for interaction with show-related functionalities.
     IShow public showInstance;
 
-    /// @notice Reference to the Box Office contract interface to interact with ticket-related functionalities.
+    /// @notice Reference to the Box Office contract for managing ticket sales and queries.
     IBoxOffice public boxOfficeInstance;
 
-    /// @notice Reference to the ShowVault contract interface to interact with ticket-related functionalities.
+    /// @notice Reference to the ShowVault contract for handling ticket-related financial transactions.
     IShowVault public showVaultInstance;
 
-    /// @notice Version of the ticket factory.
+    /// @notice Version identifier for the ticket storage implementation.
     string public version;
 
-    /// @notice Maximum number of tickets that a single wallet can purchase for a given show.
+    /// @notice Maximum number of tickets a single wallet is allowed to purchase per show.
     uint256 public constant MAX_TICKETS_PER_WALLET = 5;
 
-    /// @notice Mapping from token ID to its associated metadata URI.
-    /// Token ID is unique for each ticket, and the URI points to a metadata file that describes the ticket.
+    /// @notice Mapping from each ticket's unique token ID to its metadata URI.
+    /// @dev The URI points to a metadata file that describes the ticket and its attributes.
     mapping(uint256 => string) internal tokenURIs;
 
-    // Mapping from ticket ID to tier index
+    /// @notice Mapping from ticket ID to its tier index within a show.
+    /// @dev Tiers are used to categorize tickets by price, location, and other characteristics.
     mapping(uint256 => uint256) public ticketIdToTierIndex;
 
-    // Mapping from ticket ID to show ID
+    /// @notice Mapping from ticket ID to the corresponding show ID.
+    /// @dev Helps associate each ticket with a specific show.
     mapping(uint256 => bytes32) internal tokenIdToShowId;
 
+    /// @notice Mapping from show ID to a default URI for tickets.
+    /// @dev This URI is used when a specific ticket does not have its own unique URI.
     mapping(bytes32 => string) internal showDefaultURIs;
 
-    /// @notice The default URI prefix used for ticket metadata.
-    /// This is used if a specific ticket does not have a unique URI set.
+    /// @notice Default URI prefix used for generating metadata for tickets.
+    /// @dev This prefix is appended with other data to generate full URIs for tickets lacking unique metadata.
     string internal defaultURI;
 }

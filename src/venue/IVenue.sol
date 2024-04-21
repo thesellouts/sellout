@@ -8,7 +8,6 @@ import { VenueRegistryTypes } from "../registry/venue/types/VenueRegistryTypes.s
 /// @author taayyohh
 /// @notice This interface defines the methods for the Venue contract.
 interface IVenue {
-
     /// @notice Emitted when a new venue proposal is submitted.
     /// @param showId Unique identifier for the show.
     /// @param proposer Address of the proposer.
@@ -32,13 +31,11 @@ interface IVenue {
     /// @param proposalIndex Index of the proposal being voted for.
     event ProposalVoted(bytes32 indexed showId, address indexed voter, uint256 proposalIndex);
 
-
     /// @notice Emitted when a ticket holder votes for a venue proposal.
     /// @param showId Unique identifier for the show.
     /// @param voter Address of the voter.
     /// @param proposalIndex Index of the proposal being voted for.
     event VenueVoted(bytes32 indexed showId, address indexed voter, uint256 proposalIndex);
-
 
     /// @notice Emitted when an authorized user (organizer or artist) votes for a proposed date.
     /// @param showId Unique identifier for the show.
@@ -57,7 +54,6 @@ interface IVenue {
     event DateAccepted(bytes32 indexed showId, uint256 dateIndex);
 
      // @notice Initializes a new venue with the specified parameters.
-     // @dev Sets up a venue with a proposal period duration, date extensions, and thresholds for event proposals.
      // @param initialOwner Address of the initial owner of the venue, typically the creator or the venue manager.
      // @param proposalPeriodDuration Duration in seconds for how long the proposal period lasts.
      // @param proposalDateExtension Duration in seconds by which the proposal date is extended upon certain conditions.
@@ -176,13 +172,12 @@ interface IVenue {
     /// @return The amount of refund owed
     function getRefunds(address user) external view returns (uint256);
 
-
+    /// @notice Resets the bribe amount for a specific proposal associated with a show.
+    /// @param showId The unique identifier of the show containing the proposal.
+    /// @param proposalIndex The index of the proposal within the list of proposals for the given show.
     function resetBribe(bytes32 showId, uint256 proposalIndex) external;
 
-
     // @dev Sets the addresses for the Show contract and the Venue Registry.
-    // This function should only be called once to initialize the contract with
-    // the addresses of the Show and Venue Registry contracts.
     // @param _showContractAddress The address of the Show contract.
     // @param _showVaultAddress The address of the ShowVault contract.
     // @param _venueRegistryAddress The address of the Venue Registry contract.

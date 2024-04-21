@@ -68,29 +68,47 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 
 
 contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, UUPSUpgradeable, OwnableUpgradeable {
+    /// @notice Initializes the contract with the specified wallet address that will own the contract.
+    /// @param _selloutProtocolWallet The wallet address that will act as the owner of the contract.
+    /// @dev Sets up the reentrancy guard and the owner of the contract.
     function initialize(address _selloutProtocolWallet) public initializer {
         __ReentrancyGuard_init();
         __Ownable_init(_selloutProtocolWallet);
         SELLOUT_PROTOCOL_WALLET = _selloutProtocolWallet;
     }
 
+    /// @notice Ensures only the contract owner can upgrade the contract.
+    /// @param newImplementation The address of the new contract implementation.
+    /// @dev This is called as part of the UUPS upgrade pattern.
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
+    /// @notice Restricts access to organizers or artists of a specific show.
+    /// @param showId The unique identifier for the show.
+    /// @dev Requires the message sender to be an organizer or an artist linked to the show.
     modifier onlyOrganizerOrArtist(bytes32 showId) {
         require(isOrganizer(msg.sender, showId) || isArtist(msg.sender, showId), "OA");
         _;
     }
 
+    /// @notice Ensures only the ticket proxy associated with a specific show can call the modified function.
+    /// @param showId The unique identifier for the show.
+    /// @dev Requires the message sender to be the registered ticket proxy for the show.
     modifier onlyTicketProxy(bytes32 showId) {
         require(msg.sender == showToTicketProxy[showId], "T");
         _;
     }
 
+    /// @notice Ensures only the venue contract associated with a specific show can call the modified function.
+    /// @param showId The unique identifier for the show.
+    /// @dev Requires the message sender to be the registered venue proxy for the show.
     modifier onlyVenueContract(bytes32 showId) {
         require(msg.sender == showToVenueProxy[showId], "V");
         _;
     }
 
+    /// @notice Ensures that only the ticket or venue contract, or the contract itself, can call the modified function.
+    /// @param showId The unique identifier for the show.
+    /// @dev This allows multiple types of related contracts (or the contract itself) to interact with the function.
     modifier onlyTicketOrVenue(bytes32 showId) {
         require(
             msg.sender == showToVenueProxy[showId] ||
@@ -293,7 +311,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
     function completeShow(bytes32 showId) external onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
         require(show.status == Status.Upcoming, "!s");
-        require(block.timestamp >= show.showDate + 2 days, "!s");
+        require(block.timestamp >= show.showDate + COOLDOWN, "!s");
 
         address paymentToken = showVaultInstance.getShowPaymentToken(showId);
         uint256 totalAmount = showVaultInstance.calculateTotalPayoutAmount(showId, paymentToken);
@@ -325,7 +343,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         ShowTypes.Show storage show = shows[showId];
 
         require(show.status == Status.Completed, "!s");
-        require(block.timestamp >= show.showDate + 2 days, "!cl");
+        require(block.timestamp >= show.showDate + COOLDOWN, "!cl");
 
         address paymentToken = showVaultInstance.getShowPaymentToken(showId);
         showVaultInstance.payout(showId, paymentToken);

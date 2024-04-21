@@ -1,55 +1,73 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-/// @title IArtistRegistry
-/// @notice Interface for the ArtistRegistry contract, including nomination functionalities.
+/// @title Artist Registry Interface
+/// @notice Defines the interface for managing artist profiles and nominations within a decentralized registry.
 interface IArtistRegistry {
-    // Emitted when a new artist is registered
+    /// @notice Emitted when a new artist is successfully registered in the registry.
+    /// @param artistId Unique identifier for the newly registered artist.
+    /// @param name Name of the artist registered.
+    /// @param wallet Wallet address associated with the artist.
     event ArtistRegistered(uint256 indexed artistId, string name, address wallet);
-    // Emitted when an artist updates their profile
+
+    /// @notice Emitted when an existing artist updates their profile information.
+    /// @param artistId Unique identifier of the artist whose profile is updated.
+    /// @param name Updated name of the artist.
+    /// @param bio Updated biography or description of the artist.
+    /// @param wallet Updated wallet address of the artist.
     event ArtistUpdated(uint256 indexed artistId, string name, string bio, address wallet);
-    // Emitted when an artist deregisters themselves
+
+    /// @notice Emitted when an artist chooses to deregister themselves from the registry.
+    /// @param artistId Unique identifier of the deregistered artist.
     event ArtistDeregistered(uint256 indexed artistId);
-    // Emitted when an artist is waitlisted, typically after being nominated or applying for referral
+
+    /// @notice Emitted when an artist is waitlisted, often after nomination or referral application.
+    /// @param artist Address of the artist who is waitlisted.
     event ArtistWaitlisted(address indexed artist);
-    // Emitted when a waitlisted artist is accepted into the registry
+
+    /// @notice Emitted when a waitlisted artist accepts their nomination and completes registration.
+    /// @param artistId Unique identifier assigned to the artist upon registration.
+    /// @param artistAddress Wallet address of the artist who was accepted.
     event ArtistAccepted(uint256 indexed artistId, address artistAddress);
-    // Emitted when an artist is nominated by another artist
+
+    /// @notice Emitted when an artist is nominated by another artist, typically backed by referral credits.
+    /// @param nominee Wallet address of the artist being nominated.
     event ArtistNominated(address indexed nominee);
 
-    /// @notice Accepts the nomination for the artist, allowing them to complete their registration.
-    /// @dev Can only be called by the nominated artist themselves.
+    /// @notice Accepts a nomination to become a registered artist.
+    /// @param _name Name to register under.
+    /// @param _bio Biography or description to accompany the registration.
     function acceptNomination(string memory _name, string memory _bio) external;
 
-    /// @notice Allows an artist to deregister themselves from the registry.
-    /// @param _artistId The unique identifier of the artist.
+    /// @notice Allows an artist to voluntarily deregister themselves from the registry.
+    /// @param _artistId The unique identifier of the artist to deregister.
     function deregisterArtist(uint256 _artistId) external;
 
-    /// @notice Retrieves the information of an artist based on their wallet address.
-    /// @param artistAddress The wallet address of the artist.
-    /// @return name The name of the artist.
-    /// @return bio The biography of the artist.
-    /// @return wallet The wallet address associated with the artist.
+    /// @notice Retrieves detailed information about an artist using their wallet address.
+    /// @param artistAddress Wallet address of the artist.
+    /// @return name Name of the artist.
+    /// @return bio Biography or description of the artist.
+    /// @return wallet Wallet address of the artist.
     function getArtist(address artistAddress) external view returns (string memory name, string memory bio, address wallet);
 
-    /// @notice Nominates an artist for registration, can only be called by an artist with referral credits.
-    /// @param nominee The address of the artist being nominated.
+    /// @notice Nominates an individual to become an artist within the registry.
+    /// @param nominee Wallet address of the individual being nominated.
     function nominate(address nominee) external;
 
-    /// @notice Sets the URI for a given token ID
-    /// @param tokenId The token ID for which to set the URI
-    /// @param newURI The new URI to set
+    /// @notice Updates the metadata URI for a specific artist token.
+    /// @param tokenId Unique token identifier associated with the artist.
+    /// @param newURI New URI to set for the artist token.
     function setTokenURI(uint256 tokenId, string calldata newURI) external;
 
-    /// @notice Allows an artist to update their profile with a new name and biography.
-    /// @param _artistId The unique identifier of the artist.
-    /// @param _name The new name for the artist.
-    /// @param _bio The new biography for the artist.
-    /// @param _wallet The new wallet for the artist.
+    /// @notice Updates the profile of a registered artist.
+    /// @param _artistId Unique identifier of the artist whose profile is being updated.
+    /// @param _name New name for the artist.
+    /// @param _bio New biography or description for the artist.
+    /// @param _wallet New wallet address for the artist.
     function updateArtist(uint256 _artistId, string memory _name, string memory _bio, address _wallet) external;
 
-    /// @notice Checks if an artist is registered in the registry.
-    /// @param artistAddress Address of the artist to check.
-    /// @return isRegistered True if the artist is registered, false otherwise.
+    /// @notice Checks whether a specific wallet address is registered as an artist.
+    /// @param artistAddress Address to check against the registry.
+    /// @return isRegistered True if the address is registered as an artist, false otherwise.
     function isArtistRegistered(address artistAddress) external view returns (bool isRegistered);
 }

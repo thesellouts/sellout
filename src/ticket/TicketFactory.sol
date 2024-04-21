@@ -5,7 +5,7 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { Clones } from "@openzeppelin-contracts/proxy/Clones.sol";
-import "./ITicket.sol";
+import { ITicket } from "./ITicket.sol";
 
 /// @title TicketFactory
 /// @dev Implements a factory for creating upgradeable ticket proxies.

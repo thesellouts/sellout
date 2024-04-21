@@ -2,11 +2,12 @@
 pragma solidity 0.8.20;
 import { VenueRegistryTypes } from "../../registry/venue/types/VenueRegistryTypes.sol";
 
-
 /// @title VenueTypes
 /// @author taayyohh
 /// @notice This contract defines the data structures related to venues and their proposals.
 interface VenueTypes {
+    /// @notice Defines the parameters for a venue proposal period.
+    /// @dev This structure is used when setting up or modifying the rules for venue proposal submissions.
     struct VenueProposalParams {
         uint32 proposalPeriodDuration;
         uint32 proposalDateExtension;
@@ -14,7 +15,8 @@ interface VenueTypes {
         uint32 proposalPeriodExtensionThreshold;
     }
 
-    /// @notice Represents a proposal for a venue including details about the venue, proposed dates, voting information, and bribe payment token.
+    /// @notice Describes a venue proposal including operational details, voting, and bribes.
+    /// @dev This structure captures all relevant information about a venue proposal.
     struct Proposal {
         VenueRegistryTypes.VenueInfo venue; // Venue details
         uint256[] proposedDates; // Array of proposed dates for the show

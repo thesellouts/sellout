@@ -54,15 +54,25 @@ import { ShowVaultStorage } from "./storage/ShowVaultStorage.sol";
 */
 
 contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    // Modifier to restrict function calls to the Show contract only
+    /// @notice Restricts function calls to the show contract only.
     modifier onlyShowContract() {
         require(msg.sender == showContract, "Unauthorized: caller is not the Show contract");
         _;
     }
 
-    // Modifier to restrict function calls to the Show contract only
+    /// @notice Restricts function calls to either the show contract or the box office contract.
     modifier onlyShowOrBoxOfficeContract() {
         require(msg.sender == showContract || msg.sender == boxOfficeContract, "Unauthorized: caller is not the Show or Box contract");
+        _;
+    }
+
+    /// @notice Restricts function calls to either the ticket or venue contract.
+    modifier onlyVenueOrTicketContract(bytes32 showId) {
+        require(
+            msg.sender == showInstance.getShowToTicketProxy(showId) ||
+            msg.sender == showInstance.getShowToVenueProxy(showId),
+            "Unauthorized: caller is not the Ticket or Venue contract"
+        );
         _;
     }
 
@@ -74,15 +84,6 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         __ReentrancyGuard_init();
         showContract = _showContract;
         showInstance = IShow(_showContract);
-    }
-
-    modifier onlyVenueOrTicketContract(bytes32 showId) {
-        require(
-            msg.sender == showInstance.getShowToTicketProxy(showId) ||
-            msg.sender == showInstance.getShowToVenueProxy(showId),
-            "Unauthorized: caller is not the Ticket or Venue contract"
-        );
-        _;
     }
 
     /// @notice Allows the contract owner to upgrade the contract to a new implementation
@@ -156,7 +157,7 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
     /// @param refundAmount The amount to refund
     /// @param paymentToken The payment token address (address(0) for ETH)
     /// @param recipient The recipient of the refund
-    function processRefund(bytes32 showId, uint256 refundAmount, address paymentToken, address recipient) external onlyShowOrBoxOfficeContract() { // todo only show or box office
+    function processRefund(bytes32 showId, uint256 refundAmount, address paymentToken, address recipient) external onlyShowOrBoxOfficeContract() {
         if (paymentToken == address(0)) {
             require(showVault[showId] >= refundAmount, "Insufficient funds");
             showVault[showId] -= refundAmount;
@@ -251,7 +252,8 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         showPaymentTokens[showId] = token;
     }
 
-    // Updated to set both Show and Venue Registry addresses
+    /// @notice Sets the Box Office contract address.
+    /// @param _boxOfficeContract The address of the Box Office contract.
     function setContractAddresses(address _boxOfficeContract) external {
         require(address(boxOfficeContract) == address(0), "Box Office Contract already set");
 

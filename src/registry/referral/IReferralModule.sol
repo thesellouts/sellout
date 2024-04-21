@@ -1,63 +1,51 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-/**
- * @title IReferralModule
- * @dev Interface for the ReferralModule contract.
- */
+/// @title Referral Module Interface
+/// @dev Defines the interface for the ReferralModule, responsible for managing referral credits within the platform.
 interface IReferralModule {
-    /**
-     * @dev Emitted when referral credits are updated for a referrer.
-     * @param referrer Address of the referrer whose credits were updated.
-     * @param credits Updated referral credits.
-     */
+    /// @notice Emitted when referral credits for a referrer are updated.
+    /// @param referrer Address of the referrer whose credits were updated.
+    /// @param credits Struct containing the updated referral credits across different categories.
     event ReferralCreditsUpdated(address indexed referrer, ReferralCredits credits);
 
-    /**
-     * @dev Emitted when permission to update credits is granted or revoked for a contract address.
-     * @param contractAddress Address of the contract.
-     * @param permission True if permission is granted, false if revoked.
-     */
+    /// @notice Emitted when a contract is granted or revoked permission to update referral credits.
+    /// @param contractAddress Address of the contract whose permission was updated.
+    /// @param permission Boolean indicating whether the permission was granted (`true`) or revoked (`false`).
     event PermissionToUpdateCredits(address indexed contractAddress, bool permission);
 
-    /**
-     * @dev Struct to hold referral credits.
-     */
+    /// @dev Struct to encapsulate referral credits across various categories.
     struct ReferralCredits {
-        uint256 artist;
-        uint256 organizer;
-        uint256 venue;
+        uint256 artist;     ///< Credits related to artist referrals.
+        uint256 organizer;  ///< Credits related to organizer referrals.
+        uint256 venue;      ///< Credits related to venue referrals.
     }
 
-    /**
-     * @dev Sets or revokes permission for an address to decrement referral credits.
-     * @param contractAddress The address to update permission for.
-     * @param permission True to allow, false to revoke.
-     */
+    /// @notice Grants or revokes permission for a contract to adjust referral credits.
+    /// @dev Only callable by the contract owner or an authorized admin.
+    /// @param contractAddress Address of the contract to update permissions for.
+    /// @param permission `true` to grant permission, `false` to revoke.
     function setCreditControlPermission(address contractAddress, bool permission) external;
 
-    /**
-     * @dev Increments referral credits for a given referrer.
-     * @param referrer The address of the referrer whose credits are to be incremented.
-     * @param artistCredits Number of artist credits to add.
-     * @param organizerCredits Number of organizer credits to add.
-     * @param venueCredits Number of venue credits to add.
-     */
+    /// @notice Increments the referral credits for a given referrer.
+    /// @dev Typically called when a referred transaction successfully completes.
+    /// @param referrer Address of the referrer to receive more credits.
+    /// @param artistCredits Number of credits to add to the artist category.
+    /// @param organizerCredits Number of credits to add to the organizer category.
+    /// @param venueCredits Number of credits to add to the venue category.
     function incrementReferralCredits(address referrer, uint256 artistCredits, uint256 organizerCredits, uint256 venueCredits) external;
 
-    /**
-     * @dev Decrements referral credits for a given referrer.
-     * @param referrer The address of the referrer whose credits are to be decremented.
-     * @param artistCredits Number of artist credits to remove.
-     * @param organizerCredits Number of organizer credits to remove.
-     * @param venueCredits Number of venue credits to remove.
-     */
+    /// @notice Decrements the referral credits for a given referrer.
+    /// @dev Used to reduce credits when they are redeemed or if a referred transaction is reversed or invalidated.
+    /// @param referrer Address of the referrer whose credits are to be reduced.
+    /// @param artistCredits Number of artist credits to decrement.
+    /// @param organizerCredits Number of organizer credits to decrement.
+    /// @param venueCredits Number of venue credits to decrement.
     function decrementReferralCredits(address referrer, uint256 artistCredits, uint256 organizerCredits, uint256 venueCredits) external;
 
-    /**
-     * @dev Retrieves the referral credits for a specified address.
-     * @param referrer The address to retrieve referral credits for.
-     * @return The referral credits of the specified address.
-     */
+    /// @notice Retrieves the current referral credits for a specified referrer.
+    /// @dev Can be used to display credit balances or determine eligibility for benefits.
+    /// @param referrer Address for which to retrieve referral credits.
+    /// @return ReferralCredits Struct containing the counts of credits for each category.
     function getReferralCredits(address referrer) external view returns (ReferralCredits memory);
 }

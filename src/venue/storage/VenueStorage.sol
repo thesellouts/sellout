@@ -2,55 +2,67 @@
 pragma solidity 0.8.20;
 
 import { VenueTypes } from "../types/VenueTypes.sol";
-
+import { IShow } from "../../show/IShow.sol";
+import { IShowVault } from "../../show/IShowVault.sol";
+import { IVenueRegistry } from "../../registry/venue/IVenueRegistry.sol";
 
 /// @title VenueStorageV1
 /// @author taayyohh
-/// @notice Venue Storage contract that holds all the data structures and mappings related to venues and their proposals
+/// @notice This contract holds all the data structures and mappings related to venues and their proposals.
 contract VenueStorage is VenueTypes {
+    // References to other contract interfaces that interact with this contract
+    IShow public showInstance;
+    IVenueRegistry public venueRegistryInstance;
+    IShowVault public showVaultInstance;
 
-    // Mapping to store the proposal period for each venue
+    // Parameters for managing proposal periods
+    uint256 public proposalPeriodDuration;
+    uint256 public proposalDateExtension;
+    uint256 public proposalDateMinimumFuture;
+    uint256 public proposalPeriodExtensionThreshold;
+
+    /// @notice Mapping of venue identifiers to their respective proposal periods.
     mapping(bytes32 => ProposalPeriod) public proposalPeriod;
 
-    // Mapping to store all the proposals for a specific venue
+    /// @notice Mapping of venue identifiers to lists of proposals.
     mapping(bytes32 => Proposal[]) public showProposals;
 
-    // Mapping to check if a specific address has voted for a venue proposal
+    /// @notice Mapping to track if a specific address has voted on a venue proposal.
     mapping(bytes32 => mapping(address => bool)) public hasVoted;
 
-    // Mapping to store the voting period for each venue
+    /// @notice Mapping of venue identifiers to their voting periods.
     mapping(bytes32 => VotingPeriod) public votingPeriods;
 
-    // Mapping to check if a ticket owner has voted for a venue
+    /// @notice Mapping to track if a ticket owner has voted for a venue.
     mapping(bytes32 => mapping(address => bool)) public hasTicketOwnerVoted;
 
-    // Mappying to track the proposal index each ticket owner has voted for
+    /// @notice Mapping to track the proposal index that each ticket owner has voted for.
     mapping(bytes32 => mapping(address => uint256)) public ticketOwnerVoteIndex;
 
-    // Mapping to store the previous vote of an address for a venue
+    /// @notice Mapping to store the previous votes of an address for a venue.
     mapping(bytes32 => mapping(address => uint256)) public previousVote;
 
-    // Mapping to store the votes for specific dates for a venue
+    /// @notice Mapping to store the votes for specific dates for a venue.
     mapping(bytes32 => mapping(uint256 => uint256)) public dateVotes;
 
-    // Mapping to store the previous date vote of an address for a venue
+    /// @notice Mapping to track the previous date votes of an address for a venue.
     mapping(bytes32 => mapping(address => uint256)) public previousDateVote;
 
-    // Mapping to check if an address has voted for a date for a venue
+    /// @notice Mapping to check if an address has voted for a date for a venue.
     mapping(bytes32 => mapping(address => bool)) public hasDateVoted;
 
-    // Mapping to store the selected date for each venue
+    /// @notice Mapping to store the selected date for each venue.
     mapping(bytes32 => uint256) public selectedDate;
 
-    // Mapping to store the index of the selected proposal for each venue
+    /// @notice Mapping to store the index of the selected proposal for each venue.
     mapping(bytes32 => uint256) public selectedProposalIndex;
 
-    // Mapping to track the refunds owed to proposers
+    /// @notice Mapping to track the refunds owed to proposers.
     mapping(address => uint256) public refunds;
 
-    // New mappings and variables to manage the ticket holder voting phase
-    mapping(bytes32 => bool) public ticketHolderVotingActive; // Tracks if the ticket holder voting phase is active for a show
+    /// @notice Flag to indicate if ticket holder voting is active for a venue.
+    mapping(bytes32 => bool) public ticketHolderVotingActive;
 
-    mapping(bytes32 => VotingPeriod) public ticketHolderVotingPeriods; // Stores the ticket holder voting periods for each show
-
+    /// @notice Mapping to store the ticket holder voting periods for each show.
+    mapping(bytes32 => VotingPeriod) public ticketHolderVotingPeriods;
 }

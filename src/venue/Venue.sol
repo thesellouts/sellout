@@ -15,20 +15,48 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { ERC20Upgradeable } from  "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
-/// @title Venue Contract
-/// @author taayyohh
-/// @notice This contract manages the venue proposals, voting, and acceptance for shows.
+/*
+
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@, ,@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@                         @@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@               .@@@                @@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@          @@@@@@@@@@@@@@@@@@@@@@@          @@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@       @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       @@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@       @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      (@@@@@@@@@@@@@
+    @@@@@@@@@@@@@      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@@@@@
+    @@@@@@@@@@@      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@@@
+    @@@@@@@@@@      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@@
+    @@@@@@@@@     ,@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@
+    @@@@@@@@@     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@     @@@@@@@@
+    @@@@@@@@     @@@@@@@@@@@@@@@/ @@@@@@@@@@@@@@@@@@@@@ #@@@@@@@@@@@@@@@     @@@@@@@
+    @@@@@@@@     @@@@@@@@@@            @@@@@@@@@@@            @@@@@@@@@@     @@@@@@@
+    @@@@@@@@     @@@@@@@@        @       @@@@@@@       @        @@@@@@@@     @@@@@@@
+    @@@@@@@@     @@@@@@@@     @@@@@@@     @@@@@     @@@@@@@     @@@@@@@@     @@@@@@@
+    @@@@@@@@@     @@@@@@@     @@@@@@@     @@@@@     @@@@@@@     @@@@@@@     @@@@@@@@
+    @@@@@@@@@     .@@@@@@                @@@@@@@                @@@@@@      @@@@@@@@
+    @@@@@@@@@@      @@@@@@@            @@@@@@@@@@@            @@@@@@@      @@@@@@@@@
+    @@@@@@@@@@@      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@@@
+    @@@@@@@@@@@@@      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      @@@@@@@@@@@@
+    @@@@@@@@@@@@@@(      @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      &@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@       @@@@@@@@@@@ @@@@@@@@@ @@@@@@@@@@@       @@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@         @@@@@     @@@@@     @@@@@        .@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@     @@@@@     @@@@@     @@@@@     @@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@     @@@@@     @@@@@     @@@@@     @@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@                                   @@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@                                 @@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+    @title Venue
+    @author taayyohh
+    @dev This contract manages the venue proposals, voting, and acceptance for shows.
+*/
+
 contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableUpgradeable {
-    IShow public showInstance;
-    IVenueRegistry public venueRegistryInstance;
-    IShowVault public showVaultInstance;
-
-    // Add variables for storing the duration constants
-    uint256 public proposalPeriodDuration;
-    uint256 public proposalDateExtension;
-    uint256 public proposalDateMinimumFuture;
-    uint256 public proposalPeriodExtensionThreshold;
-
     /// @notice Initializes the Venue contract with Show and Ticket contract addresses and proposal period settings.
     /// @param initialOwner Address of the initial owner of the venue.
     /// @param _proposalPeriodDuration Duration in seconds for how long the proposal period lasts.
@@ -93,7 +121,6 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         storeProposal(showId, venueInfo, proposedDates, bribeAmount, paymentToken);
     }
 
-
     /// @dev Validates the proposal submission parameters.
     /// @param showId Unique identifier for the show.
     /// @param proposedDates List of potential dates for the event.
@@ -116,12 +143,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     /// @param venue Venue details for the proposal.
     /// @param proposedDates List of potential dates for the show.
     /// @param bribeAmount Amount of bribe paid to prioritize the proposal.
-    /// @dev Stores the proposal in the contract state.
-/// @param showId Unique identifier for the show.
-/// @param venue Venue details for the proposal.
-/// @param proposedDates List of potential dates for the show.
-/// @param bribeAmount Amount of bribe paid to prioritize the proposal.
-/// @param paymentToken Token used for the bribe payment.
+    /// @param paymentToken Token used for the bribe payment.
     function storeProposal(
         bytes32 showId,
         VenueRegistryTypes.VenueInfo memory venue,
@@ -153,7 +175,6 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
                 showVaultInstance.depositToVault{value: msg.value}(showId);
             }
         } else {
-            require(msg.value == 0, "Do not send ETH with ERC20 payment");
             ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
             bribeAmount = token.allowance(msg.sender, address(this));
             if (bribeAmount > 0) {
@@ -305,18 +326,28 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         emit ProposalPeriodStarted(showId, proposalPeriod[showId].endTime);
     }
 
-    // Updated to set both Show and Venue Registry addresses
-    function setContractAddresses(address _showContractAddress,  address _showVaultAddress, address _venueRegistryAddress) external {
+    /// @notice Sets the contract addresses for Show, ShowVault, and Venue Registry.
+    /// @param _showContractAddress The address of the Show contract.
+    /// @param _showVaultAddress The address of the ShowVault contract.
+    /// @param _venueRegistryAddress The address of the Venue Registry contract.
+    function setContractAddresses(
+        address _showContractAddress,
+        address _showVaultAddress,
+        address _venueRegistryAddress
+    ) external onlyOwner {
         require(address(showInstance) == address(0), "Show contract already set");
         require(address(venueRegistryInstance) == address(0), "Venue registry already set");
         require(address(showVaultInstance) == address(0), "ShowVault registry already set");
-
 
         showInstance = IShow(_showContractAddress);
         venueRegistryInstance = IVenueRegistry(_venueRegistryAddress);
         showVaultInstance = IShowVault(_showVaultAddress);
     }
 
+    /// @notice Resets the bribe amount to zero for a specified proposal of a show.
+    /// @param showId The unique identifier of the show.
+    /// @param proposalIndex The index of the proposal within the show's list of proposals.
+    /// @dev This function sets the bribe amount to zero directly in the storage.
     function resetBribe(bytes32 showId, uint256 proposalIndex) external onlyShowContract {
         require(proposalIndex < showProposals[showId].length, "Invalid proposal index");
 
@@ -338,10 +369,19 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         return showProposals[showId];
     }
 
+    /// @notice Retrieves a specific proposal for a given show.
+    /// @param showId The unique identifier of the show.
+    /// @param proposalIndex The index of the proposal in the proposal list for the specified show.
+    /// @return Proposal The proposal at the specified index for the given show.
+    /// @dev This function returns the proposal stored at the given index in the showProposals mapping.
     function getProposal(bytes32 showId, uint256 proposalIndex) external view returns (Proposal memory) {
         return showProposals[showId][proposalIndex];
     }
 
+    /// @notice Returns the number of proposals for a specific show.
+    /// @param showId The unique identifier of the show.
+    /// @return uint256 The total number of proposals stored for the given show.
+    /// @dev This function counts and returns the number of entries in the proposal array for the specified show ID.
     function getProposalsCount(bytes32 showId) external view returns (uint256) {
         return showProposals[showId].length;
     }

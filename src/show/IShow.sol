@@ -7,8 +7,6 @@ import { VenueRegistryTypes } from "../registry/venue/types/VenueRegistryTypes.s
 /// @title IShow Interface
 /// @notice Interface for the Show contract detailing functionalities with events and external functions for show management.
 interface IShow is ShowTypes {
-    /// Events
-
     /// @notice Emitted when the expiry of a show is updated.
     /// @param showId The unique identifier of the show.
     /// @param expiry The new expiry time for the show in UNIX timestamp.
@@ -68,8 +66,13 @@ interface IShow is ShowTypes {
     /// @param amount Number of tickets consumed
     event TicketTierConsumed(bytes32 indexed showId, uint256 indexed tierIndex, uint256 amount);
 
-
-
+    /// @notice This event is emitted when a bribe is refunded to a proposer.
+    /// @dev This event provides a way to log the details of a refunded bribe, useful for tracking and auditing purposes.
+    /// @param showId The unique identifier for the show associated with the bribe refund.
+    /// @param venueId The identifier of the venue where the bribe was proposed.
+    /// @param proposer The address of the entity that originally proposed the bribe.
+    /// @param bribeAmount The amount of the bribe that was refunded.
+    /// @param paymentToken The address of the ERC20 token used for the bribe payment (address(0) for ETH).
     event BribeRefunded(
         bytes32 indexed showId,
         uint256 indexed venueId,
@@ -77,7 +80,6 @@ interface IShow is ShowTypes {
         uint256 bribeAmount,
         address paymentToken
     );
-
 
     /// @notice Emitted when the venue details of a show are updated.
     /// @param showId The unique identifier of the show.
