@@ -334,7 +334,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         address _showContractAddress,
         address _showVaultAddress,
         address _venueRegistryAddress
-    ) external onlyOwner {
+    ) external {
         require(address(showInstance) == address(0), "Show contract already set");
         require(address(venueRegistryInstance) == address(0), "Venue registry already set");
         require(address(showVaultInstance) == address(0), "ShowVault registry already set");

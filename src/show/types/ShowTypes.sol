@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 import { VenueRegistryTypes } from "../../registry/venue/types/VenueRegistryTypes.sol";
-import { VenueTypes } from "../../venue/storage/VenueStorage.sol";
+import { VenueTypes } from "../../venue/types/VenueTypes.sol";
 
 /// @title ShowTypes
 /// @author taayyohh

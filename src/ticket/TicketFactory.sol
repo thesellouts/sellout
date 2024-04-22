@@ -69,13 +69,13 @@ contract TicketFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /// @notice Updates the ticket implementation contract address.
     /// @param newImplementation New ticket implementation address to set.
-    function updateTicketImplementation(address newImplementation) public onlyOwner {
+    function updateTicketImplementation(address newImplementation) external onlyOwner {
         ticketImplementation = newImplementation;
     }
 
     /// @notice Sets the BoxOffice address, can only be called once by the owner.
     /// @param _boxOfficeAddress The address of the BoxOffice contract.
-    function setContractAddresses(address _boxOfficeAddress) public onlyOwner {
+    function setContractAddresses(address _boxOfficeAddress) external {
         require(boxOfficeAddress == address(0), "BoxOffice address already set");
         boxOfficeAddress = _boxOfficeAddress;
     }

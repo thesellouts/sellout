@@ -53,7 +53,8 @@ interface IShowVault {
     /// @notice Allows the organizer or artist to withdraw funds after a show has been completed.
     /// @param showId Unique identifier of the show.
     /// @param paymentToken Contract address of the ERC20 token, or address(0) for Ether.
-    function payout(bytes32 showId, address paymentToken) external;
+    /// @param payee Recipient wallet address
+    function payout(bytes32 showId, address paymentToken, address payee) external;
 
     /// @notice Sets the payment token for a specific show
     /// @param showId The unique identifier of the show

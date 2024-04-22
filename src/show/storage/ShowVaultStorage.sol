@@ -4,6 +4,9 @@ pragma solidity 0.8.20;
 import { IShow } from '../IShow.sol';
 
 contract ShowVaultStorage {
+    /// @notice Address of the Sellout multisig that can interact with the vault
+    address public SELLOUT_PROTOCOL_WALLET;
+
     /// @notice Address of the Show contract that can interact with the vault
     address public showContract;
 

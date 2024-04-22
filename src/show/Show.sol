@@ -106,6 +106,14 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         _;
     }
 
+    /// @notice Restricts access to organizers or artists of a specific show.
+    /// @param showId The unique identifier for the show.
+    /// @dev Requires the message sender to be an organizer or an artist linked to the show.
+    modifier onlyOrganizerOrArtistOrVenue(bytes32 showId) {
+        require(isOrganizer(msg.sender, showId) || isArtist(msg.sender, showId) || msg.sender == showToVenueProxy[showId], "OAV");
+        _;
+    }
+
     /// @notice Ensures that only the ticket or venue contract, or the contract itself, can call the modified function.
     /// @param showId The unique identifier for the show.
     /// @dev This allows multiple types of related contracts (or the contract itself) to interact with the function.
@@ -339,21 +347,21 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
     /// @notice Allows the organizer or artist to withdraw funds after a show has been completed.
     /// @param showId The unique identifier of the show.
-    function payout(bytes32 showId) public onlyOrganizerOrArtist(showId) {
+    function payout(bytes32 showId) public onlyOrganizerOrArtistOrVenue(showId) {
         ShowTypes.Show storage show = shows[showId];
 
         require(show.status == Status.Completed, "!s");
         require(block.timestamp >= show.showDate + COOLDOWN, "!cl");
 
         address paymentToken = showVaultInstance.getShowPaymentToken(showId);
-        showVaultInstance.payout(showId, paymentToken);
+        showVaultInstance.payout(showId, paymentToken, msg.sender);
     }
 
     /// @notice Cancels a sold-out show
     /// @param showId Unique identifier for the show
     function cancelShow(bytes32 showId) external onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
-        require(show.status == Status.SoldOut || show.status == Status.Accepted || show.status == Status.Upcoming, "!s");
+        require(show.status == Status.Proposed || show.status == Status.SoldOut || show.status == Status.Accepted || show.status == Status.Upcoming, "!s");
         show.status = Status.Cancelled;
     }
 

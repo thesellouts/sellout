@@ -6,6 +6,7 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+
 import { ShowTypes } from "./types/ShowTypes.sol";
 import { IShowVault } from "./IShowVault.sol";
 import { IShow } from "./IShow.sol";
@@ -84,6 +85,8 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         __ReentrancyGuard_init();
         showContract = _showContract;
         showInstance = IShow(_showContract);
+        SELLOUT_PROTOCOL_WALLET = _selloutProtocolWallet;
+        // TODO: add protocol wallet variable
     }
 
     /// @notice Allows the contract owner to upgrade the contract to a new implementation
@@ -182,8 +185,15 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         uint256 totalAmount,
         address paymentToken
     ) external onlyShowContract {
+        uint256 protocolFee = (totalAmount * 3) / 100; // 3% protocol fee
+        uint256 remainingAmount = totalAmount - protocolFee;
+
+        // Pay the protocol fee
+        addPayout(showId, SELLOUT_PROTOCOL_WALLET, protocolFee, paymentToken);
+
+        // Distribute the remaining amount among the recipients
         for (uint256 i = 0; i < recipients.length; i++) {
-            uint256 share = (totalAmount * splits[i]) / 100;
+            uint256 share = (remainingAmount * splits[i]) / 100;
             addPayout(showId, recipients[i], share, paymentToken);
         }
     }
@@ -204,38 +214,39 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
     /// @notice Allows the organizer or artist to withdraw funds after a show has been completed
     /// @param showId The identifier of the show
     /// @param paymentToken The payment token address (address(0) for ETH)
-    function payout(bytes32 showId, address paymentToken) public onlyShowContract {
+    /// @param payee The recipient of the payout
+    function payout(bytes32 showId, address paymentToken, address payee) public onlyShowContract {
         if (paymentToken == address(0)) {
-            payoutETH(showId);
+            payoutETH(showId, payee);
         } else {
-            payoutERC20(showId, paymentToken);
+            payoutERC20(showId, paymentToken, payee);
         }
     }
 
     /// @notice Handles Ethereum payouts
     /// @param showId The identifier of the show
-    function payoutETH(bytes32 showId) private {
-        uint256 amount = pendingPayouts[showId][msg.sender];
+    function payoutETH(bytes32 showId, address payee) private {
+        uint256 amount = pendingPayouts[showId][payee];
         require(amount > 0, "!$");
-        pendingPayouts[showId][msg.sender] = 0;
+        pendingPayouts[showId][payee] = 0;
 
-        (bool sent, ) = payable(msg.sender).call{value: amount}("");
+        (bool sent, ) = payable(payee).call{value: amount}("");
         require(sent, "!->");
-        emit Withdrawal(showId, msg.sender, amount, address(0));
+        emit Withdrawal(showId, payee, amount, address(0));
     }
 
     // @notice Handles ERC20 token payouts
     /// @param showId The identifier of the show
     /// @param paymentToken The ERC20 token used for the payout
-    function payoutERC20(bytes32 showId, address paymentToken) private {
-        uint256 amount = pendingTokenPayouts[showId][paymentToken][msg.sender];
+    function payoutERC20(bytes32 showId, address paymentToken, address payee) private {
+        uint256 amount = pendingTokenPayouts[showId][paymentToken][payee];
         require(amount > 0, "!$");
-        pendingTokenPayouts[showId][paymentToken][msg.sender] = 0;
+        pendingTokenPayouts[showId][paymentToken][payee] = 0;
 
         ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
         require(token.balanceOf(address(this)) >= amount, "!$");
-        require(token.transfer(msg.sender, amount), "!->");
-        emit Withdrawal(showId, msg.sender, amount, paymentToken);
+        require(token.transfer(payee, amount), "!->");
+        emit Withdrawal(showId, payee, amount, paymentToken);
     }
 
     /// @notice Gets the payment token for a specific show
