@@ -69,6 +69,19 @@ contract BoxOffice is IBoxOffice, BoxOfficeStorage, Initializable, UUPSUpgradeab
         _;
     }
 
+    /// @notice Ensures that only the ticket proxy, the contract itself, or the Show contract can perform wallet operations.
+    modifier onlyAuthorizedForWalletOperations(bytes32 showId) {
+        address ticketProxy = showContractInstance.getShowToTicketProxy(showId);
+        require(
+            msg.sender == ticketProxy ||
+            msg.sender == address(this) ||
+            msg.sender == address(showContractInstance),
+            "Unauthorized: caller is not the ticket proxy, the contract itself, or the Show contract"
+        );
+        _;
+    }
+
+
     /// @notice Initializes the BoxOffice contract with required addresses.
     /// @param _selloutProtocolWallet Address of the Sellout Protocol Wallet (owner).
     /// @param _showContract Address of the Show contract.
@@ -191,8 +204,7 @@ contract BoxOffice is IBoxOffice, BoxOfficeStorage, Initializable, UUPSUpgradeab
     // @param wallet The address of the wallet owning the ticket.
     // @param ticketId The ID of the ticket to be removed.
     // @dev This function can only be called by the external contracts
-    function removeTokenIdFromWallet(bytes32 showId, address wallet, uint256 tokenId) public  {
-        require(msg.sender == showContractInstance.getShowToTicketProxy(showId) || msg.sender == address(this), "BOT");
+    function removeTokenIdFromWallet(bytes32 showId, address wallet, uint256 tokenId) public onlyAuthorizedForWalletOperations(showId) {
         uint256[] storage ticketIds = walletToShowToTokenIds[showId][wallet];
         for (uint256 i = 0; i < ticketIds.length; i++) {
             if (ticketIds[i] == tokenId) {

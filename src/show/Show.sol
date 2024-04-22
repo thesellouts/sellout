@@ -106,11 +106,17 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         _;
     }
 
-    /// @notice Restricts access to organizers or artists of a specific show.
+    /// @notice Restricts access to organizers or artists or the venue of a specific show.
     /// @param showId The unique identifier for the show.
-    /// @dev Requires the message sender to be an organizer or an artist linked to the show.
+    /// @dev Requires the message sender to be an organizer, an artist, or the venue linked to the show.
     modifier onlyOrganizerOrArtistOrVenue(bytes32 showId) {
-        require(isOrganizer(msg.sender, showId) || isArtist(msg.sender, showId) || msg.sender == showToVenueProxy[showId], "OAV");
+        Show storage show = shows[showId];
+        require(
+            msg.sender == show.organizer ||
+            isArtist(msg.sender, showId) ||
+            msg.sender == show.venue.wallet,
+            "Not organizer, artist, or venue"
+        );
         _;
     }
 

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Set the RPC URL and the private key for the deployment account
-# Define environment variables
 export ETH_RPC_URL=""
 export PRIVATE_KEY=""
 export ETHERSCAN_API_KEY=""
