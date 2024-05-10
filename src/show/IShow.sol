@@ -44,7 +44,7 @@ interface IShow is ShowTypes {
         string name,
         address[] artists,
         string description,
-        uint256 sellOutThreshold,
+        uint8 sellOutThreshold,
         uint256[] split,
         address currencyAddress
     );
@@ -136,7 +136,7 @@ interface IShow is ShowTypes {
         address[] memory artists,
         VenueRegistryTypes.VenueInfo memory venue,
         ShowTypes.TicketTier[] memory ticketTiers,
-        uint256 sellOutThreshold,
+        uint8 sellOutThreshold,
         uint256 totalCapacity,
         Status status,
         address currencyAddress

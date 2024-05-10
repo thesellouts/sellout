@@ -99,6 +99,7 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
     // @param _bio Biography of the venue.
     // @param _latitude Latitude part of the venue's coordinates.
     // @param _longitude Longitude part of the venue's coordinates.
+    // @param _totalCapacity Total Capacity of the venue.
     // @param _streetAddress Street address of the venue.
     function registerVenue(
         string memory _name,
@@ -107,15 +108,17 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
         int256 _longitude,
         uint256 _totalCapacity,
         string memory _streetAddress
-    ) internal {
-        // Create coordinates and venueInfo without venueId
+    ) internal returns (uint256) {
+        currentVenueId++;
+        uint256 venueId = currentVenueId;
+
         VenueRegistryTypes.Coordinates memory coords = VenueRegistryTypes.Coordinates({
             latitude: _latitude,
             longitude: _longitude
         });
 
         VenueRegistryTypes.VenueInfo memory venueInfo = VenueRegistryTypes.VenueInfo({
-            venueId: 0, // Initially set as 0
+            venueId: venueId,
             name: _name,
             bio: _bio,
             wallet: msg.sender,
@@ -124,29 +127,15 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
             streetAddress: _streetAddress
         });
 
-        // Calculate hash excluding venueId
-        bytes32 venueHash = keccak256(abi.encode(
-            _name,
-            _bio,
-            msg.sender,
-            _latitude,
-            _longitude,
-            _totalCapacity,
-            _streetAddress
-        ));
-        uint256 venueId = uint256(venueHash);
-
-        require(venues[venueId].wallet == address(0), "Venue already registered");
-
-        // Now assign the venueId to the venueInfo
-        venueInfo.venueId = venueId;
-
         venues[venueId] = venueInfo;
         addressToVenueId[msg.sender] = venueId;
 
         _mint(msg.sender, venueId, 1, "");
         emit VenueRegistered(venueId, _name);
+
+        return venueId;
     }
+
 
     /// @notice Allows a venue to deregister themselves from the registry.
     /// @param _venueId Unique identifier of the venue wishing to deregister.

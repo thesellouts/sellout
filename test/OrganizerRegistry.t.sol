@@ -79,4 +79,37 @@ contract OrganizerRegistryTest is Test {
         assertEq(name, "", "Organizer name should be empty.");
         assertEq(bio, "", "Organizer bio should be empty.");
     }
+
+    function testFailRegisterDuplicateOrganizer() public {
+        // Nominate and accept an organizer
+        testOrganizerNominationAndAcceptance();
+
+        // Attempt to nominate the same organizer again
+        vm.expectRevert("Organizer already registered");
+        organizerRegistry.nominate(NOMINEE);
+    }
+
+    function testMultipleOrganizerRegistrations() public {
+        address organizer2 = address(0xABC);
+        address organizer3 = address(0xDEF);
+
+        // Nominate multiple new organizers
+        organizerRegistry.nominate(NOMINEE);
+        organizerRegistry.nominate(organizer2);
+        organizerRegistry.nominate(organizer3);
+
+        // Accept nominations
+        vm.prank(NOMINEE);
+        organizerRegistry.acceptNomination("First Organizer", "The first one");
+        vm.prank(organizer2);
+        organizerRegistry.acceptNomination("Second Organizer", "The second one");
+        vm.prank(organizer3);
+        organizerRegistry.acceptNomination("Third Organizer", "The third one");
+
+        // Check all are registered
+        assertTrue(organizerRegistry.isOrganizerRegistered(NOMINEE), "First organizer should be registered");
+        assertTrue(organizerRegistry.isOrganizerRegistered(organizer2), "Second organizer should be registered");
+        assertTrue(organizerRegistry.isOrganizerRegistered(organizer3), "Third organizer should be registered");
+    }
+
 }

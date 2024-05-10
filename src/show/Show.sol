@@ -75,6 +75,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         __ReentrancyGuard_init();
         __Ownable_init(_selloutProtocolWallet);
         SELLOUT_PROTOCOL_WALLET = _selloutProtocolWallet;
+        transferOwnership(_selloutProtocolWallet);
     }
 
     /// @notice Ensures only the contract owner can upgrade the contract.
@@ -480,7 +481,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         address[] memory artists,
         VenueRegistryTypes.VenueInfo memory venue,
         TicketTier[] memory ticketTiers,
-        uint256 sellOutThreshold,
+        uint8 sellOutThreshold,
         uint256 totalCapacity,
         Status status,
         address currencyAddress

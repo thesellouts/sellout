@@ -5,7 +5,6 @@ export ETH_RPC_URL=""
 export PRIVATE_KEY=""
 export ETHERSCAN_API_KEY=""
 export SELLOUT_PROTOCOL_WALLET=""
-
 # Deploy ReferralModule and capture its address
 referralModuleAddress=$(forge script DeployReferralModule.s.sol:DeployReferralModule --rpc-url $ETH_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY -- --sellout-protocol-wallet $SELLOUT_PROTOCOL_WALLET | grep "ReferralModule deployed at" | awk '{print $NF}')
 export REFERRAL_MODULE_ADDRESS=$referralModuleAddress

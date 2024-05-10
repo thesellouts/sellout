@@ -40,7 +40,7 @@ interface ShowTypes {
         VenueRegistryTypes.VenueInfo venue;       // Venue details
         uint256 radius;               // radius for proposed show venue
         TicketTier[] ticketTiers;     // tiers of tickets
-        uint256 sellOutThreshold;     // Threshold for considering the show as sold out
+        uint8 sellOutThreshold;     // Threshold for considering the show as sold out
         uint256 totalCapacity;        // Total capacity of the show
         Status status;                // Current status of the show
         uint256[] split;              // Split percentages for revenue distribution

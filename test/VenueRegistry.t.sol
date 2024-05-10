@@ -111,4 +111,11 @@ contract VenueRegistryTest is Test {
         assertEq(totalCapacity, 0, "Venue totalCapacity should be 0 after deregistration.");
         assertEq(streetAddress, "", "Venue streetAddress should be empty after deregistration.");
     }
+
+    function testFailVenueNominationByUnauthorizedUser() public {
+        address unauthorizedUser = address(0x3);
+        vm.prank(unauthorizedUser);
+        vm.expectRevert("Unauthorized");
+        venueRegistry.nominate(NOMINEE);
+    }
 }
