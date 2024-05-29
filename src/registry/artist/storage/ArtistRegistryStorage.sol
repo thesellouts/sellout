@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import { ArtistRegistryTypes } from "../types/ArtistRegistryTypes.sol";
 
 /// @title Artist Registry Storage
-/// @notice Provides dedicated storage for managing artist data within the ArtistRegistry.
+/// @notice Provides dedicated storage for managing artist data within the Sellout ArtistRegistry.
 /// @dev This contract is responsible for storing and managing all artist-related data, including mappings for artist identification and nomination status.
 contract ArtistRegistryStorage {
     using ArtistRegistryTypes for ArtistRegistryTypes.ArtistInfo;
