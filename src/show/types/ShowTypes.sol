@@ -43,7 +43,7 @@ interface ShowTypes {
         uint8 sellOutThreshold;     // Threshold for considering the show as sold out
         uint256 totalCapacity;        // Total capacity of the show
         Status status;                // Current status of the show
-        uint256[] split;              // Split percentages for revenue distribution
+        uint256[] split;              // Split percentages for revenue distribution - [organizer, artists, venue]
         uint256 expiry;               // Expiry timestamp of the show
         uint256 showDate;             // Final show date
         address currencyAddress;      // Show Currency Address

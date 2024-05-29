@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
-import { ReferralModule } from "../../src/registry/referral/ReferralModule.sol";
-import { ArtistRegistry } from "../../src/registry/artist/ArtistRegistry.sol";
+import { ReferralModule } from "../src/registry/referral/ReferralModule.sol";
+import { ArtistRegistry } from "../src/registry/artist/ArtistRegistry.sol";
 import { ERC1967Proxy } from "@openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract ArtistRegistryTest is Test {

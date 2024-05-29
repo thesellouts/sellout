@@ -11,7 +11,8 @@ interface IVenueRegistry {
     /// @notice Emitted when a new venue is registered in the system.
     /// @param venueId Unique identifier for the newly registered venue.
     /// @param name Name of the venue registered.
-    event VenueRegistered(uint256 indexed venueId, string name);
+    /// @param wallet The wallet address associated with the organizer.
+    event VenueRegistered(uint256 indexed venueId, string name, address wallet);
 
     /// @notice Emitted when a venue's information is updated in the registry.
     /// @param venueId Unique identifier for the venue being updated.

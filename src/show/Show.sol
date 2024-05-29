@@ -321,8 +321,9 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         }
     }
 
-    // @notice Completes a show and distributes funds
-    // @param showId Unique identifier for the show
+    /// @notice Completes a show and distributes funds.
+    /// @param showId Unique identifier for the show.
+    /// @dev This function processes the split values by scaling them back down by dividing by 10000.
     function completeShow(bytes32 showId) external onlyOrganizerOrArtist(showId) {
         Show storage show = shows[showId];
         require(show.status == Status.Upcoming, "!s");
@@ -336,14 +337,13 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
 
         uint256 numParticipants = show.artists.length + 2;
         address[] memory recipients = new address[](numParticipants);
-        uint256[] memory splits = new uint256[](show.split.length);
+        uint256[] memory splits = processSplit(show.split);
 
         recipients[0] = show.organizer;
         for (uint256 i = 0; i < show.artists.length; i++) {
             recipients[i + 1] = show.artists[i];
         }
         recipients[numParticipants - 1] = show.venue.wallet;
-        splits = show.split;
 
         showVaultInstance.distributeShares(showId, recipients, splits, totalAmount, paymentToken);
         showVaultInstance.clearVault(showId, paymentToken);
@@ -351,6 +351,20 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         show.status = Status.Completed;
         emit StatusUpdated(showId, Status.Completed);
     }
+
+    /// @notice Converts the scaled split values back to their original values.
+    /// @dev The split values are stored scaled by 10000 to handle up to four decimal places.
+    /// @param split The array of scaled split values.
+    /// @return originalSplit The array of original split values, scaled back by dividing by 10000.
+    function processSplit(uint256[] memory split) internal pure returns (uint256[] memory) {
+        uint256[] memory originalSplit = new uint256[](split.length);
+        for (uint256 i = 0; i < split.length; i++) {
+            originalSplit[i] = split[i] / 10000;  // Convert back to original value by dividing by 10000
+        }
+        return originalSplit;
+    }
+
+
 
     /// @notice Allows the organizer or artist to withdraw funds after a show has been completed.
     /// @param showId The unique identifier of the show.

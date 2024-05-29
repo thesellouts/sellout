@@ -131,7 +131,7 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
         addressToVenueId[msg.sender] = venueId;
 
         _mint(msg.sender, venueId, 1, "");
-        emit VenueRegistered(venueId, _name);
+        emit VenueRegistered(venueId, _name, msg.sender);
 
         return venueId;
     }

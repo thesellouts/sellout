@@ -23,7 +23,7 @@ library ShowValidations {
         if (bytes(proposal.name).length == 0) revert InvalidName();
         if (proposal.radius <= 0) revert InvalidCapacity();
         if (bytes(proposal.description).length == 0 || bytes(proposal.description).length > 1000) revert InvalidDescription();
-        if (proposal.totalCapacity < 0) revert InvalidCapacity(); // todo: change to 50
+        if (proposal.totalCapacity < 50) revert InvalidCapacity();
         if (proposal.sellOutThreshold < 50 || proposal.sellOutThreshold > 100) revert InvalidSellOutThreshold();
         if (proposal.coordinates.latitude < -90 * 10**6 || proposal.coordinates.latitude > 90 * 10**6) revert InvalidLatitude();
         if (proposal.coordinates.longitude < -180 * 10**6 || proposal.coordinates.longitude > 180 * 10**6) revert InvalidLongitude();
@@ -44,7 +44,7 @@ library ShowValidations {
         for (uint i = 0; i < split.length; i++) {
             sum += split[i];
         }
-        if (sum != 100) revert InvalidSplitSum();
+        if (sum != 100 * 10000) revert InvalidSplitSum();
     }
 
     /// @notice Validates that the total tickets across all tiers match the total capacity of the show.
