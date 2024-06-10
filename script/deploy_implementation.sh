@@ -1,10 +1,12 @@
 #!/bin/bash
 
 # Define environment variables
+
 export ETH_RPC_URL=""
 export PRIVATE_KEY=""
 export ETHERSCAN_API_KEY=""
 export SELLOUT_PROTOCOL_WALLET=""
+
 # Navigate to the directory where your deployment script is located, if necessary
 # cd path/to/your/scripts
 

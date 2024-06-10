@@ -27,10 +27,10 @@ library ShowValidations {
         if (proposal.sellOutThreshold < 50 || proposal.sellOutThreshold > 100) revert InvalidSellOutThreshold();
         if (proposal.coordinates.latitude < -90 * 10**6 || proposal.coordinates.latitude > 90 * 10**6) revert InvalidLatitude();
         if (proposal.coordinates.longitude < -180 * 10**6 || proposal.coordinates.longitude > 180 * 10**6) revert InvalidLongitude();
-        if (proposal.venueProposalParams.proposalPeriodDuration < 30 minutes) revert InvalidVenueProposalParameters();
-        if (proposal.venueProposalParams.proposalDateExtension < 5 minutes) revert InvalidVenueProposalParameters();
-        if (proposal.venueProposalParams.proposalDateMinimumFuture < 45 minutes) revert InvalidVenueProposalParameters();
-        if (proposal.venueProposalParams.proposalPeriodExtensionThreshold < 2 minutes) revert InvalidVenueProposalParameters();
+        if (proposal.venueProposalParams.proposalPeriodDuration < 12 hours) revert InvalidVenueProposalParameters();
+        if (proposal.venueProposalParams.proposalDateExtension < 1 hours) revert InvalidVenueProposalParameters();
+        if (proposal.venueProposalParams.proposalDateMinimumFuture < 12 hours) revert InvalidVenueProposalParameters();
+        if (proposal.venueProposalParams.proposalPeriodExtensionThreshold < 1 hours) revert InvalidVenueProposalParameters();
 
         validateSplit(proposal.split, proposal.artists.length);
     }

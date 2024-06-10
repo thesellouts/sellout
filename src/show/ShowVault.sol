@@ -85,8 +85,7 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         __ReentrancyGuard_init();
         showContract = _showContract;
         showInstance = IShow(_showContract);
-        SELLOUT_PROTOCOL_WALLET = _selloutProtocolWallet;
-        // TODO: add protocol wallet variable
+        THE_STEWARD = _selloutProtocolWallet;
     }
 
     /// @notice Allows the contract owner to upgrade the contract to a new implementation
@@ -117,18 +116,19 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
     /// @notice Allows a user to withdraw their refund for a specific show
     /// @param showId The identifier of the show
     /// @param paymentToken The payment token address (address(0) for ETH)
-    function withdrawRefund(bytes32 showId, address paymentToken) external onlyShowContract nonReentrant {
-        uint256 amount = paymentToken == address(0) ? pendingRefunds[showId][msg.sender] : pendingTokenRefunds[showId][paymentToken][msg.sender];
+    /// @param payee The address of the payee
+    function withdrawRefund(bytes32 showId, address paymentToken, address payee) external onlyShowContract nonReentrant {
+        uint256 amount = paymentToken == address(0) ? pendingRefunds[showId][payee] : pendingTokenRefunds[showId][paymentToken][payee];
         require(amount > 0, "No refund available");
 
         if (paymentToken == address(0)) {
-            pendingRefunds[showId][msg.sender] = 0;
-            (bool sent, ) = payable(msg.sender).call{value: amount}("");
+            pendingRefunds[showId][payee] = 0;
+            (bool sent, ) = payable(payee).call{value: amount}("");
             require(sent, "Failed to send Ether");
         } else {
-            pendingTokenRefunds[showId][paymentToken][msg.sender] = 0;
+            pendingTokenRefunds[showId][paymentToken][payee] = 0;
             ERC20Upgradeable token = ERC20Upgradeable(paymentToken);
-            require(token.transfer(msg.sender, amount), "Failed to send ERC20");
+            require(token.transfer(payee, amount), "Failed to send ERC20");
         }
     }
 
@@ -172,11 +172,14 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         }
     }
 
-    /// @notice Distributes the total available payout among participants of a show based on predefined splits
-    /// @param showId The identifier of the show
-    /// @param recipients The addresses of the recipients
-    /// @param splits The percentage splits for each recipient
-    /// @param totalAmount The total payout amount
+    /// @notice Distributes the total available payout among participants of a show based on predefined splits.
+    /// Initially, a "steward" fee (4%) goes to the protocol wallet to support maintenance and growth.
+    /// A "garden" fee (1%) goes to the DAO treasury, symbolizing seeding for future decentralization.
+    /// Over time, the intention is to shift all fees towards the "garden", fully sustaining the ecosystem.
+    /// @param showId The identifier of the show.
+    /// @param recipients The addresses of the recipients.
+    /// @param splits The percentage splits for each recipient.
+    /// @param totalAmount The total payout amount.
     /// @param paymentToken The payment token address (address(0) for ETH).
     function distributeShares(
         bytes32 showId,
@@ -185,11 +188,15 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         uint256 totalAmount,
         address paymentToken
     ) external onlyShowContract {
-        uint256 protocolFee = (totalAmount * 3) / 100; // 3% protocol fee
-        uint256 remainingAmount = totalAmount - protocolFee;
+        uint256 stewardFee = (totalAmount * 4) / 100; // 4% steward fee
+        uint256 gardenFee = (totalAmount * 1) / 100; // 1% garden fee
+        uint256 remainingAmount = totalAmount - stewardFee - gardenFee;
 
-        // Pay the protocol fee
-        addPayout(showId, SELLOUT_PROTOCOL_WALLET, protocolFee, paymentToken);
+        // Pay the steward fee to the protocol wallet
+        addPayout(showId, THE_STEWARD, stewardFee, paymentToken);
+
+        // Pay the garden fee to the DAO treasury
+        addPayout(showId, THE_GARDEN, gardenFee, paymentToken);
 
         // Distribute the remaining amount among the recipients
         for (uint256 i = 0; i < recipients.length; i++) {
@@ -269,5 +276,14 @@ contract ShowVault is Initializable, IShowVault, ShowVaultStorage, UUPSUpgradeab
         require(address(boxOfficeContract) == address(0), "Box Office Contract already set");
 
         boxOfficeContract = _boxOfficeContract;
+    }
+
+    /// @notice Updates the address of the DAO treasury (the Garden)
+    /// @dev This function can only be called by the protocol owner. It updates the address that holds DAO funds.
+    /// @param _theGarden The new address for the DAO treasury
+    function setDAOTreasuryAddress(address _theGarden) external onlyOwner {
+        require(_theGarden != address(0), "Invalid address: cannot be zero address");
+        THE_GARDEN = _theGarden;
+        emit DAOTreasuryAddressUpdated(_theGarden);
     }
 }

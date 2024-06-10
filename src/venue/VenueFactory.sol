@@ -5,13 +5,14 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { Clones } from "@openzeppelin-contracts/proxy/Clones.sol";
+import { ERC1967Proxy } from "@openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IVenue } from "./IVenue.sol";
 
 /*
 
     @title  VenueFactory
     @author taayyohh
-    @dev Implements a factory for creating upgradeable venue proxies using the clone pattern.
+    @dev Implements a factory for creating upgradeable venue proxies using the UUPS pattern.
 
 */
 
@@ -53,13 +54,15 @@ contract VenueFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         _;
     }
 
-    /// @notice Creates and initializes a new venue proxy with specified parameters.
-    /// @param initialOwner The owner of the new venue proxy.
-    /// @param proposalPeriodDuration Duration of the proposal period in seconds.
-    /// @param proposalDateExtension Extension duration for proposal dates in seconds.
-    /// @param proposalDateMinimumFuture Minimum future time in seconds for a proposal to be valid.
-    /// @param proposalPeriodExtensionThreshold Threshold in seconds for extending the proposal period.
-    /// @return The address of the newly created venue proxy.
+    /**
+     * @notice Creates and initializes a new venue proxy with the specified parameters.
+     * @param initialOwner The initial owner of the new venue proxy.
+     * @param proposalPeriodDuration The duration for the proposal period, in seconds.
+     * @param proposalDateExtension The additional time allowed for extending the proposal date, in seconds.
+     * @param proposalDateMinimumFuture The minimum future time required for a proposal to be valid, in seconds.
+     * @param proposalPeriodExtensionThreshold The threshold for extending the proposal period, in seconds.
+     * @return The address of the newly created venue proxy.
+     */
     function createVenueProxy(
         address initialOwner,
         uint256 proposalPeriodDuration,
@@ -67,16 +70,18 @@ contract VenueFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 proposalDateMinimumFuture,
         uint256 proposalPeriodExtensionThreshold
     ) public onlyShowContract returns (address) {
-        address clone = Clones.clone(venueImplementation);
-        IVenue(clone).initialize(
+        bytes memory initData = abi.encodeWithSelector(
+            IVenue.initialize.selector,
             initialOwner,
             proposalPeriodDuration,
             proposalDateExtension,
             proposalDateMinimumFuture,
             proposalPeriodExtensionThreshold
         );
-        emit VenueProxyCreated(clone);
-        return clone;
+        ERC1967Proxy proxy = new ERC1967Proxy(venueImplementation, initData);
+        address venueProxyAddress = address(proxy);
+        emit VenueProxyCreated(venueProxyAddress);
+        return venueProxyAddress;
     }
 
     /// @notice Sets a new version string for the VenueFactory.

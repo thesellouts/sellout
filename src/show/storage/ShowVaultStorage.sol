@@ -4,8 +4,8 @@ pragma solidity 0.8.20;
 import { IShow } from '../IShow.sol';
 
 contract ShowVaultStorage {
-    /// @notice Address of the Sellout multisig that can interact with the vault
-    address public SELLOUT_PROTOCOL_WALLET;
+    /// @notice Address of the protocol owner multisig, aka the steward
+    address public THE_STEWARD;
 
     /// @notice Address of the Show contract that can interact with the vault
     address public showContract;
@@ -43,4 +43,7 @@ contract ShowVaultStorage {
     /// @notice Mapping to track the payment token for each show
     /// @dev Stores the address of the ERC20 payment token used for transactions in each show
     mapping(bytes32 => address) public showPaymentTokens;
+
+    /// @notice Address of the public DAO, aka the garden
+    address public THE_GARDEN;
 }

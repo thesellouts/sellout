@@ -19,8 +19,7 @@ contract ShowStorage is ShowTypes {
     address public SELLOUT_PROTOCOL_WALLET;
 
     /// @notice Cooling off period to prevent immediate actions following significant events.
-    /// @dev Initially set to 2 minutes for testing; change to `2 days` for production.
-    uint256 public constant COOLDOWN = 2 minutes;
+    uint256 public constant COOLDOWN = 2 days;
 
     /// @notice Instance of the VenueFactory for creating and managing venue-related operations.
     IVenueFactory public venueFactoryInstance;

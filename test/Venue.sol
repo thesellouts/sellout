@@ -1,44 +1,37 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
-//
-//import "forge-std/Test.sol";
-//import "../src/Show.sol";
-//import "../src/VenueProposals.sol";
-//
-//contract VenueProposalsTest is Test {
-//    Show public showContract;
-//    VenueProposals public venueProposalsContract;
-//
-//    function setUp() public {
-//        showContract = new Show();
-//        venueProposalsContract = new VenueProposals(address(showContract));
-//    }
-//
-//    function testSubmitProposal() public {
-//        // Deploy and set up a show
-//        address[] memory artists = new address[](2);
-//        artists[0] = address(0x1234567890123456789012345678901234567890);
-//        artists[1] = address(0x0987654321098765432109876543210987654321);
-//
-//        // Deploy and set up a show using the Show contract
-//        Show show = new Show(
-//            msg.sender,
-//            "40.730610,-73.935242",
-//            artists,
-//            1000,
-//            0.5 ether,
-//            2 ether,
-//            80
-//        );
-//
-//        // Submit a proposal using the VenueProposals contract
-//        venueProposalsContract.submitProposal(address(show), "Venue Name", "40.730610,-73.935242", new uint256[](0), {value: 1 ether});
-//
-//        // Perform assertions
-//        // ... Your assertions here ...
-//    }
-//
-//    // You can write similar test functions for other interactions with VenueProposals contract
-//
-//    // ... other test functions ...
-//}
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "forge-std/Test.sol";
+import "../src/venue/Venue.sol";
+import "../src/registry/venue/IVenueRegistry.sol";
+import "../src/show/IShow.sol";
+import "../src/show/IShowVault.sol";
+import { ERC1967Proxy } from "@openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { VenueRegistryTypes } from "../src/registry/venue/types/VenueRegistryTypes.sol";
+import { ShowTypes } from "../src/show/types/ShowTypes.sol";
+
+contract VenueTest is Test {
+    Venue venue;
+    address initialOwner = address(1);
+
+    function setUp() external {
+        // Deploy the Venue contract through a proxy
+        bytes memory initData = abi.encodeWithSelector(
+            Venue.initialize.selector,
+            initialOwner,
+            3600,   // proposalPeriodDuration
+            600,    // proposalDateExtension
+            3600,   // proposalDateMinimumFuture
+            300     // proposalPeriodExtensionThreshold
+        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(new Venue()), initData);
+        venue = Venue(address(proxy));
+    }
+
+    function testInitialization() public {
+        assertEq(venue.proposalPeriodDuration(), 3600, "Incorrect proposal period duration.");
+        assertEq(venue.proposalDateExtension(), 600, "Incorrect proposal date extension.");
+        assertEq(venue.proposalDateMinimumFuture(), 3600, "Incorrect proposal date minimum future.");
+        assertEq(venue.proposalPeriodExtensionThreshold(), 300, "Incorrect proposal period extension threshold.");
+    }
+}

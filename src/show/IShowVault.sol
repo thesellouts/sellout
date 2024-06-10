@@ -8,6 +8,10 @@ interface IShowVault {
     /// @param amount The amount of funds withdrawn.
     event Withdrawal(bytes32 indexed showId, address indexed recipient, uint256 amount, address paymentToken);
 
+    /// @notice Emitted when the DAO treasury address is updated.
+    /// @param newAddress The new address of the DAO treasury.
+    event DAOTreasuryAddressUpdated(address indexed newAddress);
+
     /// @notice Deposits Ether into the vault for a specific show.
     /// @param showId Unique identifier of the show to receive the deposit.
     function depositToVault(bytes32 showId) external payable;
@@ -22,7 +26,8 @@ interface IShowVault {
     /// @notice Allows a user to withdraw their refund for a show, in either Ether or an ERC20 token.
     /// @param showId Unique identifier of the show from which the refund will be withdrawn.
     /// @param paymentToken Contract address of the ERC20 token, or address(0) for Ether.
-    function withdrawRefund(bytes32 showId, address paymentToken) external;
+    /// @param payee Address of the payee.
+    function withdrawRefund(bytes32 showId, address paymentToken, address payee) external;
 
     /// @notice Clears all stored value in the vault for a specific show.
     /// @param showId Unique identifier of the show for which to clear the vault.
@@ -69,4 +74,9 @@ interface IShowVault {
     // @dev Sets the addresses for the Show contract and the Venue Registry.
     // @param boxOfficeAddress The address of the BoxOffice contract.
     function setContractAddresses(address boxOfficeAddress) external;
+
+    /// @notice Sets the DAO treasury address to which funds can be allocated.
+    /// @dev This function can only be called by the owner of the contract. It updates the treasury address used for DAO operations and allocations.
+    /// @param _theGarden The new address for the DAO treasury.
+    function setDAOTreasuryAddress(address _theGarden) external;
 }

@@ -127,7 +127,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     function validateProposalSubmission(bytes32 showId, uint256[] memory proposedDates) private view {
         require(showInstance.getShowStatus(showId) == ShowTypes.Status.SoldOut, "Show not in 'Sold Out' status");
         require(proposalPeriod[showId].endTime == 0 || block.timestamp <= proposalPeriod[showId].endTime, "Proposal period ended");
-        require(proposedDates.length > 0 && proposedDates.length <= 5, "Invalid number of proposed dates");
+        require(proposedDates.length > 0 && proposedDates.length <= 20, "Invalid number of proposed dates");
     }
 
     // @dev Adjusts the proposal period if necessary based on current time.

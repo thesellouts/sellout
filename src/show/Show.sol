@@ -166,6 +166,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         setContracts = true;
     }
 
+
     // @notice Proposes a new show with detailed information.
     // @dev This function creates a new show proposal based on the provided ShowProposal struct.
     // @param proposal A struct containing all necessary details for proposing a new show.
@@ -455,7 +456,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         address paymentToken = showVaultInstance.getShowPaymentToken(showId);
 
         // Use the retrieved token address to withdraw the refund
-        showVaultInstance.withdrawRefund(showId, paymentToken);
+        showVaultInstance.withdrawRefund(showId, paymentToken, msg.sender);
     }
 
     /// @notice Updates the venue information for a specific show.

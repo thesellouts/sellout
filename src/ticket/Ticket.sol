@@ -64,6 +64,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 
 contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable, OwnableUpgradeable {
     uint256 private ticketIdCounter = 1;
+    string private contractMetadataURI;
 
     /// @notice Initializes the contract with the Show contract address and metadata URI.
     /// @param initialOwner The address of the initial contract owner.
@@ -74,12 +75,28 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         __UUPSUpgradeable_init();
         version = _version;
         defaultURI = "https://metadata.sellouts.app/show/";
+        contractMetadataURI = "";
     }
 
     /// @dev Ensures that only the Show contract can call the modified function.
     modifier onlyShowContract() {
         require(msg.sender == address(showInstance), "Only the Show contract can call this function");
         _;
+    }
+
+    /// @dev Sets the contract metadata URI internally.
+    /// @param showId The unique identifier for the show.
+    function setContractMetadataURI(bytes32 showId) private {
+        string memory showIdHexString = bytes32ToHexString(showId);
+        string memory baseURI = bytes(showDefaultURIs[showId]).length > 0 ? showDefaultURIs[showId] : defaultURI;
+        string memory newContractMetadataURI = string(abi.encodePacked(baseURI, "0x", showIdHexString, "/contract"));
+        contractMetadataURI = newContractMetadataURI;
+    }
+
+    /// @notice Retrieves the URI for the contract metadata.
+    /// @return The URI of the contract metadata.
+    function contractURI() public view returns (string memory) {
+        return contractMetadataURI;
     }
 
      /// @dev Allows contract upgrades by the contract owner only.
@@ -99,6 +116,10 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         bool purchaseSuccessful = executePurchase(showId, tierIndex, amount, data, paymentToken);
         require(purchaseSuccessful, "Purchase failed");
 
+        // Set contract metadata URI on first purchase
+        if (bytes(contractMetadataURI).length == 0) {
+            setContractMetadataURI(showId);
+        }
         /// Finalize the purchase only after confirming success
         finalizePurchase(showId, tierIndex, amount);
     }
