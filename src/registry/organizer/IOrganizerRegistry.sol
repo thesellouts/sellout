@@ -30,6 +30,15 @@ interface IOrganizerRegistry {
     /// @param nominee The address of the nominee who accepted the nomination.
     event OrganizerAccepted(address indexed nominee);
 
+    /// @notice Emitted when the general token URI is updated.
+    /// @param newURI The new URI that has been set.
+    event contractURIUpdated(string newURI);
+
+    /// @notice Emitted when the URI of a specific artist token is updated.
+    /// @param newURI The new metadata URI.
+    /// @param tokenId The token ID for which the URI was updated.
+    event tokenURIUpdated(string newURI, uint256 tokenId);
+
     /// @notice Accepts the nomination to become an organizer.
     /// @param _name The name of the nominee.
     /// @param _bio The biography or description of the nominee.
@@ -59,6 +68,10 @@ interface IOrganizerRegistry {
     /// @param tokenId The unique identifier of the organizer token.
     /// @param newURI The new URI string that will represent the token's metadata.
     function setTokenURI(uint256 tokenId, string calldata newURI) external;
+
+    /// @notice Updates the metadata URI for the contract.
+    /// @param newURI New URI to set for the artist token.
+    function setContractURI(string calldata newURI) external;
 
     /// @notice Updates the profile information of a registered organizer.
     /// @param organizerId The unique identifier of the organizer whose information is being updated.

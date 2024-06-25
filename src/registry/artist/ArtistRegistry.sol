@@ -56,7 +56,10 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 
 contract ArtistRegistry is Initializable, ERC1155Upgradeable, IArtistRegistry, ArtistRegistryStorage, UUPSUpgradeable, OwnableUpgradeable {
     ReferralModule private referralModule;
+
     mapping(uint256 => string) private _tokenURIs;
+
+    string private contractMetadataURI;
 
     /// @notice Initializes the contract with a metadata URI and sets up the referral system.
     /// @param initialOwner Address to be set as the initial owner of the contract.
@@ -71,6 +74,12 @@ contract ArtistRegistry is Initializable, ERC1155Upgradeable, IArtistRegistry, A
     /// @notice Ensures only the contract owner can upgrade the contract implementation.
     /// @param newImplementation Address of the new contract implementation.
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    /// @notice Retrieves the URI for the contract metadata.
+    /// @return The URI of the contract metadata.
+    function contractURI() public view returns (string memory) {
+        return contractMetadataURI;
+    }
 
     /// @notice Accepts the nomination and registers the artist with the provided name and biography.
     /// @param _name The artist's name.
@@ -135,6 +144,17 @@ contract ArtistRegistry is Initializable, ERC1155Upgradeable, IArtistRegistry, A
     }
 
     /// @notice Sets or updates the URI for a specific artist token.
+    /// @param newURI The new metadata URI.
+    function setContractURI(string memory newURI) public {
+        require(
+            msg.sender == owner(),
+            "Caller is not the owner"
+        );
+        contractMetadataURI = newURI;
+        emit contractURIUpdated(newURI);
+    }
+
+    /// @notice Sets or updates the URI for a specific artist token.
     /// @param tokenId The token ID for which to set the URI.
     /// @param newURI The new metadata URI.
     function setTokenURI(uint256 tokenId, string memory newURI) public {
@@ -143,7 +163,7 @@ contract ArtistRegistry is Initializable, ERC1155Upgradeable, IArtistRegistry, A
             "Caller is not the owner or the artist"
         );
         _tokenURIs[tokenId] = newURI;
-        emit URI(newURI, tokenId);
+        emit tokenURIUpdated(newURI, tokenId);
     }
 
     /// @notice Updates an artist's profile information.

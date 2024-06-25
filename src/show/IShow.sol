@@ -261,4 +261,13 @@ interface IShow is ShowTypes {
     /// @param showId The unique identifier of the show
     function voteForEmergencyRefund(bytes32 showId) external;
 
+    /// @notice Retrieves the expiry time for a specific show.
+    /// @param showId The unique identifier of the show.
+    /// @return The timestamp of when the show expires.
+    function getShowExpiry(bytes32 showId) external view returns (uint256);
+
+    /// @notice Extends the expiry time of a specific show.
+    /// @param showId The unique identifier of the show.
+    /// @param extraTime The amount of time in seconds to extend the show's expiry.
+    function extendShowExpiry(bytes32 showId, uint256 extraTime) external;
 }

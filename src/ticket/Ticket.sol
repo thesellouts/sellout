@@ -120,6 +120,13 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         if (bytes(contractMetadataURI).length == 0) {
             setContractMetadataURI(showId);
         }
+
+        // Extend show expiry if within one day of expiring
+        uint256 showExpiry = showInstance.getShowExpiry(showId);
+        if (block.timestamp >= showExpiry - 1 days) {
+            showInstance.extendShowExpiry(showId, 1 days);
+        }
+
         /// Finalize the purchase only after confirming success
         finalizePurchase(showId, tierIndex, amount);
     }

@@ -47,6 +47,15 @@ interface IVenueRegistry {
     /// @param venueAddress Wallet address of the venue that has been accepted.
     event VenueAccepted(uint256 indexed venueId, address venueAddress);
 
+    /// @notice Emitted when the general token URI is updated.
+    /// @param newURI The new URI that has been set.
+    event contractURIUpdated(string newURI);
+
+    /// @notice Emitted when the URI of a specific artist token is updated.
+    /// @param newURI The new metadata URI.
+    /// @param tokenId The token ID for which the URI was updated.
+    event tokenURIUpdated(string newURI, uint256 tokenId);
+
     /// @notice Allows a nominated venue to accept its nomination and register.
     /// @param _name Name of the venue.
     /// @param _bio Biography or description of the venue.
@@ -101,6 +110,10 @@ interface IVenueRegistry {
     /// @param tokenId Token ID for which to set the new URI.
     /// @param newURI New URI string to update.
     function setTokenURI(uint256 tokenId, string calldata newURI) external;
+
+    /// @notice Updates the metadata URI for the contract.
+    /// @param newURI New URI to set for the artist token.
+    function setContractURI(string calldata newURI) external;
 
     /// @notice Updates the profile information of a registered venue.
     /// @param _venueId Unique identifier of the venue.

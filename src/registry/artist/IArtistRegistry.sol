@@ -34,6 +34,15 @@ interface IArtistRegistry {
     /// @param nominee Wallet address of the artist being nominated.
     event ArtistNominated(address indexed nominee);
 
+    /// @notice Emitted when the general token URI is updated.
+    /// @param newURI The new URI that has been set.
+    event contractURIUpdated(string newURI);
+
+    /// @notice Emitted when the URI of a specific artist token is updated.
+    /// @param newURI The new metadata URI.
+    /// @param tokenId The token ID for which the URI was updated.
+    event tokenURIUpdated(string newURI, uint256 tokenId);
+
     /// @notice Accepts a nomination to become a registered artist.
     /// @param _name Name to register under.
     /// @param _bio Biography or description to accompany the registration.
@@ -58,6 +67,10 @@ interface IArtistRegistry {
     /// @param tokenId Unique token identifier associated with the artist.
     /// @param newURI New URI to set for the artist token.
     function setTokenURI(uint256 tokenId, string calldata newURI) external;
+
+    /// @notice Updates the metadata URI for the contract.
+    /// @param newURI New URI to set for the artist token.
+    function setContractURI(string calldata newURI) external;
 
     /// @notice Updates the profile of a registered artist.
     /// @param _artistId Unique identifier of the artist whose profile is being updated.

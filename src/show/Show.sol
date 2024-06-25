@@ -649,4 +649,21 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         shows[showId].status = Status.Cancelled;
         emit ShowCancelled(showId, "Emergency Refund");
     }
+
+    /// @notice Retrieves the expiry time for a specific show.
+    /// @param showId The unique identifier of the show.
+    /// @return The timestamp of when the show expires.
+    function getShowExpiry(bytes32 showId) external view returns (uint256) {
+        return shows[showId].expiry;
+    }
+
+    /// @notice Extends the expiry time of a specific show.
+    /// @param showId The unique identifier of the show.
+    /// @param extraTime The amount of time in seconds to extend the show's expiry.
+    function extendShowExpiry(bytes32 showId, uint256 extraTime) external onlyTicketProxy(showId) {
+        require(extraTime > 0, "Extra time must be greater than zero");
+        Show storage show = shows[showId];
+        show.expiry += extraTime;
+        emit ExpiryUpdated(showId, show.expiry);
+    }
 }

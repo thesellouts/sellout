@@ -60,6 +60,8 @@ contract OrganizerRegistry is Initializable, ERC1155Upgradeable, IOrganizerRegis
     /// @dev Mapping from token IDs to their respective metadata URIs.
     mapping(uint256 => string) private _tokenURIs;
 
+    string private contractMetadataURI;
+
     /// @notice Initializes the contract with metadata URI and ReferralModule address.
     /// @param initialOwner The address to be set as the owner of the contract.
     /// @param _referralModuleAddress Address of the ReferralModule to interact with referral functionalities.
@@ -146,6 +148,17 @@ contract OrganizerRegistry is Initializable, ERC1155Upgradeable, IOrganizerRegis
         );
 
         _tokenURIs[tokenId] = newURI;
+    }
+
+    /// @notice Sets or updates the URI for a specific artist token.
+    /// @param newURI The new metadata URI.
+    function setContractURI(string memory newURI) public {
+        require(
+            msg.sender == owner(),
+            "Caller is not the owner"
+        );
+        contractMetadataURI = newURI;
+        emit contractURIUpdated(newURI);
     }
 
     /// @notice Updates the profile information of an organizer.

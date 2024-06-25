@@ -59,6 +59,8 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
 
     mapping(uint256 => string) private _tokenURIs;
 
+    string private contractMetadataURI;
+
     // @notice Initializes the contract with a metadata URI and the ReferralModule address.
     // @param _referralModuleAddress Address of the ReferralModule contract.
     function initialize(address initialOwner, address _referralModuleAddress) public initializer {
@@ -212,6 +214,16 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
         _tokenURIs[tokenId] = newURI;
     }
 
+    /// @notice Sets or updates the URI for a specific artist token.
+    /// @param newURI The new metadata URI.
+    function setContractURI(string memory newURI) public {
+        require(
+            msg.sender == owner(),
+            "Caller is not the owner"
+        );
+        contractMetadataURI = newURI;
+        emit contractURIUpdated(newURI);
+    }
 
     /// @notice Allows a registered venue to update their profile information.
     /// @param _venueId Unique identifier of the venue.
