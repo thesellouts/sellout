@@ -110,7 +110,7 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         require(venueRegistryInstance.isVenueRegistered(msg.sender), "Venue not registered");
 
         validateProposalSubmission(showId, proposedDates);
-        if (!proposalPeriod[showId].isPeriodActive) {
+        if (!proposalPeriod[showId].hasProposalPeriodStarted) {
             startProposalPeriod(showId);
         }
         adjustProposalPeriodIfNeeded(showId);
@@ -128,6 +128,14 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
         require(showInstance.getShowStatus(showId) == ShowTypes.Status.SoldOut, "Show not in 'Sold Out' status");
         require(proposalPeriod[showId].endTime == 0 || block.timestamp <= proposalPeriod[showId].endTime, "Proposal period ended");
         require(proposedDates.length > 0 && proposedDates.length <= 20, "Invalid number of proposed dates");
+
+        // Calculate the minimum acceptable date only once
+        uint256 minAcceptableDate = block.timestamp + proposalDateMinimumFuture;
+
+        // Ensure all proposed dates are at least _proposalDateMinimumFuture in the future
+        for (uint256 i = 0; i < proposedDates.length; i++) {
+            require(proposedDates[i] >= minAcceptableDate, "Proposed date must be sufficiently far in the future");
+        }
     }
 
     // @dev Adjusts the proposal period if necessary based on current time.
@@ -315,12 +323,12 @@ contract Venue is Initializable, IVenue, VenueStorage, UUPSUpgradeable, OwnableU
     /// @notice Starts the proposal period for a show.
     /// @param showId Unique identifier for the show.
     function startProposalPeriod(bytes32 showId) internal {
-        proposalPeriod[showId].isPeriodActive = true;
+        proposalPeriod[showId].hasProposalPeriodStarted = true;
         proposalPeriod[showId].endTime = block.timestamp + proposalPeriodDuration;
         ticketHolderVotingActive[showId] = true;
         ticketHolderVotingPeriods[showId] = VenueTypes.VotingPeriod({
             endTime: proposalPeriod[showId].endTime, // Ticket holder voting ends when proposal period ends
-            isPeriodActive: true
+            hasProposalPeriodStarted: true
         });
 
         emit ProposalPeriodStarted(showId, proposalPeriod[showId].endTime);

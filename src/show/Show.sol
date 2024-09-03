@@ -318,6 +318,7 @@ contract Show is Initializable, IShow, ShowStorage, ReentrancyGuardUpgradeable, 
         Show storage show = shows[showId];
         uint256 soldTickets = boxOfficeInstance.getTotalTicketsSold(showId);
         if (soldTickets * 100 >= show.totalCapacity * show.sellOutThreshold) {
+            shows[showId].expiry = block.timestamp + 30 days;
             updateStatus(showId, Status.SoldOut);
         }
     }

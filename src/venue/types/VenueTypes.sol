@@ -30,18 +30,18 @@ interface VenueTypes {
     /// @notice Represents the time period during which venue proposals can be submitted.
     struct ProposalPeriod {
         uint256 endTime; // End time of the proposal period
-        bool isPeriodActive; // Whether the proposal period is active or not
+        bool hasProposalPeriodStarted; // Whether the proposal period is active or not
     }
 
     /// @notice Represents the time period during which votes for venue proposals can be cast.
     struct VotingPeriod {
         uint256 endTime; // End time of the voting period
-        bool isPeriodActive; // Whether the voting period is active or not
+        bool hasProposalPeriodStarted; // Whether the voting period is active or not
     }
 
     /// @notice Represents the time period during which votes for proposed show dates can be cast.
     struct DateVotingPeriod {
         uint256 endTime; // End time of the date voting period
-        bool isPeriodActive; // Whether the date voting period is active or not
+        bool hasProposalPeriodStarted; // Whether the date voting period is active or not
     }
 }

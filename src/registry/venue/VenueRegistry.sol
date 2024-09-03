@@ -194,6 +194,9 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
     /// @notice Nominates another address as a venue, provided the caller has sufficient referral credits.
     /// @param nominee The address being nominated as a venue.
     function nominate(address nominee) public {
+        require(!nominatedVenues[nominee], "Nominee already nominated");
+        require(addressToVenueId[nominee] == 0, "Nominee already a venue");
+
         ReferralTypes.ReferralCredits memory credits = referralModule.getReferralCredits(msg.sender);
         require(credits.venue > 0, "Insufficient venue referral credits");
 
