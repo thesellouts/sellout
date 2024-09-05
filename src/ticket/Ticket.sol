@@ -252,6 +252,13 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         return (_price, _tierIndex);
     }
 
+    /// @notice Gets the associated show ID for a given ticket ID.
+    /// @param ticketId The unique identifier of the ticket.
+    /// @return showId The unique identifier of the show associated with the ticket.
+    function getShowIdByTicketId(uint256 ticketId) external view returns (bytes32 showId) {
+        return tokenIdToShowId[ticketId];
+    }
+
     /// @notice Burns a specified amount of tokens, removing them from circulation.
     /// @param tokenId Identifier of the token to be burned.
     /// @param amount Amount of tokens to be burned.

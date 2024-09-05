@@ -62,4 +62,9 @@ interface ITicket {
     /// @return price The price paid for the ticket.
     /// @return tierIndex The index of the ticket tier.
     function getTicketPricePaidAndTierIndex(bytes32 showId, uint256 ticketId) external view returns (uint256 price, uint256 tierIndex);
+
+    /// @notice Gets the associated show ID for a given ticket ID.
+    /// @param ticketId The unique identifier of the ticket.
+    /// @return showId The unique identifier of the show associated with the ticket.
+    function getShowIdByTicketId(uint256 ticketId) external view returns (bytes32 showId);
 }
