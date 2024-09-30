@@ -8,6 +8,7 @@ import { IVenueRegistry } from "./IVenueRegistry.sol";
 import { ReferralModule } from "../referral/ReferralModule.sol";
 import { ReferralTypes } from "../referral/types/ReferralTypes.sol";
 
+import { Strings } from "@openzeppelin-contracts/utils/Strings.sol";
 import { ERC1155Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -64,7 +65,7 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
     // @notice Initializes the contract with a metadata URI and the ReferralModule address.
     // @param _referralModuleAddress Address of the ReferralModule contract.
     function initialize(address initialOwner, address _referralModuleAddress) public initializer {
-        __ERC1155_init("https://metadata.sellouts.app/venue/{id}.json");
+        __ERC1155_init("https://metadata.sellout.energy/venue/{id}.json");
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
         referralModule = ReferralModule(_referralModuleAddress);
@@ -217,7 +218,7 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
         _tokenURIs[tokenId] = newURI;
     }
 
-    /// @notice Sets or updates the URI for a specific artist token.
+    /// @notice Sets or updates the URI for the venue contract.
     /// @param newURI The new metadata URI.
     function setContractURI(string memory newURI) public {
         require(
@@ -280,14 +281,20 @@ contract VenueRegistry is Initializable, ERC1155Upgradeable, IVenueRegistry, Ven
         return isRegistered;
     }
 
-    /// @notice Returns the URI for a specific token.
-    /// @param tokenId The ID of the token.
-    /// @return The URI of the token.
+    /// @notice Retrieves the URI for a specific artist's token.
+    /// @param tokenId The token ID of the artist.
+    /// @return The URI associated with the artist token.
     function uri(uint256 tokenId) public view override returns (string memory) {
         string memory customURI = _tokenURIs[tokenId];
         if (bytes(customURI).length > 0) {
             return customURI;
         }
-        return super.uri(tokenId);
+        return string(abi.encodePacked("https://metadata.sellout.energy/venue/", Strings.toString(tokenId), ".json"));
+    }
+
+    /// @notice Retrieves the URI for the contract metadata.
+    /// @return The URI of the contract-level metadata.
+    function contractURI() public view returns (string memory) {
+        return contractMetadataURI;
     }
 }

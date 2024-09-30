@@ -8,6 +8,7 @@ import { IArtistRegistry } from "./IArtistRegistry.sol";
 import { ReferralModule } from "../referral/ReferralModule.sol";
 import { ReferralTypes } from "../referral/types/ReferralTypes.sol";
 
+import { Strings } from "@openzeppelin-contracts/utils/Strings.sol";
 import { ERC1155Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -65,7 +66,7 @@ contract ArtistRegistry is Initializable, ERC1155Upgradeable, IArtistRegistry, A
     /// @param initialOwner Address to be set as the initial owner of the contract.
     /// @param _referralModuleAddress Address of the ReferralModule contract.
     function initialize(address initialOwner, address _referralModuleAddress) public initializer {
-        __ERC1155_init("https://metadata.sellouts.app/artist/{id}.json");
+        __ERC1155_init("https://metadata.sellout.energy/artist/{id}.json");
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
         referralModule = ReferralModule(_referralModuleAddress);
@@ -196,6 +197,7 @@ contract ArtistRegistry is Initializable, ERC1155Upgradeable, IArtistRegistry, A
         if (bytes(customURI).length > 0) {
             return customURI;
         }
-        return super.uri(tokenId);
+        return string(abi.encodePacked("https://metadata.sellout.energy/artist/", Strings.toString(tokenId), ".json"));
     }
+
 }

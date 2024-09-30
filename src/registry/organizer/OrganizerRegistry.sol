@@ -8,6 +8,7 @@ import { OrganizerRegistryTypes } from "./types/OrganizerRegistryTypes.sol";
 import { ReferralModule } from "../referral/ReferralModule.sol";
 import { ReferralTypes } from "../referral/types/ReferralTypes.sol";
 
+import { Strings } from "@openzeppelin-contracts/utils/Strings.sol";
 import { ERC1155Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -66,7 +67,7 @@ contract OrganizerRegistry is Initializable, ERC1155Upgradeable, IOrganizerRegis
     /// @param initialOwner The address to be set as the owner of the contract.
     /// @param _referralModuleAddress Address of the ReferralModule to interact with referral functionalities.
     function initialize(address initialOwner, address _referralModuleAddress) public initializer {
-        __ERC1155_init("https://metadata.sellouts.app/organizer/{id}.json");
+        __ERC1155_init("https://metadata.sellout.energy/organizer/{id}.json");
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
         referralModule = ReferralModule(_referralModuleAddress);
@@ -188,14 +189,20 @@ contract OrganizerRegistry is Initializable, ERC1155Upgradeable, IOrganizerRegis
     }
 
 
-    /// @notice Retrieves the URI associated with a specific token.
-    /// @param tokenId The ID of the token.
-    /// @return The URI string associated with the token.
+    /// @notice Retrieves the URI for a specific artist's token.
+    /// @param tokenId The token ID of the artist.
+    /// @return The URI associated with the artist token.
     function uri(uint256 tokenId) public view override returns (string memory) {
         string memory customURI = _tokenURIs[tokenId];
         if (bytes(customURI).length > 0) {
             return customURI;
         }
-        return super.uri(tokenId);
+        return string(abi.encodePacked("https://metadata.sellout.energy/organizer/", Strings.toString(tokenId), ".json"));
+    }
+
+    /// @notice Retrieves the URI for the contract metadata.
+    /// @return The URI of the contract-level metadata.
+    function contractURI() public view returns (string memory) {
+        return contractMetadataURI;
     }
 }

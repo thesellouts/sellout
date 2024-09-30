@@ -69,12 +69,12 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     /// @notice Initializes the contract with the Show contract address and metadata URI.
     /// @param initialOwner The address of the initial contract owner.
     function initialize(address initialOwner, string memory _version) public initializer {
-        __ERC1155_init("https://metadata.sellouts.app/show/{id}.json");
+        __ERC1155_init("https://metadata.sellout.energy/show/{id}.json");
         __ReentrancyGuard_init();
         __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
         version = _version;
-        defaultURI = "https://metadata.sellouts.app/show/";
+        defaultURI = "https://metadata.sellout.energy/show/";
         contractMetadataURI = "";
     }
 
@@ -110,7 +110,7 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
     /// @param amount Number of tickets to purchase.
     /// @param paymentToken Address of the ERC20 token the show is priced in.
     function purchaseTickets(bytes32 showId, uint256 tierIndex, uint256 amount, address paymentToken) public payable nonReentrant {
-        validatePurchase(showId, tierIndex, amount);
+        validatePurchaseForRecipient(showId, tierIndex, amount, msg.sender);
         PurchaseData memory data = preparePurchaseData(showId, tierIndex, amount);
 
         bool purchaseSuccessful = executePurchase(showId, tierIndex, amount, data, paymentToken);
@@ -131,11 +131,41 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         finalizePurchase(showId, tierIndex, amount);
     }
 
-    /// @dev Validates the parameters for a ticket purchase request.
+    /// @notice Purchases tickets on behalf of a recipient, processing payment, minting tickets, and finalizing the purchase.
+    /// @dev Allows a third-party contract to purchase tickets for a specified recipient.
+    /// @param recipient The address that will receive the purchased tickets.
+    /// @param showId Identifier of the show.
+    /// @param tierIndex Index of the ticket tier.
+    /// @param amount Number of tickets to purchase.
+    /// @param paymentToken Address of the ERC20 token the show is priced in.
+    function purchaseTicketsFor(address recipient, bytes32 showId, uint256 tierIndex, uint256 amount, address paymentToken) public payable nonReentrant {
+        validatePurchaseForRecipient(showId, tierIndex, amount, recipient);
+        PurchaseData memory data = preparePurchaseData(showId, tierIndex, amount);
+
+        bool purchaseSuccessful = executePurchaseFor(recipient, showId, tierIndex, amount, data, paymentToken);
+        require(purchaseSuccessful, "Purchase failed");
+
+        // Set contract metadata URI on first purchase
+        if (bytes(contractMetadataURI).length == 0) {
+            setContractMetadataURI(showId);
+        }
+
+        // Extend show expiry if within one day of expiring
+        uint256 showExpiry = showInstance.getShowExpiry(showId);
+        if (block.timestamp >= showExpiry - 1 days) {
+            showInstance.extendShowExpiry(showId, 1 days);
+        }
+
+        // Finalize the purchase only after confirming success
+        finalizePurchase(showId, tierIndex, amount);
+    }
+
+    /// @dev Validates the parameters for a ticket purchase request for a specific recipient.
     /// @param showId Unique identifier for the show for which tickets are being purchased.
     /// @param tierIndex Index of the ticket tier within the show from which tickets are being purchased.
     /// @param amount The number of tickets the user wishes to purchase.
-    function validatePurchase(bytes32 showId, uint256 tierIndex, uint256 amount) private view {
+    /// @param recipient The address that will receive the purchased tickets.
+    function validatePurchaseForRecipient(bytes32 showId, uint256 tierIndex, uint256 amount, address recipient) private view {
         ShowTypes.Status showStatus = showInstance.getShowStatus(showId);
         require(
             showStatus == ShowTypes.Status.Proposed ||
@@ -149,8 +179,8 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
         (, , uint256 ticketsAvailable) = showInstance.getTicketTierInfo(showId, tierIndex);
         require(ticketsAvailable >= amount, "Not enough tickets available");
 
-        uint256[] memory ownedTokenIds = boxOfficeInstance.getWalletTokenIds(showId, msg.sender);
-        require(ownedTokenIds.length + amount <= MAX_TICKETS_PER_WALLET, "Max tickets exceeded");
+        uint256[] memory ownedTokenIds = boxOfficeInstance.getWalletTokenIds(showId, recipient);
+        require(ownedTokenIds.length + amount <= MAX_TICKETS_PER_WALLET, "Max tickets exceeded for recipient");
     }
 
     /// @dev Prepares the purchase data for a ticket purchase request.
@@ -193,6 +223,33 @@ contract Ticket is Initializable, ITicket, TicketStorage, ERC1155Upgradeable, Re
             }
 
             emit TicketPurchased(msg.sender, showId, tierIndex, tokenId, 1, paymentToken);
+        }
+
+        return mintingSuccess;
+    }
+
+    /// @dev Executes the ticket purchase process for a specified recipient: processes payment, mints tickets, and returns success status.
+    /// @param recipient The address that will receive the purchased tickets.
+    /// @param showId The unique identifier for the show.
+    /// @param tierIndex The index of the ticket tier.
+    /// @param amount The number of tickets to purchase.
+    /// @param data Struct containing purchase data.
+    /// @param paymentToken The address of the ERC20 token used for payment (address(0) for ETH).
+    /// @return success Indicates whether the purchase was successful.
+    function executePurchaseFor(address recipient, bytes32 showId, uint256 tierIndex, uint256 amount, PurchaseData memory data, address paymentToken) private returns (bool) {
+        if (!processPayment(showId, data.totalPayment, paymentToken)) {
+            return false; // Payment processing failed
+        }
+
+        bool mintingSuccess = true;
+        for (uint256 i = 0; i < amount; i++) {
+            uint256 tokenId = ticketIdCounter++;
+            if (!mintTicket(tokenId, tierIndex, showId, recipient, data.pricePerTicket)) {
+                mintingSuccess = false; // Minting failed
+                break;
+            }
+
+            emit TicketPurchased(recipient, showId, tierIndex, tokenId, 1, paymentToken);
         }
 
         return mintingSuccess;
